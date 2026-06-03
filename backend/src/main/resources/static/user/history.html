@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lịch Sử Đặt Tour - TourBooking</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .layout { display:grid; grid-template-columns: 240px 1fr; gap: 24px; align-items:start; margin-top: 20px; }
+    .sidebar-menu { display: flex; flex-direction: column; gap: 8px; }
+    .sidebar-menu a { padding: 12px 16px; border-radius: 8px; text-decoration: none; color: var(--text-base); font-weight: 600; }
+    .sidebar-menu a:hover { background: rgba(0,0,0,0.05); }
+    .sidebar-menu a.active { background: var(--primary); color: white; }
+    
+    .booking-card { border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px; position: relative; }
+    .booking-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 12px; }
+    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+    .status-badge.success { background: #dcfce7; color: #166534; }
+    .status-badge.pending { background: #fef08a; color: #854d0e; }
+    .status-badge.cancelled { background: #fee2e2; color: #991b1b; }
+    
+    .booking-actions { display: flex; gap: 10px; margin-top: 16px; }
+    
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-box { background: white; padding: 24px; border-radius: 12px; width: 100%; max-width: 500px; }
+    .modal-box textarea { width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; margin-top: 12px; }
+    
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar-menu { flex-direction: row; overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="page-shell">
+      <div class="content-pad">
+        <div class="topbar">
+          <a class="brand" href="../pages/index.html">
+            <span class="brand-mark">TB</span>
+            <span class="brand-copy">
+              <strong>TourBooking</strong>
+              <span>An tâm tận hưởng</span>
+            </span>
+          </a>
+        </div>
+
+        <div class="layout">
+          <div class="card panel">
+            <nav class="sidebar-menu">
+              <a href="personal-info.html">Thông tin cá nhân</a>
+              <a href="profile.html">Cập nhật hồ sơ</a>
+              <a href="history.html" class="active">Lịch sử đặt tour</a>
+            </nav>
+          </div>
+
+          <div class="card panel">
+            <h2 class="section-title">Lịch Sử Đặt Tour (UC19)</h2>
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+              <button class="btn" id="filterAll" style="background:var(--primary); color:white;">Tất cả</button>
+              <button class="btn btn-secondary" id="filterPending">Đang chờ</button>
+              <button class="btn btn-secondary" id="filterDone">Đã hoàn thành</button>
+              <button class="btn btn-secondary" id="filterCancelled">Đã hủy</button>
+            </div>
+
+            <div id="bookingList"></div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Hủy Tour (UC20 & UC21) -->
+  <div class="modal-overlay" id="cancelModal">
+    <div class="modal-box">
+      <h3 style="margin-top:0;">Hủy Đặt Tour (UC20)</h3>
+      <p style="font-size:0.9rem; color:var(--text-faint);">Bạn có chắc chắn muốn hủy đặt tour <strong id="cancelCode"></strong> không?</p>
+      
+      <div style="margin-top:16px; padding:12px; background:#f0f9ff; border-radius:8px; border:1px solid #bae6fd;">
+        <strong>Yêu Cầu Hoàn Tiền (UC21)</strong>
+        <p style="font-size:0.85rem; margin:4px 0 0;">Vì bạn hủy trước 7 ngày, bạn sẽ được hoàn 100% số tiền. Vui lòng nhập tài khoản ngân hàng để nhận lại tiền.</p>
+        <textarea rows="2" placeholder="Tên NH - Số TK - Chủ Tài Khoản" id="refundInfo"></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeModals()">Đóng</button>
+        <button class="btn" style="background:#ef4444; color:white;" onclick="confirmCancel()">Xác nhận Hủy</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Đánh Giá Tour (UC23) -->
+  <div class="modal-overlay" id="reviewModal">
+    <div class="modal-box">
+      <h3 style="margin-top:0;">Viết Đánh Giá (UC23)</h3>
+      <p style="font-size:0.9rem; color:var(--text-faint);">Chia sẻ trải nghiệm của bạn về mã tour <strong id="reviewCode"></strong>.</p>
+      
+      <div style="margin-top:12px;">
+        <label style="font-weight:600; font-size:0.9rem;">Điểm hài lòng:</label>
+        <select id="reviewRating" style="width:100%; padding:8px; margin-top:4px; border-radius:6px; border:1px solid rgba(0,0,0,0.1);">
+          <option value="5">⭐⭐⭐⭐⭐ Tuyệt vời</option>
+          <option value="4">⭐⭐⭐⭐ Tốt</option>
+          <option value="3">⭐⭐⭐ Bình thường</option>
+          <option value="2">⭐⭐ Tệ</option>
+          <option value="1">⭐ Rất tệ</option>
+        </select>
+      </div>
+      
+      <textarea rows="4" id="reviewComment" placeholder="Viết cảm nhận của bạn..."></textarea>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeModals()">Đóng</button>
+        <button class="btn" onclick="submitReview()">Gửi Đánh Giá</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../assets/js/api.js"></script>
+  <script>
+    let allBookings = [];
+    let currentBooking = null;
+
+    const $ = (id) => document.getElementById(id);
+
+    function formatCurrency(v) {
+      const n = Number(v || 0);
+      return n.toLocaleString('vi-VN') + ' ₫';
+    }
+
+    function statusBadge(status) {
+      const s = String(status || '').toUpperCase();
+      if (s === 'CANCELLED') return { cls: 'cancelled', label: 'Đã hủy' };
+      if (s === 'COMPLETED' || s === 'SUCCESS') return { cls: 'success', label: 'Đã hoàn thành' };
+      if (s === 'CONFIRMED') return { cls: 'pending', label: 'Đã xác nhận' };
+      if (s === 'REFUND_REQUESTED') return { cls: 'pending', label: 'Đang chờ hoàn tiền' };
+      return { cls: 'pending', label: 'Đang chờ' };
+    }
+
+    function render(list) {
+      const root = $('bookingList');
+      if (!list || list.length === 0) {
+        root.innerHTML = `<div class="card panel" style="border:1px dashed rgba(0,0,0,0.15); background: rgba(0,0,0,0.02);">Chưa có booking nào.</div>`;
+        return;
+      }
+
+      root.innerHTML = list.map(b => {
+        const badge = statusBadge(b.status);
+        const canCancel = String(b.status || '').toUpperCase() === 'PENDING' || String(b.status || '').toUpperCase() === 'CONFIRMED';
+        const canReview = String(b.status || '').toUpperCase() === 'COMPLETED' || String(b.status || '').toUpperCase() === 'SUCCESS';
+
+        return `
+          <div class="booking-card">
+            <div class="booking-header">
+              <div>
+                <h3 style="margin:0; font-size:1.1rem;">${(b.tourName || 'Tour').toString()}</h3>
+                <small style="color:var(--text-faint);">Booking ID: #${b.id}</small>
+              </div>
+              <span class="status-badge ${badge.cls}">${badge.label}</span>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.95rem;">
+              <div><strong style="color:var(--text-faint);">Ngày đặt:</strong> ${(b.bookingDate || '').toString().slice(0, 10)}</div>
+              <div><strong style="color:var(--text-faint);">Số khách:</strong> ${b.numberOfPeople ?? 0}</div>
+              <div><strong style="color:var(--text-faint);">Tổng tiền:</strong> ${formatCurrency(b.totalPrice)}</div>
+              <div><strong style="color:var(--text-faint);">Giảm giá:</strong> ${formatCurrency(b.discountAmount)}</div>
+            </div>
+            <div class="booking-actions">
+              <button class="btn btn-secondary" onclick="downloadInvoice(${b.id})">Tải Hóa Đơn PDF (UC22)</button>
+              ${canCancel ? `<button class="btn btn-secondary" style="color:#ef4444; border-color:#fee2e2; background:#fef2f2;" onclick="openCancelModal(${b.id})">Hủy Đặt Tour (UC20)</button>` : ''}
+              ${canReview ? `<button class="btn" style="background:#0284c7; color:white;" onclick="openReviewModal(${b.id})">Đánh Giá Chuyến Đi (UC23)</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function applyFilter(kind) {
+      const k = String(kind || 'all');
+      if (k === 'pending') {
+        render(allBookings.filter(b => ['PENDING', 'CONFIRMED', 'REFUND_REQUESTED'].includes(String(b.status || '').toUpperCase())));
+        return;
+      }
+      if (k === 'done') {
+        render(allBookings.filter(b => ['COMPLETED', 'SUCCESS'].includes(String(b.status || '').toUpperCase())));
+        return;
+      }
+      if (k === 'cancelled') {
+        render(allBookings.filter(b => String(b.status || '').toUpperCase() === 'CANCELLED'));
+        return;
+      }
+      render(allBookings);
+    }
+
+    async function loadBookings() {
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      if (!user?.id) {
+        TB.goToLogin('Vui lòng đăng nhập để xem lịch sử đặt tour.');
+        return;
+      }
+      const res = await TB.apiFetch(`/api/v1/bookings/user/${encodeURIComponent(user.id)}`, { method: 'GET' });
+      allBookings = res?.data || [];
+      applyFilter('all');
+    }
+
+    async function downloadInvoice(bookingId) {
+      const token = TB.getToken();
+      const res = await fetch(`/api/v1/bookings/${encodeURIComponent(bookingId)}/invoice`, {
+        method: 'GET',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!res.ok) {
+        alert(`Không tải được hóa đơn (HTTP ${res.status})`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice_${bookingId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function openCancelModal(bookingId) {
+      currentBooking = allBookings.find(b => Number(b.id) === Number(bookingId)) || null;
+      $('cancelCode').innerText = currentBooking ? `#${currentBooking.id}` : `#${bookingId}`;
+      $('cancelModal').style.display = 'flex';
+    }
+
+    function openReviewModal(bookingId) {
+      currentBooking = allBookings.find(b => Number(b.id) === Number(bookingId)) || null;
+      $('reviewCode').innerText = currentBooking ? `#${currentBooking.id}` : `#${bookingId}`;
+      $('reviewModal').style.display = 'flex';
+    }
+
+    function closeModals() {
+      $('cancelModal').style.display = 'none';
+      $('reviewModal').style.display = 'none';
+      $('refundInfo').value = '';
+      $('reviewComment').value = '';
+      currentBooking = null;
+    }
+
+    async function confirmCancel() {
+      if (!currentBooking?.id) return;
+      const info = $('refundInfo').value.trim();
+      if (!info) {
+        alert("Vui lòng nhập thông tin nhận tiền hoàn!");
+        return;
+      }
+
+      // UC20: cancel
+      await TB.apiFetch(`/api/v1/bookings/${encodeURIComponent(currentBooking.id)}/cancel`, { method: 'POST' });
+
+      // UC21: request refund (if eligible) - store info in reason for now
+      const refundReq = { bookingId: currentBooking.id, reason: info };
+      try {
+        await TB.apiFetch(`/api/v1/bookings/${encodeURIComponent(currentBooking.id)}/refund`, {
+          method: 'POST',
+          body: JSON.stringify(refundReq)
+        });
+      } catch (_) {
+        // ignore if backend rejects (e.g. not confirmed/success)
+      }
+
+      alert("Đã gửi yêu cầu hủy/hoàn tiền. Vui lòng kiểm tra lại trạng thái.");
+      closeModals();
+      await loadBookings();
+    }
+
+    async function submitReview() {
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      if (!user?.id) {
+        TB.goToLogin('Vui lòng đăng nhập để đánh giá.');
+        return;
+      }
+      if (!currentBooking?.tourId) {
+        alert("Không xác định được tourId để đánh giá (thiếu dữ liệu tour).");
+        return;
+      }
+
+      const rating = Number($('reviewRating').value || 5);
+      const comment = $('reviewComment').value.trim();
+
+      await TB.apiFetch('/api/v1/reviews', {
+        method: 'POST',
+        body: JSON.stringify({
+          tourId: currentBooking.tourId,
+          userId: user.id,
+          rating,
+          comment
+        })
+      });
+
+      alert("Cảm ơn bạn đã gửi đánh giá!");
+      closeModals();
+    }
+
+    $('filterAll').onclick = () => applyFilter('all');
+    $('filterPending').onclick = () => applyFilter('pending');
+    $('filterDone').onclick = () => applyFilter('done');
+    $('filterCancelled').onclick = () => applyFilter('cancelled');
+
+    loadBookings().catch(err => {
+      console.error(err);
+      $('bookingList').innerHTML = `<div class="card panel" style="border-color:#fecaca;color:#991b1b;">${(err?.message || 'Không tải được lịch sử đặt tour')}</div>`;
+    });
+  </script>
+</body>
+</html>

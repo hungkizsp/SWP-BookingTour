@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Tours - TourBooking Admin</title>
+    <link rel="stylesheet" href="../../assets/css/admin-common.css">
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/toast.js"></script>
+</head>
+
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <a href="./dashboard.html" class="logo">TourBooking</a>
+            <nav>
+                <a href="./dashboard.html" class="nav-item">Dashboard</a>
+                <a href="./manageTours.html" class="nav-item active">Tours</a>
+                <a href="./manageCategories.html" class="nav-item">Categories</a>
+                <a href="./manageUsers.html" class="nav-item">Users</a>
+                <a href="./manageReview.html" class="nav-item">Reviews</a>
+                <a href="./financialReport.html" class="nav-item">Financial Report</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Tours</h1>
+                <div class="user-actions">
+                    <span id="userInfo" style="font-weight: 600;"></span>
+                    <button id="logoutBtn" class="btn btn-secondary" style="margin-left: 1rem;">Logout</button>
+                </div>
+            </header>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2>Tour List</h2>
+                    <button onclick="showCreateModal()" class="btn btn-primary">Create New Tour</button>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tour Name</th>
+                                <th>Price</th>
+                                <th>Duration (Days)</th>
+                                <th>Location</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tourTable">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem;">Loading tours...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="pagination" class="pagination-container"></div>
+            </div>
+
+            <div class="card" style="margin-top: 2rem;">
+                <h3>Tour Details</h3>
+                <div id="detail"
+                    style="background: var(--bg-light); padding: 1.5rem; border-radius: 0.5rem; margin-top: 1rem;">
+                    <p style="color: var(--text-muted);">Select a tour to view details</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Create/Edit -->
+    <div id="tourModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Create Tour</h3>
+            <input type="hidden" id="tourId">
+
+            <div class="form-group">
+                <label>Tour Name *</label>
+                <input type="text" id="tourName" class="form-control" placeholder="Enter tour name">
+            </div>
+
+            <div class="form-group">
+                <label>Price * (VND)</label>
+                <input type="number" id="price" class="form-control" placeholder="0" min="1000" step="1000">
+            </div>
+
+            <div class="form-group">
+                <label>Duration (Days) *</label>
+                <input type="number" id="duration" class="form-control" placeholder="Number of days" min="1" step="1">
+                <small>Enter the number of days for this tour (must be > 0)</small>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Start Location *</label>
+                    <input type="text" id="startLocation" class="form-control" placeholder="e.g., Hanoi, Ho Chi Minh">
+                </div>
+
+                <div class="form-group">
+                    <label>End Location *</label>
+                    <input type="text" id="endLocation" class="form-control" placeholder="e.g., Da Nang, Nha Trang">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Transport Type *</label>
+                <input type="text" id="transportType" class="form-control" placeholder="e.g., Bus, Plane">
+            </div>
+
+
+
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="description" class="form-control" rows="3"
+                    placeholder="Enter tour description"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Itinerary *</label>
+                <textarea id="itinerary" class="form-control" rows="3" placeholder="Enter tour itinerary"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Category ID (Optional)</label>
+                <input type="number" id="categoryId" class="form-control" placeholder="Category ID" min="1">
+                <small>Leave empty if no category</small>
+            </div>
+
+            <div class="form-group">
+                <label>Tour Images</label>
+                <input type="file" id="tourImages" class="form-control" multiple accept="image/*"
+                    onchange="previewImages(event)">
+                <div id="imagePreviewContainer" style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                </div>
+                <input type="hidden" id="existingImages">
+            </div>
+
+            <div class="form-group" style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Tour Schedules</label>
+                <div id="scheduleContainer"></div>
+                <button type="button" onclick="addScheduleRow()" class="btn btn-secondary btn-sm"
+                    style="margin-top: 10px;">+ Add Schedule</button>
+            </div>
+
+            <div class="modal-buttons">
+                <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                <button onclick="saveTour()" class="btn btn-primary">Save Tour</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "/api/v1/admin/tours";
+        const PUBLIC_API = "/api/v1/tours";
+
+        // Kiểm tra quyền ADMIN
+        function checkAuth() {
+            try {
+                const userStr = sessionStorage.getItem('user');
+                if (!userStr) {
+                    window.location.href = '/pages/auth/login.html';
+                    return false;
+                }
+
+                const user = JSON.parse(userStr);
+                if (!user || user.role !== 'ADMIN') {
+                    window.location.href = '/pages/auth/login.html';
+                    return false;
+                }
+
+                document.getElementById('userInfo').innerText = user.fullName || user.FullName || user.email;
+                return true;
+            } catch (error) {
+                console.error('Auth error:', error);
+                window.location.href = '/pages/auth/login.html';
+                return false;
+            }
+        }
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (window.TB && TB.logout) {
+                TB.logout();
+            } else {
+                sessionStorage.removeItem('user');
+                sessionStorage.removeItem('token');
+                window.location.href = '/pages/auth/login.html';
+            }
+        });
+
+        let currentEditId = null;
+
+        // Helper: Lấy Header (bao gồm Token)
+        function getHeaders() {
+            const token = sessionStorage.getItem('token');
+            const headers = {
+                "Content-Type": "application/json"
+            };
+            if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+            }
+            return headers;
+        }
+
+        let currentPage = 0;
+        let pageSize = 10;
+
+        async function loadTours(page = 0) {
+            currentPage = page;
+            const tourTable = document.getElementById("tourTable");
+            
+            try {
+                const response = await TB.apiFetch(`${PUBLIC_API}/browse?page=${page}&size=${pageSize}&sortBy=tourName&sortDir=asc`);
+                const data = response.data;
+                const tours = data.content;
+
+                if (!tours || tours.length === 0) {
+                    tourTable.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2rem;">No tours found.</td>
+                        </tr>
+                    `;
+                    renderPagination(0, 0);
+                    return;
+                }
+
+                let html = "";
+                tours.forEach(t => {
+                    const location = `${t.startLocation || '?'} - ${t.endLocation || '?'}`;
+                    html += `
+                        <tr>
+                            <td>${t.id}</td>
+                            <td><strong>${escapeHtml(t.tourName)}</strong></td>
+                            <td>${formatPrice(t.price)}</td>
+                            <td>${t.duration || '-'} days</td>
+                            <td>${escapeHtml(location)}</td>
+                            <td class="action-buttons">
+                                <button onclick="viewTour(${t.id})" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">View</button>
+                                <button onclick="showEditModal(${t.id})" class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Edit</button>
+                                <button onclick="deleteTour(${t.id})" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tourTable.innerHTML = html;
+                renderPagination(data.totalPages, data.page);
+            } catch (error) {
+                console.error('Error loading tours:', error);
+                tourTable.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--danger);">Error: ${error.message}</td>
+                    </tr>
+                `;
+            }
+        }
+
+        function renderPagination(totalPages, currentPage) {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'flex';
+            
+            let html = `
+                <button class="page-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="loadTours(${currentPage - 1})">&laquo;</button>
+            `;
+            
+            for (let i = 0; i < totalPages; i++) {
+                if (i === 0 || i === totalPages - 1 || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadTours(${i})">${i + 1}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span class="page-info">...</span>`;
+                }
+            }
+            
+            html += `
+                <button class="page-btn" ${currentPage === totalPages - 1 ? 'disabled' : ''} onclick="loadTours(${currentPage + 1})">&raquo;</button>
+            `;
+            container.innerHTML = html;
+        }
+
+        async function viewTour(id) {
+            try {
+                const response = await TB.apiFetch(`${PUBLIC_API}/${id}`);
+                const t = response.data || response;
+                document.getElementById("detail").innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                        <p><strong>Tour Name:</strong> ${escapeHtml(t.tourName)}</p>
+                        <p><strong>Price:</strong> ${formatPrice(t.price)}</p>
+                        <p><strong>Duration:</strong> ${t.duration} days</p>
+                        <p><strong>Start Location:</strong> ${escapeHtml(t.startLocation || 'N/A')}</p>
+                        <p><strong>End Location:</strong> ${escapeHtml(t.endLocation || 'N/A')}</p>
+                        <p><strong>Rating:</strong> ${t.rating || 'No ratings'}</p>
+                    </div>
+                    <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                        <p><strong>Description:</strong></p>
+                        <p>${escapeHtml(t.description || 'No description available')}</p>
+                    </div>
+                    ${t.imageUrls && t.imageUrls.length > 0 ? `
+                    <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                        <p><strong>Images:</strong></p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                            ${t.imageUrls.map(url => `<img src="${TB.normalizeImageUrl(url)}" style="width: 150px; height: 100px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;">`).join('')}
+                        </div>
+                    </div>` : ''}
+                    <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
+                        <p><strong>Transport:</strong> ${escapeHtml(t.transportType || 'N/A')}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Error loading tour details:', error);
+                showToast('Error loading tour details: ' + error.message, 'error');
+            }
+        }
+
+        // SHOW CREATE MODAL
+        function showCreateModal() {
+            currentEditId = null;
+            document.getElementById('modalTitle').innerText = 'Create New Tour';
+            document.getElementById('tourId').value = '';
+            document.getElementById('tourName').value = '';
+            document.getElementById('price').value = '';
+            document.getElementById('duration').value = '';
+            document.getElementById('startLocation').value = '';
+            document.getElementById('endLocation').value = '';
+            document.getElementById('transportType').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('itinerary').value = '';
+            document.getElementById('categoryId').value = '';
+            
+            // Set min check for schedules row to tomorrow
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            window.minDateStr = tomorrow.toISOString().split('T')[0];
+            document.getElementById('tourImages').value = '';
+            document.getElementById('imagePreviewContainer').innerHTML = '';
+            document.getElementById('existingImages').value = '';
+            document.getElementById('scheduleContainer').innerHTML = '';
+            document.getElementById('tourModal').style.display = 'flex';
+        }
+
+        // SHOW EDIT MODAL
+        async function showEditModal(id) {
+            try {
+                const response = await TB.apiFetch(`${PUBLIC_API}/${id}`);
+                const t = response.data;
+                currentEditId = id;
+                document.getElementById('modalTitle').innerText = 'Edit Tour';
+                document.getElementById('tourId').value = t.id;
+                document.getElementById('tourName').value = t.tourName || '';
+                document.getElementById('price').value = t.price || '';
+                document.getElementById('duration').value = t.duration || '';
+                document.getElementById('startLocation').value = t.startLocation || '';
+                document.getElementById('endLocation').value = t.endLocation || '';
+                document.getElementById('transportType').value = t.transportType || '';
+                document.getElementById('description').value = t.description || '';
+                document.getElementById('itinerary').value = t.itinerary || '';
+                document.getElementById('categoryId').value = t.categoryId || '';
+
+                document.getElementById('tourImages').value = '';
+                document.getElementById('existingImages').value = (t.imageUrls && t.imageUrls.length > 0) ? JSON.stringify(t.imageUrls) : '';
+
+                // Schedules
+                const scheduleContainer = document.getElementById('scheduleContainer');
+                scheduleContainer.innerHTML = '';
+                if (t.schedules && t.schedules.length > 0) {
+                    t.schedules.forEach(s => addScheduleRow(s));
+                }
+
+                const previewContainer = document.getElementById('imagePreviewContainer');
+                previewContainer.innerHTML = '';
+                if (t.imageUrls && t.imageUrls.length > 0) {
+                    t.imageUrls.forEach(urlOrData => {
+                        const img = document.createElement('img');
+                        img.src = TB.normalizeImageUrl(urlOrData);
+                        img.className = 'preview-img';
+                        img.style.width = '80px';
+                        img.style.height = '80px';
+                        img.style.objectFit = 'cover';
+                        img.style.borderRadius = '4px';
+                        img.style.border = '1px solid #ddd';
+                        previewContainer.appendChild(img);
+                    });
+                }
+
+                document.getElementById('tourModal').style.display = 'flex';
+            } catch (error) {
+                console.error('Error loading tour for edit:', error);
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        // PREVIEW IMAGES
+        function previewImages(event) {
+            const container = document.getElementById('imagePreviewContainer');
+            container.innerHTML = ''; // clear for new selection
+            const files = event.target.files;
+            if (files) {
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'preview-img';
+                        img.style.width = '80px';
+                        img.style.height = '80px';
+                        img.style.objectFit = 'cover';
+                        img.style.borderRadius = '4px';
+                        img.style.border = '1px solid #ddd';
+                        container.appendChild(img);
+                    }
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+
+        // SAVE TOUR (CREATE OR UPDATE)
+        async function saveTour() {
+            const tourName = document.getElementById('tourName').value.trim();
+            const price = parseFloat(document.getElementById('price').value);
+            const duration = parseInt(document.getElementById('duration').value);
+            const startLocation = document.getElementById('startLocation').value.trim();
+            const endLocation = document.getElementById('endLocation').value.trim();
+            const transportType = document.getElementById('transportType').value.trim();
+            const description = document.getElementById('description').value.trim();
+            const itinerary = document.getElementById('itinerary').value.trim();
+            const categoryId = document.getElementById('categoryId').value;
+            const fileInput = document.getElementById('tourImages');
+
+            // Validation
+            if (!tourName || isNaN(price) || price <= 0 || isNaN(duration) || duration <= 0 || !startLocation || !endLocation || !itinerary || !transportType) {
+                showToast('Please fill all required fields correctly (numbers must be > 0)', 'error');
+                return;
+            }
+
+            const schedules = getScheduleData();
+            if (schedules.length === 0) {
+                showToast('Please add at least one valid future schedule!', 'error');
+                return;
+            }
+
+            let finalImageUrls = [];
+            const existingImagesStr = document.getElementById('existingImages').value;
+            if (existingImagesStr) {
+                try {
+                    finalImageUrls = JSON.parse(existingImagesStr);
+                } catch (e) { }
+            }
+
+            // Upload images if new files selected
+            if (fileInput.files && fileInput.files.length > 0) {
+                const formData = new FormData();
+                Array.from(fileInput.files).forEach(f => formData.append("files", f));
+
+                try {
+                    const uploadRes = await fetch("http://localhost:8080/api/v1/admin/tours/upload", {
+                        method: 'POST',
+                        headers: {
+                            "Authorization": `Bearer ${sessionStorage.getItem('token')}`
+                        },
+                        body: formData
+                    });
+                    const uploadData = await uploadRes.json();
+                    if (!uploadRes.ok) throw new Error(uploadData.message || 'Image upload failed');
+                    // Gắn thêm ảnh mới vào danh sách ảnh cũ (nếu có)
+                    finalImageUrls = finalImageUrls.concat(uploadData.data);
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    showToast('Error uploading images: ' + error.message, 'error');
+                    return;
+                }
+            }
+
+            const tourData = {
+                tourName: tourName,
+                description: description || null,
+                itinerary: itinerary || null,
+                price: price,
+                duration: duration,
+                startLocation: startLocation,
+                endLocation: endLocation,
+                transportType: transportType,
+                categoryId: categoryId ? parseInt(categoryId) : null,
+                imageUrls: finalImageUrls.length > 0 ? finalImageUrls : null,
+                schedules: getScheduleData()
+            };
+
+            let url = currentEditId ? `${API}/${currentEditId}` : API;
+            let method = currentEditId ? 'PUT' : 'POST';
+
+            try {
+                await TB.apiFetch(url, {
+                    method: method,
+                    body: JSON.stringify(tourData)
+                });
+                closeModal();
+                loadTours();
+                showToast(currentEditId ? 'Tour updated successfully!' : 'Tour created successfully!', 'success');
+            } catch (error) {
+                console.error('Error saving tour:', error);
+                showToast('Error: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteTour(id) {
+            if (confirm('Are you sure you want to delete this tour?')) {
+                try {
+                    await TB.apiFetch(`${API}/${id}`, {
+                        method: "DELETE"
+                    });
+                    loadTours();
+                    showToast('Tour deleted successfully!', 'success');
+                    document.getElementById("detail").innerHTML = `<p style="color: var(--text-muted);">Tour deleted. Select a tour to view details</p>`;
+                } catch (error) {
+                    console.error('Error deleting tour:', error);
+                    showToast('Error: ' + error.message, 'error');
+                }
+            }
+        }
+
+        // Schedule Helpers
+        function addScheduleRow(data = null) {
+            const container = document.getElementById('scheduleContainer');
+            const row = document.createElement('div');
+            row.className = 'schedule-row';
+            row.style.display = 'grid';
+            row.style.gridTemplateColumns = '1fr 1fr 80px 40px';
+            row.style.gap = '10px';
+            row.style.marginBottom = '10px';
+            row.style.alignItems = 'center';
+
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const minDate = tomorrow.toISOString().split('T')[0];
+
+            row.innerHTML = `
+                <input type="date" class="form-control schedule-start" value="${data ? data.startDate : ''}" min="${minDate}" onchange="updateMinEndDate(this)" placeholder="Start Date">
+                <input type="date" class="form-control schedule-end" value="${data ? data.endDate : ''}" min="${data ? data.startDate : minDate}" placeholder="End Date">
+                <input type="number" class="form-control schedule-max" value="${data ? data.maxSlots || data.availableSlots : ''}" min="1" placeholder="Max Slots">
+                <button type="button" onclick="this.parentElement.remove()" class="btn btn-danger btn-sm" style="padding: 2px 5px;">&times;</button>
+            `;
+            container.appendChild(row);
+        }
+
+        function updateMinEndDate(startInput) {
+            const endInput = startInput.parentElement.querySelector('.schedule-end');
+            endInput.min = startInput.value;
+            if (endInput.value && endInput.value < startInput.value) {
+                endInput.value = startInput.value;
+            }
+        }
+
+        function getScheduleData() {
+            const rows = document.querySelectorAll('.schedule-row');
+            const schedules = [];
+            rows.forEach(row => {
+                const startDate = row.querySelector('.schedule-start').value;
+                const endDate = row.querySelector('.schedule-end').value;
+                const maxSlots = parseInt(row.querySelector('.schedule-max').value);
+
+                if (startDate && endDate && !isNaN(maxSlots)) {
+                    schedules.push({
+                        startDate: startDate,
+                        endDate: endDate,
+                        maxSlots: maxSlots
+                    });
+                }
+            });
+            return schedules;
+        }
+
+        // CLOSE MODAL
+        function closeModal() {
+            document.getElementById('tourModal').style.display = 'none';
+            currentEditId = null;
+        }
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('tourModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        function formatPrice(price) {
+            if (!price && price !== 0) return '-';
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }).format(price);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Init
+        if (checkAuth()) {
+            loadTours();
+        }
+    </script>
+</body>
+
+</html>

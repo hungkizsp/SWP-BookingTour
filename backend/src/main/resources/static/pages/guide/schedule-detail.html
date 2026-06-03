@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết Tour &middot; Hướng dẫn viên</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        body { background: #fbf6ee; margin: 0; padding-bottom: 70px; }
+        .guide-header { background: #115e59; color: white; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; display:flex; align-items:center; gap:12px; }
+        .back-btn { background: rgba(255,255,255,0.2); border: none; border-radius: 50%; width: 36px; height: 36px; color: white; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+        .guide-header h1 { margin: 0; font-size: 1.2rem; font-family: 'Fraunces'; line-height: 1.2; }
+        
+        .content-area { padding: 20px; display: grid; gap: 20px; }
+        .section-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 16px rgba(15,23,42,0.06); border: 1px solid rgba(0,0,0,0.05); }
+        .section-title { font-family: 'Fraunces'; font-size: 1.1rem; margin-top: 0; margin-bottom: 12px; color: #1e293b; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+        
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: #64748b; margin-bottom: 6px; }
+        .form-input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.95rem; }
+        .btn-action { background: #0f766e; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; width: 100%; margin-top: 8px; }
+        .btn-action:active { transform: translateY(1px); }
+        .btn-outline { background: transparent; border: 1px solid #0f766e; color: #0f766e; }
+        
+        .file-input { display: none; }
+        .file-label { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #94a3b8; border-radius: 8px; padding: 20px; cursor: pointer; color: #64748b; font-size: 0.9rem; text-align: center; }
+        .file-label:hover { background: #f8fafc; border-color: #0f766e; color: #0f766e; }
+        
+        #previewImages { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; padding-bottom: 5px; }
+        .preview-img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; }
+    </style>
+</head>
+
+<body>
+    <header class="guide-header">
+        <a href="/pages/guide/dashboard.html" class="back-btn">&#8592;</a>
+        <h1 id="tourTitle">Đang tải...</h1>
+    </header>
+
+    <div class="content-area">
+        
+        <!-- UC28: Update Progress -->
+        <div class="section-card">
+            <h2 class="section-title">Cập nhật tiến độ</h2>
+            <div class="form-group">
+                <label>Vị trí hoặc trạng thái hiện tại</label>
+                <div class="input-group">
+                <textarea id="progressInput" placeholder="Đang diễn ra điều gì?" class="form-input"></textarea>
+                <button class="btn-action" onclick="updateProgress()">Lưu tiến độ</button>
+            </div>
+            <div id="progressHistory" style="margin-top: 1rem; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+
+        <!-- UC29: Upload Images -->
+        <div class="section-card">
+            <h2 class="section-title">Tải ảnh hoạt động tour</h2>
+            <div class="form-group">
+                <input type="file" id="photosInput" class="file-input" multiple accept="image/*">
+                <label for="photosInput" class="file-label">
+                    <span style="font-size: 1.5rem; margin-bottom: 4px;">&#128247;</span>
+                    Nhấn để chọn ảnh
+                </label>
+                <div id="previewImages"></div>
+            </div>
+            <button class="btn-action btn-outline" id="uploadBtn" onclick="uploadPhotos()">Tải lên ảnh</button>
+            <div id="uploadedGallery" style="margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap;"></div>
+        </div>
+
+        <!-- UC30: Submit Report -->
+        <div class="section-card">
+            <h2 class="section-title">Kết thúc tour &amp; Nộp báo cáo</h2>
+            <div class="form-group">
+                <label>Nội dung báo cáo</label>
+                <textarea id="reportInput" class="form-input" rows="4" placeholder="Tóm tắt tour, ghi chú các sự cố..."></textarea>
+            </div>
+            <button class="btn-action" style="background: #b45309;" onclick="submitReport()">Nộp báo cáo cuối</button>
+        </div>
+
+    </div>
+
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/guide-schedule.js"></script>
+</body>
+</html>

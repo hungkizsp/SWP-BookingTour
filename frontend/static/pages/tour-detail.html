@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chi tiết Tour - DANANGBEST</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Manrope:wght@600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 50px;
+      padding: 60px 0;
+    }
+
+    .tour-gallery {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      grid-template-rows: 240px 240px;
+      gap: 15px;
+      margin-bottom: 40px;
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+
+    .tour-gallery img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s;
+    }
+
+    .tour-gallery img:hover {
+      transform: scale(1.05);
+    }
+
+    .tour-gallery .main-img {
+      grid-row: span 2;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 25px;
+      margin-bottom: 50px;
+      background: var(--bg-section);
+      padding: 40px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      width: 50px;
+      height: 50px;
+      background: white;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .itinerary-item {
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .itinerary-header {
+      padding: 20px 25px;
+      background: white;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .itinerary-content {
+      padding: 25px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-section);
+      display: none;
+      line-height: 2;
+      color: var(--text-soft);
+    }
+
+    .itinerary-item.active .itinerary-content {
+      display: block;
+    }
+
+    .sidebar-booking {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 35px;
+      position: sticky;
+      top: 120px;
+      box-shadow: var(--shadow-premium);
+    }
+
+    @media (max-width: 960px) {
+      .detail-layout {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .tour-gallery {
+        grid-template-rows: 200px 150px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="top-bar">
+    <div class="top-info">
+      <span>📞 Hotline: 0913 599 745</span>
+      <span style="margin-left: 20px;">📧 Email: buiminhtue2005@gmail.com</span>
+    </div>
+    <div class="top-links" id="topLinks">
+      <a href="./auth/login.html">Đăng nhập</a>/
+      <a href="./auth/register.html">Đăng ký</a>
+    </div>
+  </div>
+
+  <header class="site-header" id="siteHeader">
+    <div class="header-container">
+      <a class="brand" href="./index.html">
+        <div class="brand-mark">DB</div>
+        <div class="brand-copy">
+          <strong>DANANGBEST</strong>
+          <span>Trao niềm tin - Nhận giá thực</span>
+        </div>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="./index.html">Trang chủ</a></li>
+          <li><a href="./tours.html">Tour Đà Nẵng</a></li>
+          <li><a href="./tours.html">Tour 1 Ngày</a></li>
+          <li><a href="./compare.html">So sánh</a></li>
+          <li><a href="./chat.html">Tư vấn AI</a></li>
+        </ul>
+      </nav>
+      <div id="navRight" class="actions"></div>
+    </div>
+  </header>
+
+  <div class="tour-detail-hero"
+    style="background: linear-gradient(to right, #064e3b, #065f46); padding: 160px 5% 60px; color: white;">
+    <div class="container reveal">
+      <div
+        style="font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-bottom: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">
+        Trang chủ / Tour Đà Nẵng / <span id="breadcrumb" style="color: var(--accent-light);">Đang tải...</span>
+      </div>
+      <h1 id="title"
+        style="font-size: clamp(2rem, 5vw, 3.5rem); margin: 0; font-weight: 900; letter-spacing: -0.04em; line-height: 1.1;">
+        Đang tải...
+      </h1>
+    </div>
+  </div>
+
+  <main class="container" style="padding: 0 5%;">
+    <div class="detail-layout">
+      <section class="reveal">
+        <div class="tour-gallery" id="gallery">
+          <img src="https://danangbest.com/vnt_upload/tour/04_2023/banahill_1.jpg" class="main-img" alt="Tour img">
+          <img src="https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg" alt="Tour img">
+          <img src="https://danangbest.com/vnt_upload/tour/04_2023/banahill_5.jpg" alt="Tour img">
+        </div>
+
+        <div class="feature-grid">
+          <div class="feature-item">
+            <div class="feature-icon">🕒</div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-faint); font-weight: 700; text-transform: uppercase;">
+                Thời lượng</div>
+              <div style="font-weight: 800; color: var(--primary);" id="duration">...</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">📍</div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-faint); font-weight: 700; text-transform: uppercase;">
+                Khởi hành</div>
+              <div style="font-weight: 800; color: var(--primary);" id="departure">...</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🚌</div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-faint); font-weight: 700; text-transform: uppercase;">
+                Phương tiện</div>
+              <div style="font-weight: 800; color: var(--primary);" id="transport">...</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">🏷️</div>
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-faint); font-weight: 700; text-transform: uppercase;">Mã
+                tour</div>
+              <div style="font-weight: 800; color: var(--primary);" id="tourCode">...</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 60px;">
+          <h3 class="section-title"
+            style="margin-bottom: 25px; border-left: 5px solid var(--accent); padding-left: 20px;">GIỚI THIỆU HÀNH TRÌNH
+          </h3>
+          <p id="desc" style="line-height: 2; color: var(--text-soft); font-size: 1.05rem;"></p>
+        </div>
+
+        <div style="margin-bottom: 60px;">
+          <h3 class="section-title"
+            style="margin-bottom: 25px; border-left: 5px solid var(--accent); padding-left: 20px;">LỊCH TRÌNH CHI TIẾT
+          </h3>
+          <div id="itinerary">
+            <div class="loader"></div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 60px;">
+          <h3 class="section-title"
+            style="margin-bottom: 25px; border-left: 5px solid var(--accent); padding-left: 20px;">CHÍNH SÁCH & LƯU Ý
+          </h3>
+          <div
+            style="background: white; border: 1px solid var(--border); border-radius: 12px; padding: 30px; display: grid; gap: 25px;">
+            <div>
+              <strong style="display: block; color: var(--primary); margin-bottom: 10px;">👥 ĐỐI TƯỢNG PHÙ HỢP:</strong>
+              <div id="suitableAges" style="color: var(--text-soft); line-height: 1.8;">Mọi lứa tuổi</div>
+            </div>
+            <div style="border-top: 1px solid var(--border); padding-top: 25px;">
+              <strong style="display: block; color: var(--primary); margin-bottom: 10px;">🧒 CHÍNH SÁCH TRẺ EM:</strong>
+              <div id="childPolicy" style="color: var(--text-soft); line-height: 1.8;">Theo quy định chung</div>
+            </div>
+            <div style="border-top: 1px solid var(--border); padding-top: 25px;">
+              <strong style="display: block; color: var(--primary); margin-bottom: 10px;">✨ TẠI SAO NÊN CHỌN CHÚNG
+                TÔI?</strong>
+              <div id="whyChooseUs" style="color: var(--text-soft); line-height: 1.8; white-space: pre-line;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 60px;" id="faqSection">
+          <h3 class="section-title"
+            style="margin-bottom: 25px; border-left: 5px solid var(--accent); padding-left: 20px;">CÂU HỎI THƯỜNG GẶP
+          </h3>
+          <div id="tourFaqList" style="background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+            <div style="padding: 20px; text-align: center; color: var(--text-faint);">Đang tải câu hỏi...</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 60px;" id="reviewSection">
+          <h3 class="section-title"
+            style="margin-bottom: 25px; border-left: 5px solid var(--accent); padding-left: 20px;">ĐÁNH GIÁ CHUYẾN ĐI
+          </h3>
+          <div id="reviewFormContainer" style="margin-bottom: 30px; display: none;">
+            <div style="background: white; border: 1px solid var(--border); border-radius: 12px; padding: 25px;">
+              <h4 style="margin-bottom: 15px; color: var(--primary);">Viết đánh giá của bạn</h4>
+              <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; font-weight: 600;">Đánh giá (1-5 sao):</label>
+                <select id="reviewRating"
+                  style="width: 150px; padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+                  <option value="5">5 Sao ⭐⭐⭐⭐⭐</option>
+                  <option value="4">4 Sao ⭐⭐⭐⭐</option>
+                  <option value="3">3 Sao ⭐⭐⭐</option>
+                  <option value="2">2 Sao ⭐⭐</option>
+                  <option value="1">1 Sao ⭐</option>
+                </select>
+              </div>
+              <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; font-weight: 600;">Nhận xét:</label>
+                <textarea id="reviewComment" rows="4"
+                  style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"
+                  placeholder="Chia sẻ trải nghiệm của bạn..."></textarea>
+              </div>
+              <button class="btn btn-search" id="submitReviewBtn"
+                style="padding: 10px 25px; border-radius: 8px; cursor: pointer;">Gửi đánh giá</button>
+            </div>
+          </div>
+          <div id="loginPromptReview"
+            style="background: var(--bg-section); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+            Vui lòng <a href="./auth/login.html"
+              style="color: var(--primary); font-weight: bold; text-decoration: underline;">đăng nhập</a> để viết đánh
+            giá.
+          </div>
+          <div id="reviewList" style="display: grid; gap: 20px;">
+            <div class="loader" style="margin: 0 auto;"></div>
+          </div>
+        </div>
+
+      </section>
+
+      <aside class="reveal" style="animation-delay: 0.3s;">
+        <div class="sidebar-booking">
+          <div
+            style="font-size: 0.85rem; color: var(--text-faint); margin-bottom: 10px; font-weight: 700; text-transform: uppercase;">
+            Giá tour trọn gói</div>
+          <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 30px;">
+            <div style="font-size: 2.5rem; font-weight: 800; color: var(--price);" id="price">...</div>
+            <div style="font-weight: 700; color: var(--text-faint);">VNĐ</div>
+          </div>
+
+          <div style="margin-bottom: 30px;">
+            <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-soft); margin-bottom: 10px;">CHỌN NGÀY
+              KHỞI HÀNH:</label>
+            <select id="schedules"
+              style="margin-top: 10px; height: 50px; border-radius: 12px; font-weight: 600;"></select>
+          </div>
+
+          <button class="btn btn-search" id="bookNowBtn"
+            style="width: 100%; height: 60px; font-size: 1.2rem; border-radius: 15px;">ĐẶT TOUR NGAY</button>
+
+          <div
+            style="margin-top: 40px; border-top: 2px dashed var(--border); padding-top: 30px; display: grid; gap: 20px;">
+            <div style="display: flex; gap: 15px; font-size: 0.95rem; font-weight: 600; color: var(--text-soft);">
+              <span style="color: var(--primary-light);">✓</span> Bảo hiểm du lịch trọn gói
+            </div>
+            <div style="display: flex; gap: 15px; font-size: 0.95rem; font-weight: 600; color: var(--text-soft);">
+              <span style="color: var(--primary-light);">✓</span> Miễn phí hủy tour trước 24h
+            </div>
+            <div style="display: flex; gap: 15px; font-size: 0.95rem; font-weight: 600; color: var(--text-soft);">
+              <span style="color: var(--primary-light);">✓</span> Nhân viên hỗ trợ tận tình 24/7
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer style="background: #064e3b; color: white; padding: 60px 0;">
+    <div class="container" style="text-align: center; color: rgba(255,255,255,0.4); font-size: 0.85rem;">
+      &copy; 2024 DANANGBEST. Trao niềm tin - Nhận giá thực.
+    </div>
+  </footer>
+
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/tour-detail.js"></script>
+  <script>
+    const el = (id) => document.getElementById(id);
+    const header = el('siteHeader');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 50) header.classList.add('scrolled');
+      else header.classList.remove('scrolled');
+    });
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible');
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Login check
+    const navRight = el('navRight');
+    const user = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
+    if (user) {
+      if (el('topLinks')) el('topLinks').style.display = 'none';
+      if (el('authLinks')) el('authLinks').style.display = 'none';
+      
+      const isAdmin = String(user.role || '').toUpperCase() === 'ADMIN';
+      const adminLink = isAdmin
+        ? '<a class="btn" href="./admin/manageUsers.html" style="font-size: 0.8rem; height: 40px; min-height: 40px; border-radius: 10px;">QUẢN TRỊ</a>'
+        : '';
+      const userLinks = !isAdmin
+        ? `<a href="./user/bookings.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem;">TOUR ĐÃ ĐẶT</a>
+           <a href="./user/personal-info.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem; margin-left:15px;">CÁ NHÂN</a>`
+        : '';
+
+      navRight.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="font-weight: 700; color: var(--primary); font-size: 0.9rem;">Chào, ${user.fullName || 'Bạn'}</span>
+          ${userLinks}
+          ${adminLink}
+          <button class="btn btn-secondary" id="logoutBtn" style="padding: 0 20px; min-height: 40px; height: 40px; font-size: 0.8rem; border-radius: 10px;">Đăng xuất</button>
+        </div>`;
+      
+      const logoutBtn = el('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.onclick = () => {
+          sessionStorage.clear();
+          location.reload();
+        };
+      }
+    }
+  </script>
+</body>
+
+</html>

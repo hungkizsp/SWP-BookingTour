@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tư vấn AI - DANA</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Manrope:wght@600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .chat-layout {
+      max-width: 1000px;
+      margin: 40px auto;
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      height: 75vh;
+      min-height: 500px;
+      box-shadow: var(--shadow-premium);
+    }
+
+    .chat-sidebar {
+      background: var(--bg-section);
+      border-right: 1px solid var(--border);
+      padding: 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    .chat-main {
+      display: flex;
+      flex-direction: column;
+      background: white;
+      min-height: 0;
+    }
+
+    .chat-header {
+      padding: 20px 30px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-box {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      background: #f8fafc;
+      border-left: 1px solid var(--border);
+    }
+
+    .msg {
+      max-width: 80%;
+      padding: 15px 20px;
+      border-radius: 18px;
+      font-size: 1rem;
+      line-height: 1.6;
+      font-weight: 500;
+      position: relative;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      background: var(--primary);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg.ai, .msg.staff {
+      align-self: flex-start;
+      background: var(--bg-section);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+
+    .msg.me {
+      align-self: flex-end !important;
+      background: var(--primary) !important;
+      color: white !important;
+      border-bottom-right-radius: 4px;
+      border-bottom-left-radius: 18px !important;
+      border: none !important;
+    }
+
+    .chat-input-area {
+      padding: 25px 30px;
+      border-top: 1px solid var(--border);
+      background: white;
+    }
+
+    .chat-form {
+      display: flex;
+      gap: 15px;
+    }
+
+    .chat-form input {
+      flex: 1;
+      height: 55px;
+      padding: 0 25px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .chat-form input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn-send {
+      width: 55px;
+      height: 55px;
+      border-radius: 50%;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      font-size: 1.2rem;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 5px 12px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 800px) {
+      .chat-layout {
+        grid-template-columns: 1fr;
+        height: 600px;
+        margin: 20px;
+      }
+
+      .chat-sidebar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="top-bar">
+    <div class="top-info">
+      <span>📞 Hotline: 0913 599 745</span>
+      <span style="margin-left: 20px;">📧 Email: buiminhtue2005@gmail.com</span>
+    </div>
+    <div class="top-links" id="topLinks">
+      <a href="./auth/login.html">Đăng nhập</a>/
+      <a href="./auth/register.html">Đăng ký</a>
+    </div>
+  </div>
+
+  <header class="site-header" id="siteHeader">
+    <div class="header-container">
+      <a class="brand" href="./index.html">
+        <div class="brand-mark">DB</div>
+        <div class="brand-copy">
+          <strong>DANANGBEST</strong>
+          <span>Trao niềm tin - Nhận giá thực</span>
+        </div>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="./index.html">Trang chủ</a></li>
+          <li><a href="./tours.html">Tour Đà Nẵng</a></li>
+          <li><a href="./tours.html">Tour 1 Ngày</a></li>
+          <li><a href="./compare.html">So sánh</a></li>
+          <li><a href="./chat.html" class="active">Tư vấn AI</a></li>
+        </ul>
+      </nav>
+      <div id="navRight" class="actions"></div>
+    </div>
+  </header>
+
+  <section class="hero-banner"
+    style="background-image: url('https://images.unsplash.com/photo-1549608276-5786777e6587?q=80&w=2070&auto=format&fit=crop'); height: 60vh;">
+    <div class="hero-content">
+      <h1 class="reveal">HỖ TRỢ THÔNG MINH</h1>
+      <p class="reveal" style="animation-delay: 0.2s;">
+        Trợ lý AI luôn sẵn sàng đồng hành cùng bạn lên kế hoạch cho chuyến đi mơ ước.
+      </p>
+    </div>
+  </section>
+
+  <main class="container">
+    <div class="chat-layout reveal visible">
+      <aside class="chat-sidebar">
+        <div>
+          <h3 style="color: var(--primary); font-weight: 800; margin-bottom: 15px;">TƯ VẤN AI</h3>
+          <p style="font-size: 0.9rem; color: var(--text-soft); line-height: 1.6;">Chào mừng bạn đến với hỗ trợ trực
+            tuyến của Dana. Hãy đặt câu hỏi về tour, lịch trình hoặc giá cả.</p>
+        </div>
+
+        <div style="margin-top: auto;">
+          <div
+            style="font-size: 0.75rem; font-weight: 800; color: var(--text-faint); text-transform: uppercase; margin-bottom: 15px;">
+            Trạng thái</div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="width: 10px; height: 10px; background: #22c55e; border-radius: 50%;"></span>
+            <span style="font-weight: 700; color: var(--text-main);">AI Sẵn sàng hỗ trợ</span>
+          </div>
+        </div>
+      </aside>
+
+      <div class="chat-main">
+        <div class="chat-header">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <div
+              style="width: 40px; height: 40px; background: var(--primary); color: white; border-radius: 50%; display: grid; place-items: center; font-weight: 800;">
+              AI</div>
+            <div>
+              <div style="font-weight: 800; color: var(--primary); font-size: 0.95rem;">Concierge Assistant</div>
+              <div style="font-size: 0.75rem; color: var(--text-faint); font-weight: 600;">Trả lời tự động 24/7</div>
+            </div>
+          </div>
+          <div id="who" class="pill">Guest Session</div>
+        </div>
+
+        <div id="chatBox" class="chat-box"></div>
+
+        <div class="chat-input-area">
+          <form id="form" class="chat-form">
+            <input id="text" placeholder="Nhập tin nhắn của bạn..." autocomplete="off">
+            <button type="submit" class="btn btn-search btn-send">✈</button>
+          </form>
+          <div style="display: flex; gap: 15px; margin-top: 15px;">
+            <button id="escalateBtn"
+              style="background: none; border: none; color: var(--primary); font-size: 0.8rem; font-weight: 700; cursor: pointer; text-decoration: underline;">Kết
+              nối với nhân viên</button>
+            <div id="escalationStatus" style="font-size: 0.8rem; font-weight: 700; color: var(--accent);" hidden></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer style="background: #064e3b; color: white; padding: 100px 5% 40px; margin-top: 100px;">
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 60px; margin-bottom: 80px;">
+      <div>
+        <h3 style="color: var(--accent); margin-bottom: 30px; font-size: 1.8rem;">DANA</h3>
+        <p style="opacity: 0.8; line-height: 2; margin-bottom: 30px;">Trao niềm tin - Nhận giá thực. Chúng tôi cam kết
+          mang lại những chuyến đi đáng nhớ nhất cho mọi khách hàng.</p>
+      </div>
+      <div>
+        <h4 style="margin-bottom: 30px; font-weight: 700; border-left: 4px solid var(--accent); padding-left: 15px;">
+          LIÊN HỆ</h4>
+        <p style="opacity: 0.9; margin-bottom: 15px;">📍 Đà Nẵng, Việt Nam</p>
+        <p style="opacity: 0.9;">📞 Hotline: 0913 599 745</p>
+      </div>
+      <div>
+        <h4 style="margin-bottom: 30px; font-weight: 700; border-left: 4px solid var(--accent); padding-left: 15px;">HỖ
+          TRỢ</h4>
+        <ul style="list-style: none; padding: 0; opacity: 0.8; line-height: 2.5;">
+          <li>Chính bảo mật</li>
+          <li>Câu hỏi thường gặp</li>
+        </ul>
+      </div>
+    </div>
+    <div
+      style="text-align: center; color: rgba(255,255,255,0.4); font-size: 0.85rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 30px;">
+      &copy; 2024 DANANGBEST. All rights reserved.
+    </div>
+  </footer>
+
+  <script src="../assets/js/api.js?v=5"></script>
+  <script src="../assets/js/chat.js?v=5"></script>
+  <script>
+    const el = (id) => document.getElementById(id);
+    const header = el('siteHeader');
+    if (header) {
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) header.classList.add('scrolled');
+        else header.classList.remove('scrolled');
+      });
+    }
+
+    const user = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
+    const navRight = el('navRight');
+    if (user) {
+      if (el('topLinks')) el('topLinks').style.display = 'none';
+      if (el('who')) el('who').textContent = user.fullName;
+
+      const isAdmin = String(user.role || '').toUpperCase() === 'ADMIN';
+      const adminLink = isAdmin
+        ? '<a class="btn" href="./admin/manageUsers.html" style="font-size: 0.8rem; height: 40px; min-height: 40px; border-radius: 10px;">QUẢN TRỊ</a>'
+        : '';
+      const userLinks = !isAdmin
+        ? `<a href="./user/bookings.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem;">TOUR ĐÃ ĐẶT</a>
+           <a href="./user/personal-info.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem; margin-left:15px;">CÁ NHÂN</a>`
+        : '';
+
+      navRight.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="font-weight: 700; color: var(--primary); font-size: 0.9rem;">Chào, ${user.fullName}</span>
+          ${userLinks}
+          ${adminLink}
+          <button class="btn btn-secondary" id="logoutBtn" style="padding: 0 20px; min-height: 40px; height: 40px; font-size: 0.8rem; border-radius: 10px;">Đăng xuất</button>
+        </div>`;
+
+      const logoutBtn = el('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.onclick = () => {
+          sessionStorage.clear();
+          location.reload();
+        };
+      }
+    }
+  </script>
+</body>
+
+</html>

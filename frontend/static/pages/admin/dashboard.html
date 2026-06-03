@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - TourBooking</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/admin-common.css">
+    <script src="../../assets/js/api.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* ── Stats Grid ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--bg-white);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            opacity: 0.06;
+            transform: translate(20px, -20px);
+        }
+
+        .stat-card.blue::after {
+            background: #3b82f6;
+        }
+
+        .stat-card.green::after {
+            background: #10b981;
+        }
+
+        .stat-card.purple::after {
+            background: #8b5cf6;
+        }
+
+        .stat-card.orange::after {
+            background: #f59e0b;
+        }
+
+        .stat-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .stat-icon.blue {
+            background: #eff6ff;
+        }
+
+        .stat-icon.green {
+            background: #ecfdf5;
+        }
+
+        .stat-icon.purple {
+            background: #f5f3ff;
+        }
+
+        .stat-icon.orange {
+            background: #fffbeb;
+        }
+
+        .stat-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.35rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1;
+        }
+
+        .stat-sub {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .stat-sub .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        .dot.green-dot {
+            background: #10b981;
+        }
+
+        .dot.orange-dot {
+            background: #f59e0b;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        /* Skeleton loading */
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .skeleton-val {
+            width: 80px;
+            height: 28px;
+        }
+
+        .skeleton-sub {
+            width: 110px;
+            height: 14px;
+            margin-top: 6px;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        /* ── Dashboard Sections ── */
+        .dashboard-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--bg-white);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .panel-badge {
+            font-size: 0.75rem;
+            background: #eff6ff;
+            color: #1d4ed8;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+
+        /* Quick links */
+        .quick-links {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .quick-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            border-radius: 0.75rem;
+            background: #f8fafc;
+            text-decoration: none;
+            color: var(--text-main);
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .quick-link:hover {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+            color: #1d4ed8;
+        }
+
+        .quick-link .link-icon {
+            font-size: 1.1rem;
+            width: 28px;
+            text-align: center;
+        }
+
+        .quick-link .link-arrow {
+            margin-left: auto;
+            font-size: 0.75rem;
+            opacity: 0.4;
+        }
+
+        /* Month badge */
+        .month-chip {
+            background: #f1f5f9;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+        }
+
+        /* Revenue bar */
+        .revenue-bar-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .revenue-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .revenue-item-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .bar-track {
+            height: 8px;
+            background: #f1f5f9;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 1s ease;
+        }
+
+        /* Error banner */
+        .error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        /* Refresh button */
+        .btn-refresh {
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            transition: all 0.2s;
+        }
+
+        .btn-refresh:hover {
+            background: #f1f5f9;
+            color: var(--text-main);
+        }
+
+        .btn-refresh.spinning .icon {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Last updated */
+        .last-updated {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+
+        header h1 {
+            font-size: 1.6rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <a href="./dashboard.html" class="logo"> TourBooking</a>
+            <nav>
+                <a href="./dashboard.html" class="nav-item active"> Dashboard</a>
+                <a href="./manageTours.html" class="nav-item"> Tours</a>
+                <a href="./manageCategories.html" class="nav-item"> Categories</a>
+                <a href="./manageBookings.html" class="nav-item"> Bookings</a>
+                <a href="./manageUsers.html" class="nav-item"> Users</a>
+                <a href="./manageReview.html" class="nav-item"> Reviews</a>
+                <a href="./manageNewsletter.html" class="nav-item"> Newsletters</a>
+                <a href="./financialReport.html" class="nav-item"> Financial Report</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <div>
+                    <h1>Dashboard Overview</h1>
+                    <div class="last-updated" id="lastUpdated">Đang tải dữ liệu...</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <button class="btn-refresh" id="refreshBtn" onclick="refreshStats()">
+                        <span class="icon">🔄</span> Làm mới
+                    </button>
+                    <span id="userInfo" style="font-weight:600; font-size:0.9rem;"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Đăng xuất</button>
+                </div>
+            </header>
+
+            <div id="errorMessage" class="error-message" style="display:none;"></div>
+
+            <!-- ── Stats Cards ── -->
+            <div class="stats-grid">
+                <!-- Total Users -->
+                <div class="stat-card blue" id="card-total-users">
+                    <div class="stat-icon blue">👥</div>
+                    <div class="stat-body">
+                        <div class="stat-label">Tổng người dùng</div>
+                        <div class="stat-value" id="totalUsers">
+                            <span class="skeleton skeleton-val"></span>
+                        </div>
+                        <div class="stat-sub" id="totalUsersSub">
+                            <span class="skeleton skeleton-sub"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Online Users -->
+                <div class="stat-card green" id="card-online-users">
+                    <div class="stat-icon green"></div>
+                    <div class="stat-body">
+                        <div class="stat-label">Đang trực tuyến</div>
+                        <div class="stat-value" id="onlineUsers">
+                            <span class="skeleton skeleton-val"></span>
+                        </div>
+                        <div class="stat-sub" id="onlineUsersSub">
+                            <span class="skeleton skeleton-sub"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monthly Revenue -->
+                <div class="stat-card purple" id="card-revenue">
+                    <div class="stat-icon purple"></div>
+                    <div class="stat-body">
+                        <div class="stat-label">Doanh thu tháng này</div>
+                        <div class="stat-value" id="totalRevenue">
+                            <span class="skeleton skeleton-val"></span>
+                        </div>
+                        <div class="stat-sub" id="revenueSub">
+                            <span class="skeleton skeleton-sub"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Bookings -->
+                <div class="stat-card orange" id="card-bookings">
+                    <div class="stat-icon orange"></div>
+                    <div class="stat-body">
+                        <div class="stat-label">Booking đang hoạt động</div>
+                        <div class="stat-value" id="activeBookings">
+                            <span class="skeleton skeleton-val"></span>
+                        </div>
+                        <div class="stat-sub" id="bookingsSub">
+                            <span class="skeleton skeleton-sub"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Dashboard Row ── -->
+            <div class="dashboard-row">
+                <!-- Revenue snapshot -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title"> Snapshot Doanh thu</span>
+                        <span class="month-chip" id="currentMonthLabel">--</span>
+                    </div>
+                    <div class="revenue-bar-container" id="revenueSnapshot">
+                        <div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1rem 0;">
+                            Đang tải...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick links -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">⚡ Truy cập nhanh</span>
+                    </div>
+                    <div class="quick-links">
+                        <a href="./manageTours.html" class="quick-link">
+                            <span class="link-icon"></span> Quản lý Tours
+                            <span class="link-arrow">›</span>
+                        </a>
+                        <a href="./manageUsers.html" class="quick-link">
+                            <span class="link-icon"></span> Quản lý Users
+                            <span class="link-arrow">›</span>
+                        </a>
+                        <a href="./manageDiscounts.html" class="quick-link">
+                            <span class="link-icon"></span> Quản lý Giảm giá
+                            <span class="link-arrow">›</span>
+                        </a>
+                        <a href="./manageReview.html" class="quick-link">
+                            <span class="link-icon"></span> Xem Đánh giá
+                            <span class="link-arrow">›</span>
+                        </a>
+                        <a href="./financialReport.html" class="quick-link">
+                            <span class="link-icon"></span> Báo cáo tài chính
+                            <span class="link-arrow">›</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // ── Helpers ──────────────────────────────────────────────
+        function showError(message) {
+            const el = document.getElementById('errorMessage');
+            el.textContent = message;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 4000);
+        }
+
+        function formatCurrency(amount) {
+            const num = parseFloat(amount);
+            if (isNaN(num)) return '$0';
+            if (num >= 1_000_000) return '$' + (num / 1_000_000).toFixed(1) + 'M';
+            if (num >= 1_000) return '$' + (num / 1_000).toFixed(1) + 'K';
+            return '$' + num.toFixed(0);
+        }
+
+        function formatNumber(n) {
+            return Number(n).toLocaleString('vi-VN');
+        }
+
+        function getNow() {
+            return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        // ── Auth guard ──────────────────────────────────────────
+        try {
+            const userStr = sessionStorage.getItem('user');
+            if (!userStr) { window.location.href = '/pages/auth/login.html'; throw new Error(); }
+            const user = JSON.parse(userStr);
+            if (!user || user.role !== 'ADMIN') { window.location.href = '/pages/auth/login.html'; throw new Error(); }
+            document.getElementById('userInfo').innerText = user.fullName || user.email || 'Admin';
+        } catch (e) {
+            setTimeout(() => window.location.href = '/pages/auth/login.html', 1500);
+        }
+
+        // ── Month label ─────────────────────────────────────────
+        const now = new Date();
+        const monthNames = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
+            'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+        document.getElementById('currentMonthLabel').textContent =
+            monthNames[now.getMonth()] + ' ' + now.getFullYear();
+
+        // ── Load Stats ──────────────────────────────────────────
+        async function loadStats() {
+            const btn = document.getElementById('refreshBtn');
+            btn.classList.add('spinning');
+
+            const token = sessionStorage.getItem('token');
+            if (!token) { window.location.href = '/pages/auth/login.html'; return; }
+            const headers = { 'Authorization': `Bearer ${token}` };
+
+            try {
+                const [usersRes, revenueRes, bookingsRes] = await Promise.allSettled([
+                    TB.apiFetch('/api/v1/admin/users/count'),
+                    TB.apiFetch('/api/v1/admin/revenue/month'),
+                    TB.apiFetch('/api/v1/admin/bookings/active')
+                ]);
+
+                // ── Total + Online Users
+                if (usersRes.status === 'fulfilled' && usersRes.value) {
+                    const d = usersRes.value.data || usersRes.value;
+                    const total = d.total ?? 0;
+                    const online = d.online ?? 0;
+
+                    document.getElementById('totalUsers').textContent = formatNumber(total);
+                    document.getElementById('totalUsersSub').innerHTML = `<span class="dot orange-dot"></span> ${online} đang hoạt động`;
+
+                    document.getElementById('onlineUsers').textContent = formatNumber(online);
+                    const pct = total > 0 ? Math.round((online / total) * 100) : 0;
+                    document.getElementById('onlineUsersSub').innerHTML =
+                        `<span class="dot green-dot"></span> ${pct}% tổng người dùng`;
+
+                    // Revenue snapshot bars
+                    renderSnapshotBars(total, online);
+                } else {
+                    document.getElementById('totalUsers').textContent = '—';
+                    document.getElementById('onlineUsers').textContent = '—';
+                    document.getElementById('totalUsersSub').textContent = 'Không thể tải';
+                    document.getElementById('onlineUsersSub').textContent = 'Không thể tải';
+                }
+
+                // ── Monthly Revenue
+                if (revenueRes.status === 'fulfilled' && revenueRes.value) {
+                    const d = revenueRes.value.data || revenueRes.value;
+                    const rev = d.revenue ?? 0;
+                    document.getElementById('totalRevenue').textContent = formatCurrency(rev);
+                    document.getElementById('revenueSub').innerHTML =
+                        `<span class="dot green-dot"></span> Thanh toán thành công tháng này`;
+                } else {
+                    document.getElementById('totalRevenue').textContent = '$0';
+                    document.getElementById('revenueSub').textContent = 'Chưa có dữ liệu';
+                }
+
+                // ── Active Bookings
+                if (bookingsRes.status === 'fulfilled' && bookingsRes.value) {
+                    const d = bookingsRes.value.data || bookingsRes.value;
+                    const cnt = d.count ?? 0;
+                    document.getElementById('activeBookings').textContent = formatNumber(cnt);
+                    document.getElementById('bookingsSub').innerHTML =
+                        `<span class="dot orange-dot"></span> Đang chờ xác nhận hoặc xác nhận`;
+                } else {
+                    document.getElementById('activeBookings').textContent = '0';
+                    document.getElementById('bookingsSub').textContent = 'Chưa có dữ liệu';
+                }
+
+                document.getElementById('lastUpdated').textContent = `Cập nhật lúc ${getNow()}`;
+
+            } catch (err) {
+                console.error('loadStats error:', err);
+                showError('Không thể tải dữ liệu thống kê. Vui lòng thử lại.');
+            } finally {
+                btn.classList.remove('spinning');
+            }
+        }
+
+        function renderSnapshotBars(total, online) {
+            const offline = Math.max(0, total - online);
+            const maxVal = Math.max(total, 1);
+
+            const items = [
+                { label: 'Tổng người dùng', value: total, pct: 100, color: '#3b82f6' },
+                { label: 'Đang trực tuyến', value: online, pct: Math.round((online / maxVal) * 100), color: '#10b981' },
+                { label: 'Ngoại tuyến', value: offline, pct: Math.round((offline / maxVal) * 100), color: '#94a3b8' },
+            ];
+
+            const container = document.getElementById('revenueSnapshot');
+            container.innerHTML = items.map(item => `
+                <div class="revenue-item">
+                    <div class="revenue-item-header">
+                        <span>${item.label}</span>
+                        <span style="font-weight:700; color:var(--text-main);">${formatNumber(item.value)}</span>
+                    </div>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:${item.pct}%; background:${item.color};"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function loadStats() {
+            const lastUpdated = document.getElementById('lastUpdated');
+            lastUpdated.textContent = 'Đang tải dữ liệu...';
+            try {
+                const response = await TB.apiFetch('/api/v1/admin/dashboard/stats');
+                const data = response.data || response;
+                
+                // Cập nhật các thẻ thống kê
+                const updateElt = (id, val) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = val;
+                };
+
+                updateElt('totalUsers', formatNumber(data.totalUsers));
+                updateElt('onlineUsers', formatNumber(data.onlineUsers));
+                updateElt('totalRevenue', formatCurrency(data.totalRevenue));
+                updateElt('totalBookings', formatNumber(data.totalBookings));
+                
+                updateElt('totalUsersSub', 'Tổng số thành viên');
+                updateElt('onlineUsersSub', 'Người dùng đang hoạt động');
+                updateElt('revenueSub', 'Dòng tiền trong tháng');
+                updateElt('bookingsSub', 'Đơn đặt tour đang xử lý');
+
+                if (typeof updateRevenueSnapshot === 'function') {
+                    updateRevenueSnapshot(data.totalUsers, data.onlineUsers);
+                }
+                lastUpdated.textContent = 'Cập nhật lần cuối: ' + new Date().toLocaleTimeString();
+            } catch (error) {
+                console.error('Lỗi tải Dashboard:', error);
+                lastUpdated.textContent = '❌ Lỗi kết nối Server (Port 8080)';
+            }
+        }
+
+        function refreshStats() { loadStats(); }
+
+        loadStats();
+
+        // ── Tự động làm mới mỗi 30 giây
+        setInterval(loadStats, 30_000);
+
+        // ── Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (window.TB && TB.logout) {
+                TB.logout();
+            } else {
+                sessionStorage.removeItem('user');
+                sessionStorage.removeItem('token');
+                window.location.href = '/pages/auth/login.html';
+            }
+        });
+    </script>
+</body>
+
+</html>

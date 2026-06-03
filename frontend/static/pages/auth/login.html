@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome Back - DANA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
+    <style>
+        :root { --brand-dark: #063c3c; --brand-emerald: #0d9488; --text-main: #111827; --text-soft: #4b5563; --border-color: #e5e7eb; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f3f4f6; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .container { display: flex; width: 1100px; max-width: 95vw; height: 750px; background: white; border-radius: 32px; overflow: hidden; box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.2); }
+        .left-panel { flex: 1; padding: 60px; display: flex; flex-direction: column; overflow-y: auto; }
+        .logo-section { display: flex; align-items: center; gap: 12px; margin-bottom: 50px; }
+        .logo-box { width: 36px; height: 36px; background: var(--brand-dark); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; }
+        .brand-name { font-weight: 700; font-size: 1.4rem; color: var(--brand-dark); }
+        .welcome-section h1 { font-size: 2.2rem; font-weight: 700; color: var(--text-main); margin-bottom: 12px; }
+        .welcome-section p { font-size: 0.95rem; color: var(--text-soft); line-height: 1.6; margin-bottom: 40px; }
+        .form-group { margin-bottom: 24px; }
+        .form-group label { display: block; font-size: 0.9rem; font-weight: 600; color: var(--text-main); margin-bottom: 8px; }
+        .input-group { position: relative; }
+        .input-group i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-soft); }
+        .input-group input { width: 100%; padding: 14px 16px 14px 48px; border: 1.5px solid var(--border-color); border-radius: 12px; font-size: 1rem; }
+        .forgot-password { text-align: right; margin-bottom: 30px; }
+        .forgot-password a { color: var(--brand-dark); font-size: 0.85rem; font-weight: 700; text-decoration: none; }
+        .btn-signin { width: 100%; padding: 16px; background: var(--brand-dark); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; margin-bottom: 24px;}
+        .divider { display: flex; align-items: center; gap: 20px; color: #9ca3af; font-size: 0.75rem; font-weight: 700; margin-bottom: 24px; }
+        .divider::before, .divider::after { content: ''; flex: 1; height: 1.5px; background: #f3f4f6; }
+        .social-auth { display: flex; flex-direction: column; gap: 12px; }
+        #googleBtn { width: 100% !important; height: 50px !important; }
+        .apple-btn { width: 100%; padding: 14px; border: 1.5px solid var(--border-color); border-radius: 12px; background: white; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+        .signup-help { text-align: center; margin-top: auto; font-size: 0.9rem; color: var(--text-soft); }
+        .signup-help a { color: var(--brand-emerald); font-weight: 700; text-decoration: none; }
+        .right-panel { flex: 1.1; background: linear-gradient(135deg, #063c3c 0%, #032525 100%); padding: 80px 60px; color: white; display: flex; flex-direction: column; justify-content: center; position: relative; }
+        .promo-title { font-size: 3.2rem; font-weight: 800; line-height: 1.1; margin-bottom: 40px; }
+        @media (max-width: 950px) { .right-panel { display: none; } .container { width: 550px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <div class="logo-section"><div class="logo-box"><i class="fas fa-wind"></i></div><span class="brand-name">DANA</span></div>
+            <div class="welcome-section"><h1>Welcome Back!</h1><p>Đăng nhập để vào hệ thống quản lý Dana.</p></div>
+            <form id="loginForm">
+                <div class="form-group"><label>Email</label><div class="input-group"><i class="far fa-envelope"></i><input type="email" id="email" placeholder="Email" autocomplete="username" required></div></div>
+                <div class="form-group"><label>Password</label><div class="input-group"><i class="fas fa-lock"></i><input type="password" id="password" placeholder="Mật khẩu" autocomplete="current-password" required></div></div>
+                <div class="forgot-password"><a href="forgot-password.html">Forgot Password?</a></div>
+                <button type="submit" class="btn-signin">Sign In</button>
+            </form>
+            <div class="divider">OR</div>
+            <div class="social-auth"><div id="googleBtn"></div><!-- <button class="apple-btn" onclick="handleAppleLogin()"><i class="fab fa-apple" style="font-size: 20px;"></i> Continue with Apple</button> --></div>
+            <div class="signup-help"> Don't have an Account? <a href="register.html">Sign Up</a></div>
+        </div>
+        <div class="right-panel"><h2 class="promo-title">Nâng tầm chuyến đi với DANA Digital</h2></div>
+    </div>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+        // Xử lý Đăng nhập Thủ công
+        document.getElementById('loginForm').onsubmit = async (e) => {
+          e.preventDefault();
+          const email = document.getElementById('email').value;
+          const password = document.getElementById('password').value;
+          
+          try {
+            const res = await fetch('http://localhost:8080/api/v1/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password })
+            });
+            const result = await res.json();
+            
+            if (result.code === 200) {
+              sessionStorage.setItem('token', result.data.token);
+              sessionStorage.setItem('user', JSON.stringify(result.data.user));
+              // Điều hướng dựa trên quyền
+              const role = (result.data.user.role || "").toUpperCase();
+              if (role === 'ADMIN') window.location.href = '../admin/dashboard.html';
+              else if (role === 'STAFF') window.location.href = '../staff/dashboard.html';
+              else if (role === 'GUIDE') window.location.href = '../guide/dashboard.html';
+              else window.location.href = '/';
+            } else {
+              alert('Đăng nhập thất bại: ' + result.message);
+            }
+          } catch (err) {
+            alert('Không thể kết nối tới máy chủ. Vui lòng kiểm tra Backend đang chạy trên cổng 8080.');
+          }
+        };
+
+        window.onload = function () {
+            google.accounts.id.initialize({ 
+                client_id: "27844399753-b0u9h8gj7g5rsr9km9mcadt5oc4gcj51.apps.googleusercontent.com", 
+                callback: handleGoogleLogin, 
+                auto_select: false,
+                use_fedcm_for_prompt: true 
+            });
+            google.accounts.id.renderButton(
+                document.getElementById("googleBtn"),
+                { 
+                    theme: "outline", 
+                    size: "large", 
+                    width: 400, 
+                    text: "continue_with",
+                    shape: "rectangular"
+                }
+            );
+        };
+
+        async function handleGoogleLogin(response) {
+            const token = response.credential;
+            try {
+                // Gửi token về Backend để lấy JWT thực sự
+                const res = await fetch('http://localhost:8080/api/v1/auth/google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken: token }) // Đổi từ token -> idToken
+                });
+                const result = await res.json();
+                if (result.code === 200) {
+                    sessionStorage.setItem('token', result.data.token);
+                    sessionStorage.setItem('user', JSON.stringify(result.data.user));
+                    const role = (result.data.user.role || "").toUpperCase();
+                    if (role === 'ADMIN') window.location.href = '/pages/admin/dashboard.html';
+                    else if (role === 'STAFF') window.location.href = '/pages/staff/dashboard.html';
+                    else if (role === 'GUIDE') window.location.href = '/pages/guide/dashboard.html';
+                    else window.location.href = '/';
+                } else {
+                    alert('Lỗi đăng nhập Google: ' + result.message);
+                }
+            } catch (err) { alert('Không thể kết nối Server'); }
+        }
+
+        function handleAppleLogin() { alert('Vui lòng cấu hình Apple Client ID để bắt đầu.'); }
+    </script>
+</body>
+</html>

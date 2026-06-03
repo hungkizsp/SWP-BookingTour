@@ -1,0 +1,17 @@
+{
+  "name": "dana-best-frontend",
+  "version": "1.0.0",
+  "description": "Premium Tour Booking Frontend - DanaBest",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx browser-sync start --server static --files \"static/**/*\" --port 3000",
+    "sync": "powershell -File ./scripts/sync.ps1",
+    "start": "npm run dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "browser-sync": "^3.0.0"
+  }
+}

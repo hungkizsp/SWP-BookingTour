@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Escalations · Admin</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/assets/css/style.css">
+  <style>
+    body {
+      background: #7f788a;
+      color: #ffffff !important;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    span,
+    div,
+    strong,
+    small {
+      color: #ffffff !important;
+    }
+
+    .admin-hero {
+      margin-bottom: 24px;
+    }
+
+    .admin-hero h1 {
+      margin-bottom: 6px;
+      color: #ffffff !important;
+    }
+
+    .admin-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .escalation-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .escalation-card {
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      padding: 20px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03) !important;
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.4);
+      color: #ffffff !important;
+    }
+
+    .escalation-card * {
+      color: #ffffff !important;
+    }
+
+    .escalation-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .status-badge {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .status-badge.waiting_staff {
+      background: rgba(7, 146, 255, 0.15);
+      color: #09f;
+    }
+
+    .status-badge.staff_chatting {
+      background: rgba(255, 165, 0, 0.15);
+      color: #f90;
+    }
+
+    .status-badge.closed {
+      background: rgba(91, 173, 80, 0.15);
+      color: #5dab50;
+    }
+
+    .escalation-meta {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .escalation-meta div+div {
+      margin-top: 6px;
+    }
+
+    .escalation-conversation {
+      margin: 16px 0;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.02);
+      max-height: 280px;
+      overflow: auto;
+    }
+
+    .escalation-message {
+      margin-bottom: 12px;
+    }
+
+    .escalation-message:last-child {
+      margin-bottom: 0;
+    }
+
+    .msg-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 4px;
+    }
+
+    .msg-body {
+      font-size: 0.95rem;
+      color: #b85858;
+    }
+
+    .escalation-reply textarea {
+      width: 100%;
+      background: rgba(19, 12, 5, 0.92);
+      border: 1px solid rgba(15, 23, 42, 0.2);
+      border-radius: 8px;
+      color: #0b1723;
+      padding: 12px;
+      resize: none;
+      caret-color: #0b1723;
+    }
+
+    .reply-actions {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .muted {
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 0.9rem;
+    }
+
+    #adminNotificationBadge {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      gap: 8px;
+      z-index: 30;
+      background: #0b1f3d;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    #adminNotificationBadge.errored {
+      opacity: 0.5;
+    }
+
+    #adminNotificationBadge .badge-count {
+      font-weight: 700;
+      margin-right: 4px;
+    }
+
+    #adminNotificationInfo {
+      position: fixed;
+      top: 60px;
+      right: 16px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(7, 7, 7, 0.8);
+      color: #fff;
+      font-size: 0.9rem;
+      z-index: 30;
+      max-width: 280px;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="page-shell wrap">
+      <div class="content-pad">
+        <header class="admin-hero">
+          <div class="eyebrow"
+            style="background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.18);color:white;">Admin desk</div>
+          <h1>Chat escalations</h1>
+          <p>Manage AI-to-human handoffs, review customer notes, and reply directly in one interface.</p>
+        </header>
+
+        <div class="admin-controls">
+          <button id="reloadEscalations" class="btn">Refresh escalations</button>
+          <p id="escalationInfo" class="muted" hidden></p>
+        </div>
+
+        <section id="escalationList" class="escalation-list"></section>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/admin-escalations.js"></script>
+  <script src="/assets/js/admin-notifications.js"></script>
+</body>
+
+</html>

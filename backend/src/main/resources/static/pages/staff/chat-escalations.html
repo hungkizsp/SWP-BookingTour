@@ -1,0 +1,83 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Escalations - Staff</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .staff-layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: #082f49; color: white; padding: 2rem 1.5rem; }
+        .sidebar .logo { color: white; font-size: 1.5rem; margin-bottom: 3rem; display: block; text-decoration: none; font-weight: bold; }
+        .nav-item { padding: 0.75rem 1rem; color: rgba(255, 255, 255, 0.7); text-decoration: none; display: block; border-radius: 0.5rem; margin-bottom: 0.5rem; transition: all 0.2s; }
+        .nav-item:hover, .nav-item.active { background: rgba(255, 255, 255, 0.1); color: white; }
+        .main-content { flex: 1; padding: 2rem 5%; background-color: #f1f5f9; overflow-y: auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        
+        .escalation-list { display: flex; flex-direction: column; gap: 20px; }
+        .escalation-card { background: white; padding: 20px; border-radius: 14px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
+        .escalation-header { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+        .status-badge { padding: 6px 14px; border-radius: 999px; font-size: 0.85rem; text-transform: uppercase; font-weight: bold; }
+        .status-badge.waiting_staff { background: #dbeafe; color: #1e3a8a; }
+        .status-badge.staff_chatting { background: #fef3c7; color: #92400e; }
+        .status-badge.closed { background: #dcfce7; color: #166534; }
+        .escalation-meta { font-size: 0.9rem; color: #64748b; margin-bottom: 12px; }
+        
+        .escalation-conversation { background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; max-height: 250px; overflow-y: auto; margin-bottom: 12px; }
+        .escalation-message { margin-bottom: 8px; }
+        .msg-head { font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; }
+        .msg-body { font-size: 0.95rem; color: #1e293b; }
+        
+        .escalation-reply textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; font-family: inherit; margin-bottom: 8px; font-size: 0.95rem; }
+        .reply-actions { display: flex; gap: 10px; }
+        .btn-action { background: #0f766e; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+        .btn-action:hover { background: #115e59; }
+        .btn-outline { background: transparent; color: #0f766e; border: 1px solid #0f766e; }
+    </style>
+</head>
+
+<body>
+    <div class="staff-layout">
+        <aside class="sidebar">
+            <a href="#" class="logo"><strong>Staff</strong> Portal</a>
+            <nav id="sidebarNav">
+                <a href="./dashboard.html" class="nav-item">Dashboard</a>
+                <a href="./manageBookings.html" class="nav-item">Manage Bookings</a>
+                <a href="./manageSchedules.html" class="nav-item">Manage Schedules</a>
+                <a href="./manageRefunds.html" class="nav-item">Manage Refunds</a>
+                <a href="./chat-escalations.html" class="nav-item active">Chat / Escalations</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Chat Escalations</h1>
+                <div>
+                    <button id="reloadEscalations" class="btn-action">Refresh</button>
+                    <span id="userInfo" style="font-weight: 600; margin-left: 1rem;"></span>
+                </div>
+            </header>
+
+            <div id="escalationInfo" style="padding: 1rem; color: #dc2626; background: #fee2e2; border-radius: 6px; margin-bottom: 1rem;" hidden></div>
+            <section id="escalationList" class="escalation-list"></section>
+        </main>
+    </div>
+
+    <!-- Scripts from original logic -->
+    <script>
+        (function() {
+            var userStr = localStorage.getItem('user');
+            if (!userStr) { window.location.href = '/pages/auth/login.html'; return; }
+            var user = JSON.parse(userStr);
+            if (user.role === 'ADMIN') { window.location.href = '/pages/admin/dashboard.html'; return; }
+            if (user.role !== 'STAFF') { window.location.href = '/pages/auth/login.html'; return; }
+            var el = document.getElementById('userInfo');
+            if (el) el.innerText = user.fullName || user.email;
+        })();
+    </script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/admin-escalations.js"></script>
+</body>
+</html>

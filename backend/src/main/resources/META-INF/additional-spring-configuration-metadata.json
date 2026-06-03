@@ -1,0 +1,21 @@
+{
+  "properties": [
+    {
+      "name": "app.public-base-url",
+      "type": "java.lang.String",
+      "description": "Public base URL used to build links in verification and password reset emails.",
+      "defaultValue": "http://localhost:8080"
+    },
+    {
+      "name": "app.jwt.secret",
+      "type": "java.lang.String",
+      "description": "Secret used to sign JWT tokens."
+    },
+    {
+      "name": "app.jwt.exp-minutes",
+      "type": "java.lang.Long",
+      "description": "JWT expiration time in minutes.",
+      "defaultValue": 120
+    }
+  ]
+}

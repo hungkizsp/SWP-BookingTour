@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DaNangBest - Khám Phá Đà Nẵng Đích Thực</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Manrope:wght@600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+
+<body>
+  <div class="top-bar">
+    <div class="top-info">
+      <span>📞 Hotline: 0983 7165 73</span>
+      <span style="margin-left: 20px;">📧 Email: [EMAIL_ADDRESS]</span>
+    </div>
+    <div class="top-links" id="topLinks">
+      <a href="./auth/login.html">Đăng nhập</a>/
+      <a href="./auth/register.html">Đăng ký</a>
+    </div>
+  </div>
+
+  <header class="site-header" id="siteHeader">
+    <div class="header-container">
+      <a class="brand" href="./index.html">
+        <div class="brand-mark">DB</div>
+        <div class="brand-copy">
+          <strong>DANANGBEST</strong>
+          <span>Trao niềm tin - Nhận giá thực</span>
+        </div>
+      </a>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="./index.html" class="active">Trang chủ</a></li>
+          <li><a href="./tours.html">Tour Đà Nẵng</a></li>
+          <li><a href="./tours.html?cat=1-day">Tour 1 Ngày</a></li>
+          <li><a href="./compare.html">So sánh</a></li>
+          <li><a href="./chat.html">Tư vấn AI</a></li>
+        </ul>
+      </nav>
+      <div id="navRight" class="actions"></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero-banner">
+      <div class="hero-content">
+        <h1 class="reveal">Khám Phá Đà Nẵng <br>Theo Cách Riêng Của Bạn</h1>
+        <p class="reveal" style="animation-delay: 0.2s;">
+          Đặt tour trực tuyến giá tốt nhất, hỗ trợ 24/7 với đội ngũ chuyên gia bản địa giàu kinh nghiệm.
+        </p>
+      </div>
+    </section>
+
+    <div class="container index-search-container">
+      <div class="horizontal-search reveal" style="animation-delay: 0.4s;">
+        <div class="search-segment">
+          <label>Điểm đến</label>
+          <input type="text" id="searchInput" placeholder="Bạn muốn đi đâu? (Bà Nà, Hội An...)">
+        </div>
+        <div class="search-segment">
+          <label>Loại hình</label>
+          <select id="catSelect">
+            <option value="">Tất cả tour</option>
+            <option value="1">Tour trong ngày</option>
+            <option value="2">Tour dài ngày</option>
+          </select>
+        </div>
+        <div class="search-segment">
+          <label>Ngân sách</label>
+          <select id="priceSelect">
+            <option value="all">Mọi mức giá</option>
+            <option value="0-1000000">Dưới 1 triệu</option>
+            <option value="1000000-3000000">1 - 3 triệu</option>
+            <option value="3000000-plus">Trên 3 triệu</option>
+          </select>
+        </div>
+        <div style="padding: 5px;">
+          <button class="btn-search-main" onclick="handleSearch()">
+            <span class="icon">🔍</span>
+            <span>TÌM KIẾM</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <section class="section-full reveal" style="padding-top: 100px;">
+      <div style="text-align: center; margin-bottom: 80px;">
+        <span
+          style="color: var(--accent); font-weight: 800; font-size: 0.85rem; letter-spacing: 0.2em; text-transform: uppercase;">Handpicked
+          for you</span>
+        <h2
+          style="font-size: 3.2rem; color: var(--primary-dark); margin-top: 10px; font-weight: 900; letter-spacing: -0.04em;">
+          HÀNH TRÌNH NỔI BẬT</h2>
+      </div>
+
+      <div id="featuredTours" class="tour-grid" style="padding: 0;">
+        <!-- JS Render -->
+      </div>
+
+      <div style="text-align: center; margin-top: 80px;">
+        <a href="./tours.html" class="btn btn-outline" style="border-radius: 12px; padding: 0 40px;">KHÁM PHÁ TẤT CẢ
+          TOUR</a>
+      </div>
+    </section>
+
+    <section class="section-full" style="background: var(--bg-section); border-top: 1px solid var(--border);">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 40px;">
+        <div class="reveal"
+          style="text-align: center; padding: 60px 40px; background: white; border-radius: 32px; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
+          <div style="font-size: 4rem; margin-bottom: 30px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.1));">🛡️</div>
+          <h3 style="color: var(--primary); margin-bottom: 20px; font-weight: 800; font-size: 1.3rem;">UY TÍN HÀNG ĐẦU
+          </h3>
+          <p style="color: var(--text-soft); line-height: 1.8; font-weight: 500;">Hơn 10 năm kinh nghiệm dẫn dắt những
+            hành trình cảm xúc tại miền Trung Việt Nam.</p>
+        </div>
+        <div class="reveal"
+          style="text-align: center; padding: 60px 40px; background: white; border-radius: 32px; box-shadow: var(--shadow-sm); border: 1px solid var(--border); animation-delay: 0.2s;">
+          <div style="font-size: 4rem; margin-bottom: 30px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.1));">💰</div>
+          <h3 style="color: var(--primary); margin-bottom: 20px; font-weight: 800; font-size: 1.3rem;">GIÁ TỐT NHẤT</h3>
+          <p style="color: var(--text-soft); line-height: 1.8; font-weight: 500;">Giá gốc từ đơn vị tổ chức, cam kết
+            chất lượng 5 sao với chi phí tối ưu nhất.</p>
+        </div>
+        <div class="reveal"
+          style="text-align: center; padding: 60px 40px; background: white; border-radius: 32px; box-shadow: var(--shadow-sm); border: 1px solid var(--border); animation-delay: 0.4s;">
+          <div style="font-size: 4rem; margin-bottom: 30px; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.1));">🙋</div>
+          <h3 style="color: var(--primary); margin-bottom: 20px; font-weight: 800; font-size: 1.3rem;">HỖ TRỢ 24/7</h3>
+          <p style="color: var(--text-soft); line-height: 1.8; font-weight: 500;">Luôn đồng hành cùng bạn trên mọi nẻo
+            đường, giải quyết mọi yêu cầu tức thì.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer style="background: #064e3b; color: white; padding: 100px 5% 40px;">
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 60px; margin-bottom: 80px;">
+      <div>
+        <h3 style="color: var(--accent); margin-bottom: 30px; font-size: 1.8rem;">DANANGBEST</h3>
+        <p style="opacity: 0.8; line-height: 2; margin-bottom: 30px;">Trao niềm tin - Nhận giá trị thực. Chúng tôi cam
+          kết mang lại những chuyến đi đáng nhớ nhất cho mọi khách hàng.</p>
+        <div style="display: flex; gap: 15px;">
+          <div
+            style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); display: grid; place-items: center; cursor: pointer;">
+            f</div>
+          <div
+            style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); display: grid; place-items: center; cursor: pointer;">
+            t</div>
+          <div
+            style="width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.1); display: grid; place-items: center; cursor: pointer;">
+            y</div>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin-bottom: 30px; font-weight: 700; border-left: 4px solid var(--accent); padding-left: 15px;">
+          THÔNG TIN LIÊN HỆ</h4>
+        <p style="opacity: 0.9; margin-bottom: 15px;">📍 Ngũ Hành Sơn, Đà Nẵng</p>
+        <p style="opacity: 0.9; margin-bottom: 15px;">📞 Hotline: 0983 7165 73</p>
+        <p style="opacity: 0.9;">📧 [EMAIL_ADDRESS]</p>
+      </div>
+      <div>
+        <h4 style="margin-bottom: 30px; font-weight: 700; border-left: 4px solid var(--accent); padding-left: 15px;">
+          ĐIỀU KHOẢN & HỖ TRỢ</h4>
+        <ul style="list-style: none; padding: 0; opacity: 0.8; line-height: 2.5;">
+          <li>Chính sách bảo mật</li>
+          <li>Điều khoản sử dụng</li>
+          <li>Quy định hoàn và hủy tour</li>
+          <li>Câu hỏi thường gặp</li>
+        </ul>
+      </div>
+    </div>
+    <div
+      style="text-align: center; color: rgba(255,255,255,0.3); font-size: 0.85rem; padding-top: 50px; border-top: 1px solid rgba(255,255,255,0.05);">
+      &copy; 2024 DANANGBEST. All rights reserved. Designed for excellence.
+    </div>
+  </footer>
+
+  <script src="../assets/js/api.js"></script>
+  <script>
+    const el = (id) => document.getElementById(id);
+    const navRight = el('navRight');
+    const user = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
+
+    // Header Scroll Effect
+    window.addEventListener('scroll', () => {
+      const header = el('siteHeader');
+      if (window.scrollY > 50) header.classList.add('scrolled');
+      else header.classList.remove('scrolled');
+    });
+
+    if (user) {
+      if (el('topLinks')) el('topLinks').style.display = 'none';
+      const isAdmin = String(user.role || '').toUpperCase() === 'ADMIN';
+      const adminLink = isAdmin
+        ? '<a class="btn" href="./admin/manageUsers.html" style="font-size: 0.8rem; height: 40px; min-height: 40px; border-radius: 10px;">QUẢN TRỊ</a>'
+        : '';
+      const customerLink = !isAdmin 
+        ? `<a href="../user/bookings.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem;">ĐƠN HÀNG</a>
+           <a href="../user/personal-info.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem; margin-left:15px;">CÁ NHÂN</a>` 
+        : '';
+
+      navRight.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <span style="font-weight: 700; color: var(--primary); font-size: 0.9rem;">Chào, ${user.fullName || 'Bạn'}</span>
+          ${customerLink}
+          ${adminLink}
+          <button class="btn btn-secondary" id="logoutBtn" style="padding: 0 20px; min-height: 40px; height: 40px; font-size: 0.8rem; border-radius: 10px;">Đăng xuất</button>
+        </div>`;
+      const logoutBtn = el('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.onclick = () => {
+          sessionStorage.clear();
+          location.reload();
+        };
+      }
+    }
+
+    window.handleSearch = () => {
+      const keyword = el('searchInput').value;
+      const cat = el('catSelect').value;
+      const price = el('priceSelect').value;
+      window.location.href = `./tours.html?keyword=${encodeURIComponent(keyword)}&cat=${cat}&price=${price}`;
+    };
+
+    // Load featured tours
+    async function loadFeatured() {
+      try {
+        const res = await TB.apiFetch('/api/v1/tours/browse?size=6&sortBy=rating&sortDir=desc');
+        const tours = res.data?.content || [];
+        const grid = el('featuredTours');
+        if (tours.length > 0) {
+          grid.innerHTML = tours.map((t, idx) => `
+            <div class="tour-card reveal" style="animation-delay: ${idx * 0.1}s">
+              <div class="tour-card-img-wrapper">
+                <img src="${t.imageUrl || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg'}" class="tour-card-img" alt="${t.tourName}">
+                <div class="tour-card-badge">✨ NỔI BẬT</div>
+              </div>
+              <div class="tour-card-body">
+                <h3 class="tour-card-title">${t.tourName}</h3>
+                <div class="tour-card-meta">
+                  <span>⌛ ${t.duration || 'Liên hệ'}</span>
+                  <span>📍 ${t.startLocation || 'Đà Nẵng'}</span>
+                  <span>⭐ ${(t.rating || 5).toFixed(1)}</span>
+                </div>
+                <div class="tour-card-footer">
+                   <div class="tour-card-price">
+                    <span class="price-label">Giá chỉ từ:</span>
+                    <span class="price-value">${t.price ? Number(t.price).toLocaleString() : 'Liên hệ'}</span>
+                    <span class="price-currency">VNĐ</span>
+                  </div>
+                  <a href="./tour-detail.html?id=${t.id}" class="btn" style="padding: 0 25px; min-height: 48px; font-size: 0.9rem; border-radius: 12px;">CHI TIẾT</a>
+                </div>
+              </div>
+            </div>
+          `).join('');
+          initReveal();
+        } else {
+          grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px;">Hiện tại chưa có tour nổi bật.</div>';
+        }
+      } catch (err) {
+        console.error('Failed to load tours', err);
+        el('featuredTours').innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 50px; color: var(--price);">
+            <p style="font-size: 1.2rem; font-weight: 700;">⚠️ Lỗi kết nối!</p>
+            <button onclick="location.reload()" class="btn btn-outline" style="margin-top: 20px;">THỬ LẠI</button>
+          </div>`;
+      }
+    }
+
+    function initReveal() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, { threshold: 0.1 });
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    }
+
+    loadFeatured();
+    initReveal();
+  </script>
+  <style>
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .loader {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      display: inline-block;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</body>
+
+</html>

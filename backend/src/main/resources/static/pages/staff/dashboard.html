@@ -1,0 +1,90 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Dashboard - TourBooking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        :root { --text-main: #1e293b; --primary: #0f766e; --border: #e2e8f0; --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05); --text-muted: #64748b; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        .staff-layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: #082f49; color: white; padding: 2rem 1.5rem; }
+        .sidebar .logo { color: white; font-size: 1.5rem; margin-bottom: 3rem; display: block; text-decoration: none; font-weight: bold; }
+        .nav-item { padding: 0.75rem 1rem; color: rgba(255, 255, 255, 0.7); text-decoration: none; display: block; border-radius: 0.5rem; margin-bottom: 0.5rem; transition: all 0.2s; }
+        .nav-item:hover, .nav-item.active { background: rgba(255, 255, 255, 0.1); color: white; }
+        .main-content { flex: 1; padding: 2rem 5%; background-color: #f1f5f9; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .stat-card { background: white; padding: 1.5rem; border-radius: 1rem; border: 1px solid var(--border); box-shadow: var(--shadow-sm); border-top: 4px solid var(--primary); }
+        .stat-label { color: var(--text-muted); font-size: 0.875rem; font-weight: 500; }
+        .stat-value { font-size: 1.875rem; font-weight: 700; margin-top: 0.5rem; color: var(--text-main); }
+        .btn-logout { background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; }
+    </style>
+</head>
+
+<body>
+    <div class="staff-layout">
+        <aside class="sidebar">
+            <a href="#" class="logo"><strong>Staff</strong> Portal</a>
+            <nav>
+                <a href="./dashboard.html" class="nav-item active">Dashboard</a>
+                <a href="./manageBookings.html" class="nav-item">Manage Bookings</a>
+                <a href="./manageSchedules.html" class="nav-item">Manage Schedules</a>
+                <a href="./manageRefunds.html" class="nav-item">Manage Refunds</a>
+                <a href="./chat-escalations.html" class="nav-item">Chat / Escalations</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Staff Overview</h1>
+                <div class="user-actions">
+                    <span id="userInfo" style="font-weight: 600;"></span>
+                    <button class="btn-logout" onclick="TB.logout()" style="margin-left: 1rem;">Logout</button>
+                </div>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">Pending Bookings</div>
+                    <div class="stat-value">12</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Unassigned Schedules</div>
+                    <div class="stat-value">4</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Open Refunds</div>
+                    <div class="stat-value">2</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/assets/js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const userStr = localStorage.getItem('user');
+            if (!userStr) {
+                window.location.href = '/pages/auth/login.html';
+                return;
+            }
+            const user = JSON.parse(userStr);
+            // Chß╗ë cho ph├⌐p STAFF v├áo trang n├áy
+            if (user.role === 'ADMIN') {
+                window.location.href = '/pages/admin/dashboard.html';
+                return;
+            }
+            if (user.role !== 'STAFF') {
+                window.location.href = '/pages/auth/login.html';
+                return;
+            }
+            document.getElementById('userInfo').innerText = user.fullName || user.email || 'Staff';
+        });
+    </script>
+</body>
+</html>

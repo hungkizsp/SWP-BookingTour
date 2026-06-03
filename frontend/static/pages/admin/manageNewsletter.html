@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Newsletter - TourBooking Admin</title>
+    <link rel="stylesheet" href="../../assets/css/admin-common.css">
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/toast.js"></script>
+</head>
+
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <a href="./dashboard.html" class="logo">TourBooking</a>
+            <nav>
+                <a href="./dashboard.html" class="nav-item">Dashboard</a>
+                <a href="./manageTours.html" class="nav-item">Tours</a>
+                <a href="./manageCategories.html" class="nav-item">Categories</a>
+                <a href="./manageBookings.html" class="nav-item">Bookings</a>
+                <a href="./manageUsers.html" class="nav-item">Users</a>
+                <a href="./manageReview.html" class="nav-item">Reviews</a>
+                <a href="./manageNewsletter.html" class="nav-item active">Newsletters</a>
+                <a href="./financialReport.html" class="nav-item">Financial Report</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Newsletter Subscriptions</h1>
+                <div class="user-actions">
+                    <span id="userInfo">Loading...</span>
+                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                </div>
+            </header>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2>Subscriber List</h2>
+                    <button onclick="exportToExcel()" class="btn btn-primary">Export CSV</button>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Email</th>
+                                <th>Subscribed At</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="newsletterTable">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 2rem;">Loading data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        async function loadSubscribers() {
+            try {
+                const res = await TB.apiFetch('/api/v1/newsletters');
+                const list = res.data || res; // Dự phòng nếu API trả về thẳng mảng
+                
+                const table = document.getElementById('newsletterTable');
+                if (!Array.isArray(list) || list.length === 0) {
+                    table.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No subscribers found.</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = list.map(item => `
+                    <tr>
+                        <td>${item.id}</td>
+                        <td><strong>${item.email}</strong></td>
+                        <td>${new Date(item.subscribedAt).toLocaleString()}</td>
+                        <td><span class="badge ${item.subscribed ? 'badge-success' : 'badge-danger'}">${item.subscribed ? 'ACTIVE' : 'UNSUBSCRIBED'}</span></td>
+                        <td>
+                            <button onclick="deleteSub(${item.id})" class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 0.75rem;">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+                document.getElementById('newsletterTable').innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Error loading data.</td></tr>';
+            }
+        }
+
+        async function deleteSub(id) {
+            if (!confirm('Are you sure you want to remove this subscriber?')) return;
+            try {
+                await TB.apiFetch(`/api/v1/newsletters/${id}`, { method: 'DELETE' });
+                showToast('Subscriber removed successfully');
+                loadSubscribers();
+            } catch (err) {
+                showToast('Failed to remove subscriber', 'error');
+            }
+        }
+
+        function exportToExcel() {
+            const table = document.querySelector('table');
+            let csv = [];
+            const rows = table.querySelectorAll('tr');
+            
+            for (const row of rows) {
+                const cols = row.querySelectorAll('td, th');
+                let rowData = [];
+                for (let i = 0; i < cols.length - 1; i++) {
+                    rowData.push('"' + cols[i].innerText.replace(/"/g, '""') + '"');
+                }
+                csv.push(rowData.join(','));
+            }
+            
+            const csvContent = "data:text/csv;charset=utf-8," + csv.join("\n");
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "newsletter_subscribers.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        const user = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
+        if (!user || user.role !== 'ADMIN') {
+            window.location.href = '../auth/login.html';
+        } else {
+            document.getElementById('userInfo').textContent = user.fullName;
+            loadSubscribers();
+        }
+
+        document.getElementById('logoutBtn').onclick = () => {
+            sessionStorage.clear();
+            window.location.href = '../auth/login.html';
+        };
+    </script>
+
+    <style>
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .btn-sm { padding: 5px 10px; font-size: 0.75rem; }
+    </style>
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Thanh toán - DANA</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Manrope:wght@600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .checkout-layout {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 50px;
+      padding: 60px 0;
+    }
+
+    .checkout-step {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      margin-bottom: 30px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .checkout-step h2 {
+      font-size: 1.4rem;
+      color: var(--primary);
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      font-weight: 800;
+    }
+
+    .step-number {
+      width: 35px;
+      height: 35px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 1rem;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-soft);
+      margin-bottom: 8px;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      height: 50px;
+      padding: 0 15px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-family: inherit;
+      font-weight: 600;
+    }
+
+    .booking-summary {
+      background: var(--primary);
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 35px;
+      position: sticky;
+      top: 120px;
+      box-shadow: var(--shadow-premium);
+    }
+
+    .summary-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      font-size: 0.95rem;
+      opacity: 0.9;
+    }
+
+    .summary-total {
+      margin-top: 25px;
+      padding-top: 25px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .method-card {
+      border: 2px solid var(--border);
+      border-radius: 15px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      cursor: pointer;
+      transition: 0.3s;
+      margin-bottom: 15px;
+    }
+
+    .method-card:hover {
+      border-color: var(--primary);
+      background: var(--bg-section);
+    }
+
+    .method-card.active {
+      border-color: var(--primary);
+      background: rgba(6, 78, 59, 0.05);
+    }
+
+    .method-card .icon {
+      width: 50px;
+      height: 50px;
+      background: white;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      font-size: 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    @media (max-width: 960px) {
+      .checkout-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="top-bar">
+    <div class="top-info">
+      <span>📞 Hotline: 0913 599 745</span>
+      <span style="margin-left: 20px;">📧 Email: buiminhtue2005@gmail.com</span>
+    </div>
+    <div class="top-links">
+      <a href="./tours.html">← Quay lại danh sách</a>
+    </div>
+  </div>
+
+  <header class="site-header" id="siteHeader">
+    <div class="header-container">
+      <a class="brand" href="./index.html">
+        <div class="brand-mark">DB</div>
+        <div class="brand-copy">
+          <strong>DANANGBEST</strong>
+          <span>Trao niềm tin - Nhận giá thực</span>
+        </div>
+      </a>
+      <div style="font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.9rem;">Thanh toán đặt tour</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="checkoutLoading" style="text-align: center; padding: 100px;">
+      <div class="loader"></div>
+      <p style="margin-top: 20px; font-weight: 700; color: var(--primary);">Đang chuẩn bị thông tin đặt tour...</p>
+    </div>
+
+    <div id="checkoutContent" class="checkout-layout" style="display: none;">
+      <section>
+        <div class="checkout-step reveal visible">
+          <h2><span class="step-number">1</span> Thông tin liên lạc</h2>
+          <div class="info-grid">
+            <div class="form-group">
+              <label>Họ và tên</label>
+              <input type="text" id="custName" readonly>
+            </div>
+            <div class="form-group">
+              <label>Số điện thoại</label>
+              <input type="text" id="custPhone" placeholder="Nhập số điện thoại...">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label>Email</label>
+              <input type="email" id="custEmail" readonly>
+            </div>
+          </div>
+        </div>
+
+        <div class="checkout-step reveal visible" style="animation-delay: 0.1s;">
+          <h2><span class="step-number">2</span> Số lượng khách & Giảm giá</h2>
+          <div class="info-grid">
+            <div class="form-group">
+              <label>Tổng số người đi</label>
+              <div style="display: flex; align-items: center; gap: 20px;">
+                <button class="btn btn-outline" id="minusBtn"
+                  style="width: 50px; min-height: 50px; padding: 0;">-</button>
+                <input type="number" id="numPeople" value="1" min="1" style="text-align: center; width: 80px;">
+                <button class="btn btn-outline" id="plusBtn"
+                  style="width: 50px; min-height: 50px; padding: 0;">+</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Mã giảm giá / Voucher</label>
+              <div style="display: flex; gap: 10px;">
+                <input type="text" id="voucherCode" placeholder="Nhập mã (nếu có)..."
+                  style="text-transform: uppercase;">
+                <button class="btn btn-secondary" id="applyVoucherBtn" style="white-space: nowrap; height: 50px;">Áp
+                  dụng</button>
+              </div>
+              <div id="voucherMsg" style="font-size: 0.75rem; margin-top: 5px; font-weight: 600;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="checkout-step reveal visible" style="animation-delay: 0.2s;">
+          <h2><span class="step-number">3</span> Phương thức thanh toán</h2>
+
+          <div class="method-card active" data-method="PAYOS">
+            <div class="icon">💳</div>
+            <div>
+              <div style="font-weight: 800; color: var(--primary);">Thanh toán qua PayOS</div>
+              <div style="font-size: 0.85rem; color: var(--text-soft);">QR Code, Chuyển khoản ngân hàng 24/7</div>
+            </div>
+          </div>
+
+          <div class="method-card" data-method="CASH">
+            <div class="icon">💸</div>
+            <div>
+              <div style="font-weight: 800; color: var(--primary);">Thanh toán tại văn phòng</div>
+              <div style="font-size: 0.85rem; color: var(--text-soft);">Ngũ Hành Sơn, Đà Nẵng</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside>
+        <div class="booking-summary reveal visible" style="animation-delay: 0.3s;">
+          <h3 style="margin-bottom: 25px; font-weight: 800; letter-spacing: -0.02em;">TỔNG KẾT ĐẶT TOUR</h3>
+          <div class="summary-item">
+            <span>Tour:</span>
+            <strong id="summaryTourName">...</strong>
+          </div>
+          <div class="summary-item">
+            <span>Ngày:</span>
+            <strong id="summaryDate">...</strong>
+          </div>
+          <div class="summary-item">
+            <span>Đơn giá:</span>
+            <strong id="summaryUnitPrice">...</strong>
+          </div>
+          <div class="summary-item">
+            <span>Số người:</span>
+            <strong id="summaryPeople">1</strong>
+          </div>
+          <div class="summary-item" id="discountItem" style="display: none; color: #ffeb3b;">
+            <span>Giảm giá (<span id="summaryVoucherCode">...</span>):</span>
+            <strong id="summaryDiscountAmount">0</strong>
+          </div>
+
+          <div class="summary-total">
+            <span>TỔNG CỘNG</span>
+            <div style="text-align: right;">
+              <div style="font-size: 2.2rem; font-weight: 800;" id="summaryTotalPrice">0</div>
+              <div style="font-size: 0.8rem; opacity: 0.6; font-weight: 700;">VNĐ (Đã bao gồm thuế)</div>
+            </div>
+          </div>
+
+          <button class="btn" id="confirmBtn"
+            style="width: 100%; height: 60px; margin-top: 40px; background: white; color: var(--primary); font-size: 1.1rem; border-radius: 15px;">XÁC
+            NHẬN ĐẶT TOUR</button>
+
+          <p style="margin-top: 20px; font-size: 0.75rem; text-align: center; opacity: 0.6; line-height: 1.5;">
+            Bằng cách nhấp vào nút "Xác nhận", bạn đồng ý với các Điều khoản & Chính sách của Dana.
+          </p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer style="background: #064e3b; color: white; padding: 60px 0; margin-top: 80px;">
+    <div class="container" style="text-align: center; color: rgba(255,255,255,0.4); font-size: 0.85rem;">
+      &copy; 2024 DANANGBEST. All rights reserved.
+    </div>
+  </footer>
+
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/checkout.js"></script>
+</body>
+
+</html>

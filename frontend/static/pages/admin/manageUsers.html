@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Users - TourBooking Admin</title>
+    <link rel="stylesheet" href="../../assets/css/admin-common.css">
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/toast.js"></script>
+</head>
+
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <a href="./dashboard.html" class="logo">TourBooking</a>
+            <nav>
+                <a href="./dashboard.html" class="nav-item">Dashboard</a>
+                <a href="./manageTours.html" class="nav-item">Tours</a>
+                <a href="./manageCategories.html" class="nav-item">Categories</a>
+                <a href="./manageBookings.html" class="nav-item">Bookings</a>
+                <a href="./manageUsers.html" class="nav-item active">Users</a>
+                <a href="./manageReview.html" class="nav-item">Reviews</a>
+                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
+                <a href="./financialReport.html" class="nav-item">Financial Report</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Users</h1>
+                <div class="user-actions">
+                    <span id="userInfo">Loading...</span>
+                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                </div>
+            </header>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2>User List</h2>
+                    <button onclick="showCreateModal()" class="btn btn-primary">Create New User</button>
+                </div>
+
+                <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                    <div class="badge badge-info">Total: <span id="totalUsers">0</span></div>
+                    <div class="badge badge-success">Active: <span id="activeUsers">0</span></div>
+                    <div class="badge badge-danger">Blocked: <span id="blockedUsers">0</span></div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Email</th>
+                                <th>Full Name</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTable">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2rem;">Loading users...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                <div id="pagination" class="pagination-container"></div>
+            </div>
+        </main>
+    </div>
+    </main>
+    </div>
+
+    <!-- Modal for Create/Edit User -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <h3 id="modalTitle">Create New User</h3>
+            <input type="hidden" id="userId">
+
+            <div class="form-group">
+                <label>Email *</label>
+                <input type="email" id="email" class="form-control" placeholder="Enter email address">
+            </div>
+
+            <div class="form-group" id="passwordGroup">
+                <label>Password *</label>
+                <input type="password" id="password" class="form-control" placeholder="Enter password">
+                <small>Leave blank to keep current password when editing</small>
+            </div>
+
+            <div class="form-group">
+                <label>Full Name *</label>
+                <input type="text" id="fullName" class="form-control" placeholder="Enter full name">
+            </div>
+
+            <div class="form-group">
+                <label>Role</label>
+                <select id="role" class="form-control">
+                    <option value="CUSTOMER">Customer</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="GUIDE">Guide</option>
+                    <option value="STAFF">Staff</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Status</label>
+                <select id="isActive" class="form-control">
+                    <option value="true">Active</option>
+                    <option value="false">Blocked</option>
+                </select>
+            </div>
+
+            <div class="modal-buttons">
+                <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                <button onclick="saveUser()" class="btn btn-primary">Save User</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = "/api/v1/admin/users";
+
+        // Kiểm tra quyền ADMIN
+        function checkAuth() {
+            try {
+                const userStr = sessionStorage.getItem('user');
+                if (!userStr) {
+                    window.location.href = '/pages/auth/login.html';
+                    return false;
+                }
+
+                const user = JSON.parse(userStr);
+                if (!user || user.role !== 'ADMIN') {
+                    window.location.href = '/pages/auth/login.html';
+                    return false;
+                }
+
+                document.getElementById('userInfo').innerText = user.fullName || user.FullName || user.email;
+                return true;
+            } catch (error) {
+                console.error('Auth error:', error);
+                window.location.href = '/pages/auth/login.html';
+                return false;
+            }
+        }
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (window.TB && TB.logout) {
+                TB.logout();
+            } else {
+                sessionStorage.removeItem('user');
+                sessionStorage.removeItem('token');
+                window.location.href = '/pages/auth/login.html';
+            }
+        });
+
+        let currentEditId = null;
+
+        let currentPage = 0;
+        let pageSize = 10;
+
+        // LOAD USERS
+        async function loadUsers(page = 0) {
+            currentPage = page;
+            const userTable = document.getElementById("userTable");
+            
+            try {
+                const response = await TB.apiFetch(`${API}?page=${page}&size=${pageSize}`);
+                const data = response.data;
+                const users = data.content;
+
+                if (!users || users.length === 0) {
+                    userTable.innerHTML = `
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 2rem;">No users found.</td>
+                        </tr>
+                    `;
+                    updateStats([]);
+                    renderPagination(0, 0);
+                    return;
+                }
+
+                let html = "";
+                users.forEach(u => {
+                    const currentUser = JSON.parse(sessionStorage.getItem('user')) || {};
+                    const isSelf = currentUser.id && u.id === currentUser.id;
+
+                    html += `
+                        <tr>
+                            <td><strong>${u.id}</strong></td>
+                            <td>${escapeHtml(u.email)}</td>
+                            <td><strong>${escapeHtml(u.fullName)}</strong></td>
+                            <td>
+                                <span class="badge ${u.role === 'ADMIN' ? 'badge-info' : (u.role === 'GUIDE' ? 'badge-warning' : (u.role === 'STAFF' ? 'badge-secondary' : 'badge-info'))}">
+                                    ${u.role}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge ${u.isActive ? 'badge-success' : 'badge-danger'}">
+                                    ${u.isActive ? 'Active' : 'Blocked'}
+                                </span>
+                            </td>
+                            <td class="action-buttons">
+                                <button onclick="editUser(${u.id})" class="btn btn-warning" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;" ${isSelf ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="Cannot edit yourself"' : ''}>
+                                    Edit
+                                </button>
+                                <button onclick="toggleUserStatus(${u.id}, ${u.isActive})" 
+                                    class="btn ${u.isActive ? 'btn-danger' : 'btn-success'}"
+                                    style="padding: 0.25rem 0.75rem; font-size: 0.75rem;"
+                                    ${isSelf ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="Cannot block yourself"' : ''}>
+                                    ${u.isActive ? 'Block' : 'Unblock'}
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                userTable.innerHTML = html;
+                updateStatsFromPagedData(data);
+                renderPagination(data.totalPages, data.page);
+            } catch (error) {
+                console.error('Error loading users:', error);
+                userTable.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 2rem; color: var(--danger);">Error loading users. Please try again.</td>
+                    </tr>
+                `;
+            }
+        }
+
+        function renderPagination(totalPages, currentPage) {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'flex';
+            
+            let html = `
+                <button class="page-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="loadUsers(${currentPage - 1})">&laquo;</button>
+            `;
+            
+            for (let i = 0; i < totalPages; i++) {
+                if (i === 0 || i === totalPages - 1 || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadUsers(${i})">${i + 1}</button>`;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    html += `<span class="page-info">...</span>`;
+                }
+            }
+            
+            html += `
+                <button class="page-btn" ${currentPage === totalPages - 1 ? 'disabled' : ''} onclick="loadUsers(${currentPage + 1})">&raquo;</button>
+            `;
+            container.innerHTML = html;
+        }
+
+        function updateStatsFromPagedData(data) {
+            document.getElementById('totalUsers').innerText = data.totalElements;
+            // Since we only have paged data, we can't easily calculate active/blocked total from frontend.
+            // I'll leave the badges as is for now or maybe fetch a summary API later.
+            // For now, I'll update total and clear others or set them based on current view.
+            document.getElementById('activeUsers').innerText = '-';
+            document.getElementById('blockedUsers').innerText = '-';
+        }
+
+        // UPDATE STATISTICS
+        function updateStats(users) {
+            const total = users.length;
+            const active = users.filter(u => u.isActive).length;
+            const blocked = total - active;
+
+            document.getElementById('totalUsers').innerText = total;
+            document.getElementById('activeUsers').innerText = active;
+            document.getElementById('blockedUsers').innerText = blocked;
+        }
+
+        // SHOW CREATE MODAL
+        function showCreateModal() {
+            currentEditId = null;
+            document.getElementById('modalTitle').innerText = 'Create New User';
+            document.getElementById('userId').value = '';
+
+            const emailInput = document.getElementById('email');
+            emailInput.value = '';
+            emailInput.disabled = false;
+
+            document.getElementById('passwordGroup').style.display = 'block';
+            document.getElementById('password').value = '';
+
+            const fullNameInput = document.getElementById('fullName');
+            fullNameInput.value = '';
+            fullNameInput.disabled = false;
+
+            document.getElementById('role').value = 'CUSTOMER';
+            document.getElementById('isActive').value = 'true';
+            document.getElementById('userModal').style.display = 'flex';
+        }
+
+        // EDIT USER
+        async function editUser(id) {
+            try {
+                const response = await TB.apiFetch(`${API}/${id}`);
+                const u = response.data || response;
+                currentEditId = id;
+                document.getElementById('modalTitle').innerText = 'Edit User';
+                document.getElementById('userId').value = u.id;
+
+                const emailInput = document.getElementById('email');
+                emailInput.value = u.email;
+                emailInput.disabled = true;
+
+                document.getElementById('passwordGroup').style.display = 'none';
+                document.getElementById('password').value = '';
+
+                const fullNameInput = document.getElementById('fullName');
+                fullNameInput.value = u.fullName;
+                fullNameInput.disabled = true;
+
+                document.getElementById('role').value = u.role;
+                document.getElementById('isActive').value = u.isActive.toString();
+                document.getElementById('userModal').style.display = 'flex';
+            } catch (error) {
+                console.error('Error loading user for edit:', error);
+                showToast('Failed to load user details', 'error');
+            }
+        }
+
+        // SAVE USER (CREATE OR UPDATE)
+        async function saveUser() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const fullName = document.getElementById('fullName').value.trim();
+            const role = document.getElementById('role').value;
+            const isActive = document.getElementById('isActive').value === 'true';
+
+            if (!email) {
+                showToast('Please enter email!', 'error');
+                return;
+            }
+            if (!fullName) {
+                showToast('Please enter full name!', 'error');
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showToast('Please enter a valid email address!', 'error');
+                return;
+            }
+
+            const userData = {
+                email: email,
+                fullName: fullName,
+                role: role,
+                isActive: isActive
+            };
+
+            if (password) {
+                userData.password = password;
+            }
+
+            let url = API;
+            let method = 'POST';
+
+            if (currentEditId) {
+                url = `${API}/${currentEditId}`;
+                method = 'PUT';
+            }
+
+            try {
+                await TB.apiFetch(url, {
+                    method: method,
+                    body: JSON.stringify(userData)
+                });
+
+                showToast(currentEditId ? 'User updated successfully' : 'User created successfully', 'success');
+                closeModal();
+                loadUsers();
+            } catch (error) {
+                console.error('Error saving user:', error);
+                showToast('Failed to save user: ' + error.message, 'error');
+            }
+        }
+
+        // TOGGLE USER STATUS
+        async function toggleUserStatus(id, isActive) {
+            const action = isActive ? 'block' : 'unblock';
+            if (!confirm(`Are you sure you want to ${action} this user?`)) {
+                return;
+            }
+
+            try {
+                await TB.apiFetch(`${API}/${id}/status`, {
+                    method: "PUT",
+                    body: JSON.stringify({ isActive: !isActive })
+                });
+
+                showToast(`User ${action}ed successfully`, 'success');
+                loadUsers();
+            } catch (error) {
+                console.error('Error updating status:', error);
+                showToast('Failed to update status: ' + error.message, 'error');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('userModal').style.display = 'none';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('userModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // Init
+        if (checkAuth()) {
+            loadUsers();
+        }
+    </script>
+</body>
+
+</html>

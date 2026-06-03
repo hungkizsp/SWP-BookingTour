@@ -1,0 +1,121 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Schedules - Staff</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        .staff-layout { display: flex; min-height: 100vh; }
+        .sidebar { width: 260px; background: #082f49; color: white; padding: 2rem 1.5rem; }
+        .sidebar .logo { color: white; font-size: 1.5rem; margin-bottom: 3rem; display: block; text-decoration: none; font-weight: bold; }
+        .nav-item { padding: 0.75rem 1rem; color: rgba(255, 255, 255, 0.7); text-decoration: none; display: block; border-radius: 0.5rem; margin-bottom: 0.5rem; transition: all 0.2s; }
+        .nav-item:hover, .nav-item.active { background: rgba(255, 255, 255, 0.1); color: white; }
+        .main-content { flex: 1; padding: 2rem 5%; background-color: #f1f5f9; overflow-y: auto; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+        
+        .data-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .data-table th, .data-table td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        .data-table th { background: #f8fafc; font-weight: 600; color: #475569; }
+        
+        .action-btn { background: #0f766e; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+        .action-btn:hover { background: #115e59; }
+
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 2rem; border-radius: 16px; width: 400px; max-width: 95%; max-height: 90vh; overflow-y: auto; }
+        .modal-content h2 { margin-top: 0; margin-bottom: 1rem; }
+        .modal-content select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 1rem; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+    </style>
+</head>
+
+<body>
+    <div class="staff-layout">
+        <aside class="sidebar">
+            <a href="#" class="logo"><strong>Staff</strong> Portal</a>
+            <nav id="sidebarNav">
+                <a href="./dashboard.html" class="nav-item">Dashboard</a>
+                <a href="./manageBookings.html" class="nav-item">Manage Bookings</a>
+                <a href="./manageSchedules.html" class="nav-item active">Manage Schedules</a>
+                <a href="./manageRefunds.html" class="nav-item">Manage Refunds</a>
+                <a href="./chat-escalations.html" class="nav-item">Chat / Escalations</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Manage Schedules</h1>
+                <span id="userInfo" style="font-weight: 600;"></span>
+            </header>
+
+            <table class="data-table" id="schedulesTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tour Name</th>
+                        <th>Date</th>
+                        <th>Guide ID</th>
+                        <th>Status</th>
+                        <th>Assign Guide</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </main>
+    </div>
+
+    <div class="modal" id="assignModal">
+        <div class="modal-content">
+            <h2>Assign Tour Guide</h2>
+            <p id="targetScheduleId"></p>
+            <select id="guideSelect"></select>
+            <div class="modal-actions">
+                <button class="action-btn" style="background:#64748b;" onclick="closeModal()">Close</button>
+                <button class="action-btn" onclick="submitAssignment()">Assign</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress & Photos Details Modal -->
+    <div class="modal" id="detailsModal">
+        <div class="modal-content" style="width: 650px; max-width: 95%; max-height: 85vh; overflow-y: auto;">
+            <h2 id="detailsTitle">Tour Progress Details</h2>
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="color: #64748b; margin-bottom: 0.5rem; font-size: 0.9rem;">CURRENT PROGRESS</h4>
+                <div id="detailsProgress" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border-left: 4px solid #0f766e; min-height: 50px; max-height: 300px; overflow-y: auto;"></div>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="color: #64748b; margin-bottom: 0.5rem; font-size: 0.9rem;">FINAL REPORT</h4>
+                <div id="detailsReport" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border-left: 4px solid #64748b; min-height: 50px; max-height: 120px; overflow-y: auto; font-size: 0.95rem; line-height: 1.5;"></div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="color: #64748b; margin-bottom: 0.5rem; font-size: 0.9rem;">ACTIVITY PHOTOS</h4>
+                <div id="detailsPhotos" style="display: flex; gap: 12px; overflow-x: auto; padding: 10px 5px; scrollbar-width: thin; -webkit-overflow-scrolling: touch; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;"></div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="action-btn" style="background:#64748b;" onclick="closeDetailsModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var userStr = localStorage.getItem('user');
+            if (!userStr) { window.location.href = '/pages/auth/login.html'; return; }
+            var user = JSON.parse(userStr);
+            if (user.role === 'ADMIN') { window.location.href = '/pages/admin/dashboard.html'; return; }
+            if (user.role !== 'STAFF') { window.location.href = '/pages/auth/login.html'; return; }
+            var el = document.getElementById('userInfo');
+            if (el) el.innerText = user.fullName || user.email;
+        })();
+    </script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/admin-schedules.js"></script>
+</body>
+</html>

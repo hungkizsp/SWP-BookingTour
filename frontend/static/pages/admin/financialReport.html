@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Report - TourBooking Admin</title>
+    <link rel="stylesheet" href="../../assets/css/admin-common.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/toast.js"></script>
+</head>
+
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <a href="./dashboard.html" class="logo">TourBooking</a>
+            <nav>
+                <a href="./dashboard.html" class="nav-item">Dashboard</a>
+                <a href="./manageTours.html" class="nav-item">Tours</a>
+                <a href="./manageCategories.html" class="nav-item">Categories</a>
+                <a href="./manageBookings.html" class="nav-item">Bookings</a>
+                <a href="./manageUsers.html" class="nav-item">Users</a>
+                <a href="./manageReview.html" class="nav-item">Reviews</a>
+                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
+                <a href="./financialReport.html" class="nav-item active">Financial Report</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Financial Report</h1>
+                <div class="user-actions">
+                    <span id="userInfo" style="font-weight: 600;"></span>
+                    <button id="logoutBtn" class="btn btn-secondary" style="margin-left: 1rem;">Logout</button>
+                </div>
+            </header>
+
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="filter-row" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>From Date</label>
+                        <input type="date" id="startDate" class="form-control">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>To Date</label>
+                        <input type="date" id="endDate" class="form-control">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Type</label>
+                        <select id="reportType" class="form-control">
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Payment Status</label>
+                        <select id="bookingStatus" class="form-control">
+                            <option value="all">All Successful Payments</option>
+                            <option value="SUCCESS">Success Only</option>
+                            <option value="CANCELLED">Cancellations Only</option>
+                        </select>
+                    </div>
+                    <button onclick="loadReport()" class="btn btn-primary" style="padding: 0 25px; min-height: 48px;">Generate</button>
+                    <button onclick="seedTestData()" class="btn btn-secondary" style="margin-left: 0.5rem; opacity: 0.7;">Seed Test Data</button>
+                    <div style="flex: 1;"></div>
+                    <button onclick="exportToExcel()" class="btn btn-success" style="padding: 0 20px; min-height: 40px;">Excel</button>
+                    <button onclick="exportToPDF()" class="btn btn-danger" style="padding: 0 20px; min-height: 40px;">PDF</button>
+                </div>
+            </div>
+
+            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                <div class="card" style="text-align: center; border-top: 4px solid var(--primary); padding: 2rem;">
+                    <small style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Total Revenue</small>
+                    <h2 id="totalRevenue" style="margin: 0.5rem 0; color: var(--primary); font-size: 2rem;">₫0</h2>
+                </div>
+                <div class="card" style="text-align: center; border-top: 4px solid var(--success); padding: 2rem;">
+                    <small style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Total Bookings</small>
+                    <h2 id="totalBookings" style="margin: 0.5rem 0; color: var(--success); font-size: 2rem;">0</h2>
+                </div>
+                <div class="card" style="text-align: center; border-top: 4px solid var(--warning); padding: 2rem;">
+                    <small style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Avg. Booking Value</small>
+                    <h2 id="avgBookingValue" style="margin: 0.5rem 0; color: var(--warning); font-size: 2rem;">₫0</h2>
+                </div>
+                <div class="card" style="text-align: center; border-top: 4px solid var(--danger); padding: 2rem;">
+                    <small style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Cancel Rate</small>
+                    <h2 id="cancelRate" style="margin: 0.5rem 0; color: var(--danger); font-size: 2rem;">0%</h2>
+                </div>
+            </div>
+
+            <div class="grid" style="display: grid; grid-template-columns: 1fr; gap: 2rem; margin-bottom: 2.5rem;">
+                <div class="card" style="padding: 2rem;">
+                    <h3 style="margin-bottom: 1.5rem;">Revenue Trends</h3>
+                    <div style="height: 350px; position: relative;">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="padding: 1.5rem;">
+                <div class="table-container">
+                    <table id="reportTable">
+                        <thead>
+                            <tr>
+                                <th>Date/Period</th>
+                                <th>Bookings</th>
+                                <th>Revenue</th>
+                                <th>Avg. Value</th>
+                                <th>Cancellations</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportBody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 3rem;">No data available. Click Generate to load.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API = "/api/v1/admin/financial-report";
+        let currentReportData = [];
+        let revenueChart;
+
+        // Auth check
+        const currentUser = JSON.parse(sessionStorage.getItem('user'));
+        if (!currentUser || currentUser.role !== 'ADMIN') {
+            window.location.href = '/pages/auth/login.html';
+        } else {
+            document.getElementById('userInfo').innerText = currentUser.fullName || currentUser.FullName || currentUser.email;
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (window.TB && TB.logout) {
+                TB.logout();
+            } else {
+                sessionStorage.removeItem('user');
+                sessionStorage.removeItem('token');
+                window.location.href = '/pages/auth/login.html';
+            }
+        });
+
+        // Set default dates
+        const today = new Date();
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        document.getElementById('startDate').value = firstDayOfMonth.toISOString().split('T')[0];
+        document.getElementById('endDate').value = today.toISOString().split('T')[0];
+
+        async function loadReport() {
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const reportType = document.getElementById('reportType').value;
+            const status = document.getElementById('bookingStatus').value;
+
+            if (!startDate || !endDate) {
+                showToast('Please select date range', 'warning');
+                return;
+            }
+
+            try {
+                const response = await TB.apiFetch(`${API}?start=${startDate}&end=${endDate}&type=${reportType}&status=${status}`);
+                const data = response.data || response || [];
+                currentReportData = data;
+                
+                renderReport(data);
+                updateStats(data);
+                updateChart(data);
+                if (data.length > 0) {
+                    showToast('Report generated successfully', 'success');
+                } else {
+                    showToast('No data found for this period', 'info');
+                }
+            } catch (error) {
+                console.error('Error loading report:', error);
+                showToast('Failed to load report: ' + error.message, 'error');
+            }
+        }
+
+        async function seedTestData() {
+            if (!confirm('This will generate 5 sample successful bookings to test the report. Continue?')) return;
+            try {
+                await TB.apiFetch('/api/v1/admin/generate-test-data', { method: 'POST' });
+                showToast('Test data generated!', 'success');
+                loadReport();
+            } catch (error) {
+                showToast('Failed to seed data: ' + error.message, 'error');
+            }
+        }
+
+        function renderReport(data) {
+            const tbody = document.getElementById('reportBody');
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">No data available for selected period</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(item => `
+                <tr>
+                    <td><strong>${item.period || item.date}</strong></td>
+                    <td>${item.bookingCount || 0}</td>
+                    <td style="color: var(--primary); font-weight: 700;">${formatCurrency(item.revenue || 0)}</td>
+                    <td>${formatCurrency(item.averageValue || 0)}</td>
+                    <td><span class="badge badge-danger" style="background: #fee2e2; color: #dc2626;">${item.cancellations || 0}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function updateStats(data) {
+            const totalRevenue = data.reduce((sum, item) => sum + (item.revenue || 0), 0);
+            const totalBookings = data.reduce((sum, item) => sum + (item.bookingCount || 0), 0);
+            const totalCancellations = data.reduce((sum, item) => sum + (item.cancellations || 0), 0);
+            const avgBookingValue = totalBookings > 0 ? totalRevenue / totalBookings : 0;
+            const cancelRate = totalBookings > 0 ? (totalCancellations / totalBookings * 100).toFixed(1) : 0;
+
+            document.getElementById('totalRevenue').innerHTML = formatCurrency(totalRevenue);
+            document.getElementById('totalBookings').innerHTML = totalBookings;
+            document.getElementById('avgBookingValue').innerHTML = formatCurrency(avgBookingValue);
+            document.getElementById('cancelRate').innerHTML = `${cancelRate}%`;
+        }
+
+        function updateChart(data) {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            if (revenueChart) revenueChart.destroy();
+
+            if (!data || data.length === 0) {
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                return;
+            }
+
+            revenueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item.period || item.date),
+                    datasets: [
+                        {
+                            label: 'Revenue',
+                            data: data.map(item => item.revenue || 0),
+                            borderColor: '#059669',
+                            backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Bookings',
+                            data: data.map(item => item.bookingCount || 0),
+                            borderColor: '#d97706',
+                            backgroundColor: 'transparent',
+                            borderDash: [5, 5],
+                            tension: 0.4,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { usePointStyle: true, font: { weight: '700' } } }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { 
+                                font: { weight: '600' },
+                                callback: (v) => v >= 1000000 ? (v/1000000)+'M' : (v >= 1000 ? (v/1000)+'K' : v) 
+                            }
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: { font: { weight: '600' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportToExcel() {
+            if (!currentReportData || currentReportData.length === 0) {
+                showToast('No data to export', 'warning');
+                return;
+            }
+
+            const wsData = [
+                ['FINANCIAL REPORT'],
+                [`Generated: ${new Date().toLocaleString()}`],
+                [],
+                ['Period', 'Bookings', 'Revenue (VND)', 'Avg. Value', 'Cancellations'],
+                ...currentReportData.map(item => [
+                    item.period || item.date,
+                    item.bookingCount || 0,
+                    item.revenue || 0,
+                    item.averageValue || 0,
+                    item.cancellations || 0
+                ])
+            ];
+
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'FinancialData');
+            XLSX.writeFile(wb, `Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+            showToast('Excel exported successfully', 'success');
+        }
+
+        async function exportToPDF() {
+            if (!currentReportData || currentReportData.length === 0) {
+                showToast('No data to export', 'warning');
+                return;
+            }
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({ orientation: 'landscape' });
+
+                doc.setFontSize(22);
+                doc.setTextColor(6, 78, 59); // var(--primary-dark)
+                doc.text('Financial Report', 14, 20);
+                
+                doc.setFontSize(10);
+                doc.setTextColor(107, 114, 128);
+                doc.text(`Period: ${document.getElementById('startDate').value} to ${document.getElementById('endDate').value}`, 14, 30);
+                doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 35);
+
+                const tableData = currentReportData.map(item => [
+                    item.period || item.date,
+                    item.bookingCount || 0,
+                    formatCurrency(item.revenue || 0),
+                    formatCurrency(item.averageValue || 0),
+                    item.cancellations || 0
+                ]);
+
+                doc.autoTable({
+                    startY: 45,
+                    head: [['Period', 'Bookings', 'Revenue', 'Avg. Value', 'Cancellations']],
+                    body: tableData,
+                    theme: 'grid',
+                    headStyles: { fillColor: [6, 78, 59], fontSize: 11 },
+                    alternateRowStyles: { fillColor: [249, 250, 251] }
+                });
+
+                doc.save(`Financial_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+                showToast('PDF exported successfully', 'success');
+            } catch (error) {
+                console.error('PDF Export error:', error);
+                showToast('PDF Export failed', 'error');
+            }
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+        }
+
+        // Initial load
+        window.addEventListener('load', loadReport);
+    </script>
+</body>
+</html>
