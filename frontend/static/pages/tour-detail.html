@@ -130,7 +130,7 @@
   <div class="top-bar">
     <div class="top-info">
       <span>📞 Hotline: 0913 599 745</span>
-      <span style="margin-left: 20px;">📧 Email: buiminhtue2005@gmail.com</span>
+      <span style="margin-left: 20px;">📧 Email: krissv659@gmail.com</span>
     </div>
     <div class="top-links" id="topLinks">
       <a href="./auth/login.html">Đăng nhập</a>/
@@ -260,7 +260,8 @@
           <h3 class="section-title"
             style="margin-bottom: 25px; border-left: 5px solid var(--accent); padding-left: 20px;">CÂU HỎI THƯỜNG GẶP
           </h3>
-          <div id="tourFaqList" style="background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+          <div id="tourFaqList"
+            style="background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
             <div style="padding: 20px; text-align: center; color: var(--text-faint);">Đang tải câu hỏi...</div>
           </div>
         </div>
@@ -371,7 +372,7 @@
     if (user) {
       if (el('topLinks')) el('topLinks').style.display = 'none';
       if (el('authLinks')) el('authLinks').style.display = 'none';
-      
+
       const isAdmin = String(user.role || '').toUpperCase() === 'ADMIN';
       const adminLink = isAdmin
         ? '<a class="btn" href="./admin/manageUsers.html" style="font-size: 0.8rem; height: 40px; min-height: 40px; border-radius: 10px;">QUẢN TRỊ</a>'
@@ -388,7 +389,7 @@
           ${adminLink}
           <button class="btn btn-secondary" id="logoutBtn" style="padding: 0 20px; min-height: 40px; height: 40px; font-size: 0.8rem; border-radius: 10px;">Đăng xuất</button>
         </div>`;
-      
+
       const logoutBtn = el('logoutBtn');
       if (logoutBtn) {
         logoutBtn.onclick = () => {

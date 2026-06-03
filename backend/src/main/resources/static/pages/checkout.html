@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Thanh toán - DANA</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Manrope:wght@600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
   <style>
     .checkout-layout {
@@ -58,7 +61,8 @@
       margin-bottom: 8px;
     }
 
-    .form-group input, .form-group select {
+    .form-group input,
+    .form-group select {
       width: 100%;
       height: 50px;
       padding: 0 15px;
@@ -89,7 +93,7 @@
     .summary-total {
       margin-top: 25px;
       padding-top: 25px;
-      border-top: 1px solid rgba(255,255,255,0.1);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       justify-content: space-between;
       align-items: baseline;
@@ -107,8 +111,15 @@
       margin-bottom: 15px;
     }
 
-    .method-card:hover { border-color: var(--primary); background: var(--bg-section); }
-    .method-card.active { border-color: var(--primary); background: rgba(6, 78, 59, 0.05); }
+    .method-card:hover {
+      border-color: var(--primary);
+      background: var(--bg-section);
+    }
+
+    .method-card.active {
+      border-color: var(--primary);
+      background: rgba(6, 78, 59, 0.05);
+    }
 
     .method-card .icon {
       width: 50px;
@@ -122,10 +133,13 @@
     }
 
     @media (max-width: 960px) {
-      .checkout-layout { grid-template-columns: 1fr; }
+      .checkout-layout {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="top-bar">
     <div class="top-links">
@@ -135,18 +149,18 @@
 
   <header class="site-header" id="siteHeader">
     <a class="brand" href="./index.html">
-        <div class="brand-mark">DB</div>
-        <div class="brand-copy">
-          <strong style="font-size: 1.25rem; color: var(--primary);">DANA</strong>
-          <span>Thanh toán đơn hàng</span>
-        </div>
+      <div class="brand-mark">DB</div>
+      <div class="brand-copy">
+        <strong style="font-size: 1.25rem; color: var(--primary);">DANA</strong>
+        <span>Thanh toán đơn hàng</span>
+      </div>
     </a>
   </header>
 
   <main class="container">
     <div id="checkoutLoading" style="text-align: center; padding: 100px;">
-        <div class="loader"></div>
-        <p style="margin-top: 20px; font-weight: 700; color: var(--primary);">Đang chuẩn bị thông tin đặt tour...</p>
+      <div class="loader"></div>
+      <p style="margin-top: 20px; font-weight: 700; color: var(--primary);">Đang chuẩn bị thông tin đặt tour...</p>
     </div>
 
     <div id="checkoutContent" class="checkout-layout" style="display: none;">
@@ -163,37 +177,41 @@
               <input type="text" id="custPhone" placeholder="Nhập số điện thoại...">
             </div>
             <div class="form-group" style="grid-column: span 2;">
-                <label>Email</label>
-                <input type="email" id="custEmail" readonly>
+              <label>Email</label>
+              <input type="email" id="custEmail" readonly>
             </div>
           </div>
         </div>
 
         <div class="checkout-step reveal visible" style="animation-delay: 0.1s;">
-            <h2><span class="step-number">2</span> Số lượng khách & Giảm giá</h2>
-            <div class="info-grid">
-              <div class="form-group">
-                <label>Tổng số người đi</label>
-                <div style="display: flex; align-items: center; gap: 20px;">
-                  <button class="btn btn-outline" id="minusBtn" style="width: 50px; min-height: 50px; padding: 0;">-</button>
-                  <input type="number" id="numPeople" value="1" min="1" style="text-align: center; width: 80px;">
-                  <button class="btn btn-outline" id="plusBtn" style="width: 50px; min-height: 50px; padding: 0;">+</button>
-                </div>
-              </div>
-              <div class="form-group">
-                <label>Mã giảm giá / Voucher</label>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="voucherCode" placeholder="Nhập mã (nếu có)..." style="text-transform: uppercase;">
-                    <button class="btn btn-secondary" id="applyVoucherBtn" style="white-space: nowrap; height: 50px;">Áp dụng</button>
-                </div>
-                <div id="voucherMsg" style="font-size: 0.75rem; margin-top: 5px; font-weight: 600;"></div>
+          <h2><span class="step-number">2</span> Số lượng khách & Giảm giá</h2>
+          <div class="info-grid">
+            <div class="form-group">
+              <label>Tổng số người đi</label>
+              <div style="display: flex; align-items: center; gap: 20px;">
+                <button class="btn btn-outline" id="minusBtn"
+                  style="width: 50px; min-height: 50px; padding: 0;">-</button>
+                <input type="number" id="numPeople" value="1" min="1" style="text-align: center; width: 80px;">
+                <button class="btn btn-outline" id="plusBtn"
+                  style="width: 50px; min-height: 50px; padding: 0;">+</button>
               </div>
             </div>
+            <div class="form-group">
+              <label>Mã giảm giá / Voucher</label>
+              <div style="display: flex; gap: 10px;">
+                <input type="text" id="voucherCode" placeholder="Nhập mã (nếu có)..."
+                  style="text-transform: uppercase;">
+                <button class="btn btn-secondary" id="applyVoucherBtn" style="white-space: nowrap; height: 50px;">Áp
+                  dụng</button>
+              </div>
+              <div id="voucherMsg" style="font-size: 0.75rem; margin-top: 5px; font-weight: 600;"></div>
+            </div>
+          </div>
         </div>
 
         <div class="checkout-step reveal visible" style="animation-delay: 0.2s;">
           <h2><span class="step-number">3</span> Phương thức thanh toán</h2>
-          
+
           <div class="method-card active" data-method="PAYOS">
             <div class="icon">💳</div>
             <div>
@@ -206,7 +224,7 @@
             <div class="icon">💸</div>
             <div>
               <div style="font-weight: 800; color: var(--primary);">Thanh toán tại văn phòng</div>
-              <div style="font-size: 0.85rem; color: var(--text-soft);">15 Phan Bá Phiến, Sơn Trà, Đà Nẵng</div>
+              <div style="font-size: 0.85rem; color: var(--text-soft);">Ngũ Hành Sơn, Đà Nẵng</div>
             </div>
           </div>
         </div>
@@ -239,13 +257,15 @@
           <div class="summary-total">
             <span>TỔNG CỘNG</span>
             <div style="text-align: right;">
-                <div style="font-size: 2.2rem; font-weight: 800;" id="summaryTotalPrice">0</div>
-                <div style="font-size: 0.8rem; opacity: 0.6; font-weight: 700;">VNĐ (Đã bao gồm thuế)</div>
+              <div style="font-size: 2.2rem; font-weight: 800;" id="summaryTotalPrice">0</div>
+              <div style="font-size: 0.8rem; opacity: 0.6; font-weight: 700;">VNĐ (Đã bao gồm thuế)</div>
             </div>
           </div>
 
-          <button class="btn" id="confirmBtn" style="width: 100%; height: 60px; margin-top: 40px; background: white; color: var(--primary); font-size: 1.1rem; border-radius: 15px;">XÁC NHẬN ĐẶT TOUR</button>
-          
+          <button class="btn" id="confirmBtn"
+            style="width: 100%; height: 60px; margin-top: 40px; background: white; color: var(--primary); font-size: 1.1rem; border-radius: 15px;">XÁC
+            NHẬN ĐẶT TOUR</button>
+
           <p style="margin-top: 20px; font-size: 0.75rem; text-align: center; opacity: 0.6; line-height: 1.5;">
             Bằng cách nhấp vào nút "Xác nhận", bạn đồng ý với các Điều khoản & Chính sách của Dana.
           </p>
@@ -263,4 +283,5 @@
   <script src="../assets/js/api.js"></script>
   <script src="../assets/js/checkout.js"></script>
 </body>
+
 </html>
