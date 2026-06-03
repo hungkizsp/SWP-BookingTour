@@ -160,11 +160,17 @@
 
   async function loadFaqs() {
     try {
-      const res = await TB.apiFetch(`/api/v1/faqs/tour/${id}`, { method: 'GET' });
-      const faqs = res || []; // If response is directly a list, handle that. If res.data, wait, public routes might not use standard ApiResponse. Our FaqController returns List<TourFaq> directly. So it's accessible via `await fetch().then(r=>r.json())`. But `TB.apiFetch` parses JSON natively. 
-      // Wait, let's use standard fetch to be safe since it's a simple public endpoint:
-      const raw = await fetch(`http://localhost:8080/api/v1/faqs/tour/${id}`);
-      const list = await raw.json();
+      // Dùng plain fetch vì đây là public endpoint (không cần auth)
+      const BACKEND = 'http://localhost:8080';
+      const [tourRes, globalRes] = await Promise.all([
+        fetch(`${BACKEND}/api/v1/faqs/tour/${id}`),
+        fetch(`${BACKEND}/api/v1/faqs/global`)
+      ]);
+
+      const tourFaqs   = tourRes.ok   ? await tourRes.json()   : [];
+      const globalFaqs = globalRes.ok ? await globalRes.json() : [];
+      const list = [...(Array.isArray(tourFaqs) ? tourFaqs : []),
+                    ...(Array.isArray(globalFaqs) ? globalFaqs : [])];
 
       const elFaqList = el('tourFaqList');
       if (!list || list.length === 0) {
@@ -174,15 +180,16 @@
 
       elFaqList.innerHTML = list.map(f => `
         <div class="faq-accordion" style="border-bottom: 1px solid var(--border);">
-          <div style="padding: 15px 20px; font-weight: 700; color: var(--primary); cursor: pointer; display: flex; justify-content: space-between;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
-            <span>${f.question}</span>
+          <div style="padding: 15px 20px; font-weight: 700; color: var(--primary); cursor: pointer; display: flex; justify-content: space-between;"
+               onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'block' ? 'none' : 'block'">
+            <span>${escapeHtml(f.question)}</span>
             <span>▼</span>
           </div>
-          <div style="padding: 0 20px 15px; color: var(--text-soft); font-size: 0.95rem; line-height: 1.6; display: none;">${f.answer}</div>
+          <div style="padding: 0 20px 15px; color: var(--text-soft); font-size: 0.95rem; line-height: 1.6; display: none;">${escapeHtml(f.answer)}</div>
         </div>
       `).join('');
     } catch(e) {
-      console.error(e);
+      console.error('FAQ load error:', e);
       el('tourFaqList').innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-faint);">Không thể tải câu hỏi.</div>';
     }
   }

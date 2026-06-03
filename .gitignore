@@ -1,10 +1,45 @@
+# ==========================================
+# 1) Frontend & Node.js (QUAN TRỌNG: Chặn node_modules)
+# ==========================================
+node_modules/
+frontend/node_modules/
+backend/src/main/resources/static/node_modules/
+.eslintcache
+.stylelintcache
+*.log
+package-lock.json
+# (Mẹo: Giữ lại package-lock.json nếu bạn muốn đồng bộ version với nhóm, 
+# hoặc chặn nó nếu mỗi máy tự quản lý bằng cách xóa dấu # ở dòng dưới)
+# package-lock.json
+
+# ==========================================
+# 2) Java & Maven (Backend)
+# ==========================================
 HELP.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
+# ==========================================
+# 3) IDEs & Editors (Phần mềm Code)
+# ==========================================
+### VS Code & Cursor ###
+.vscode/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### STS (Spring Tool Suite) ###
 .apt_generated
 .classpath
 .factorypath
@@ -12,12 +47,6 @@ target/
 .settings
 .springBeans
 .sts4-cache
-
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
 
 ### NetBeans ###
 /nbproject/private/
@@ -29,6 +58,9 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-### VS Code ###
-.vscode/
-.env
+# ==========================================
+# 4) Hệ điều hành (OS) rác tự sinh
+# ==========================================
+Thumbs.db
+Desktop.ini
+.DS_Store

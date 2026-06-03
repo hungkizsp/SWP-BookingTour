@@ -24,25 +24,269 @@ public class FixDatabaseComponent implements CommandLineRunner {
         log.info("--- STARTING DATABASE INITIALIZATION ---");
 
         try {
-            // 1. Seed Admin User
+            // 1. Seed base lookup data (categories, cities)
+            seedCategories();
+            seedCities();
+
+            // 2. Seed Admin User
             seedAdminUser();
 
-            // 2. Seed Premium Content (Commented out to speed up startup)
-            // seedPremiumTourData();
+            // 3. Seed sample Tours (only if empty)
+            seedSampleTours();
 
-            // 3. Ensure ALL tours have data (Commented out to speed up startup)
-            // ensureDetailedItinerariesForAllTours();
-            // ensureUpcomingSchedulesForAllTours();
-            // ensureHighlightsForAllTours();
+            // 3b. Seed tour images (only if empty)
+            seedTourImages();
 
-            // 4. Seed FAQs (Commented out to speed up startup)
-            // seedFaqs();
+            // 4. Seed Premium Content for known tours
+            seedPremiumTourData();
+
+            // 5. Ensure ALL tours have detailed itineraries
+            ensureDetailedItinerariesForAllTours();
+
+            // 6. Ensure upcoming schedules exist for all tours
+            ensureUpcomingSchedulesForAllTours();
+
+            // 7. Ensure highlights exist for all tours
+            ensureHighlightsForAllTours();
+
+            // 8. Seed FAQs (global + per-tour)
+            seedFaqs();
 
         } catch (Exception e) {
             log.error("Initialization error (continuing app startup): {}", e.getMessage());
         }
 
         log.info("--- DATABASE INITIALIZATION COMPLETED ---");
+    }
+
+    // =====================================================================
+    // BASE DATA: CATEGORIES
+    // =====================================================================
+    private void seedCategories() {
+        try {
+            Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM Categories", Integer.class);
+            if (count != null && count > 0) return;
+
+            String[][] cats = {
+                {"Du lịch biển đảo", "Các tour tham quan, nghỉ dưỡng tại bãi biển và đảo"},
+                {"Du lịch văn hóa", "Khám phá di sản, lịch sử và văn hóa bản địa"},
+                {"Du lịch sinh thái", "Trekking, khám phá thiên nhiên và rừng núi"},
+                {"Du lịch mạo hiểm", "Các hoạt động thể thao mạo hiểm ngoài trời"},
+                {"Du lịch ẩm thực", "Trải nghiệm ẩm thực đặc sắc các vùng miền"},
+                {"Du lịch nghỉ dưỡng", "Resort, spa và các gói nghỉ dưỡng cao cấp"},
+                {"Du lịch tâm linh", "Thăm chùa chiền, đền đài và các địa điểm tâm linh"},
+                {"Du lịch thành phố", "City tour và khám phá cuộc sống đô thị"}
+            };
+
+            for (String[] c : cats) {
+                jdbcTemplate.update(
+                    "INSERT INTO Categories (CategoryName, Description, CreatedAt, UpdatedAt) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    c[0], c[1]
+                );
+            }
+            log.info("Seed: Inserted {} categories", cats.length);
+        } catch (Exception e) {
+            log.error("Category seeding error: {}", e.getMessage());
+        }
+    }
+
+    // =====================================================================
+    // BASE DATA: CITIES
+    // =====================================================================
+    private void seedCities() {
+        try {
+            Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM Cities", Integer.class);
+            if (count != null && count > 0) return;
+
+            Object[][] cities = {
+                {"Đà Nẵng",     16.054407, 108.202167},
+                {"Hội An",      15.879799, 108.335106},
+                {"Hà Nội",      21.027764, 105.834160},
+                {"Hồ Chí Minh", 10.823099, 106.629664},
+                {"Nha Trang",   12.238791, 109.196749},
+                {"Đà Lạt",      11.940419, 108.458313},
+                {"Huế",         16.467397, 107.590866},
+                {"Phú Quốc",     10.289360, 103.984100},
+                {"Hạ Long",     20.951916, 107.074580},
+                {"Sapa",        22.336523, 103.843857}
+            };
+
+            for (Object[] c : cities) {
+                jdbcTemplate.update(
+                    "INSERT INTO Cities (CityName, CenterLatitude, CenterLongitude, CreatedAt, UpdatedAt) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    c[0], c[1], c[2]
+                );
+            }
+            log.info("Seed: Inserted {} cities", cities.length);
+        } catch (Exception e) {
+            log.error("City seeding error: {}", e.getMessage());
+        }
+    }
+
+    // =====================================================================
+    // SAMPLE TOURS (only runs when Tours table is empty)
+    // =====================================================================
+    private void seedSampleTours() {
+        try {
+            Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM Tours", Integer.class);
+            if (count != null && count > 0) return;
+
+            // Fetch category/city IDs
+            Long catBien  = getCategoryId("Du lịch biển đảo");
+            Long catVanHoa = getCategoryId("Du lịch văn hóa");
+            Long catSinhThai = getCategoryId("Du lịch sinh thái");
+            Long catNghiDuong = getCategoryId("Du lịch nghỉ dưỡng");
+
+            Long cityDaNang  = getCityId("Đà Nẵng");
+            Long cityHoiAn   = getCityId("Hội An");
+            Long cityHaNoi   = getCityId("Hà Nội");
+            Long cityNhaTrang = getCityId("Nha Trang");
+            Long cityDaLat   = getCityId("Đà Lạt");
+            Long cityPhuQuoc = getCityId("Phú Quốc");
+            Long cityHaLong  = getCityId("Hạ Long");
+            Long citySapa    = getCityId("Sapa");
+            Long cityHue     = getCityId("Huế");
+
+            Object[][] tours = {
+                // {TourName, Price, Duration, StartLocation, TransportType, CategoryID, CityID, Latitude, Longitude, BestTime, SuitableAges}
+                {"Tour Bà Nà Hills - Cầu Vàng",       850000,  1, "Đà Nẵng",  "BUS",    catVanHoa,   cityDaNang,   16.0229, 107.9889, "Quanh năm",        "Mọi lứa tuổi"},
+                {"Tour Hội An Phố Cổ Về Đêm",          650000,  1, "Đà Nẵng",  "BUS",    catVanHoa,   cityHoiAn,    15.8801, 108.3380, "Quanh năm",        "Mọi lứa tuổi"},
+                {"Tour Cù Lao Chàm Lặn Ngắm San Hô",  750000,  1, "Hội An",   "BOAT",   catBien,     cityHoiAn,    15.9938, 108.5233, "Tháng 3 - Tháng 8","Từ 5 tuổi trở lên"},
+                {"Tour Ngũ Hành Sơn - Hội An",         550000,  1, "Đà Nẵng",  "BUS",    catVanHoa,   cityDaNang,   16.0021, 108.2621, "Quanh năm",        "Mọi lứa tuổi"},
+                {"Tour Bán Đảo Sơn Trà - Linh Ứng Tự", 450000, 1, "Đà Nẵng",  "BUS",    catSinhThai, cityDaNang,   16.1129, 108.2811, "Quanh năm",        "Mọi lứa tuổi"},
+                {"Tour Phú Quốc 3N2Đ",                2500000, 3, "Hồ Chí Minh","PLANE", catNghiDuong,cityPhuQuoc,  10.2897, 103.9840, "Tháng 11 - Tháng 4","Mọi lứa tuổi"},
+                {"Tour Hạ Long Bay 2N1Đ",             1800000, 2, "Hà Nội",   "BUS",    catBien,     cityHaLong,   20.9519, 107.0745, "Tháng 3 - Tháng 11","Mọi lứa tuổi"},
+                {"Tour Sa Pa Trekking 3N2Đ",           1500000, 3, "Hà Nội",   "TRAIN",  catSinhThai, citySapa,     22.3365, 103.8438, "Tháng 9 - Tháng 11","Từ 12 tuổi trở lên"},
+                {"Tour Đà Lạt Mộng Mơ 3N2Đ",          1200000, 3, "Hồ Chí Minh","BUS",  catNghiDuong,cityDaLat,    11.9404, 108.4583, "Quanh năm",        "Mọi lứa tuổi"},
+                {"Tour Nha Trang Biển Xanh 3N2Đ",     1600000, 3, "Hà Nội",   "PLANE",  catBien,     cityNhaTrang, 12.2388, 109.1967, "Tháng 1 - Tháng 8","Mọi lứa tuổi"},
+                {"Tour Huế Cố Đô 2N1Đ",                900000, 2, "Đà Nẵng",  "BUS",    catVanHoa,   cityHue,      16.4674, 107.5909, "Quanh năm",        "Mọi lứa tuổi"},
+                {"Tour Hà Nội - Hạ Long 4N3Đ",        3200000, 4, "Hà Nội",   "BUS",    catBien,     cityHaLong,   20.9519, 107.0745, "Tháng 3 - Tháng 10","Mọi lứa tuổi"},
+            };
+
+            String insertSql = "INSERT INTO Tours (TourName, Price, Duration, StartLocation, TransportType, CategoryID, CityID, Latitude, Longitude, BestTime, SuitableAges, Rating, Source, CreatedAt, UpdatedAt) "
+                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 4.5, 'LOCAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
+
+            for (Object[] t : tours) {
+                jdbcTemplate.update(insertSql, t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7], t[8], t[9], t[10]);
+            }
+            log.info("Seed: Inserted {} sample tours", tours.length);
+        } catch (Exception e) {
+            log.error("Sample tour seeding error: {}", e.getMessage());
+        }
+    }
+
+    private Long getCategoryId(String name) {
+        try {
+            return jdbcTemplate.queryForObject("SELECT CategoryID FROM Categories WHERE CategoryName = ?", Long.class, name);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private Long getCityId(String name) {
+        try {
+            return jdbcTemplate.queryForObject("SELECT CityID FROM Cities WHERE CityName = ?", Long.class, name);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // =====================================================================
+    // TOUR IMAGES (seed real photos from Unsplash for each tour)
+    // =====================================================================
+    private void seedTourImages() {
+        try {
+            Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM TourImages", Integer.class);
+            if (count != null && count > 0) return;
+
+            // Map: keyword in TourName -> list of image URLs
+            Object[][] imageMap = {
+                {"Bà Nà", new String[]{
+                    "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800&q=80",
+                    "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&q=80",
+                    "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=800&q=80"
+                }},
+                {"Hội An", new String[]{
+                    "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800&q=80",
+                    "https://images.unsplash.com/photo-1512291313931-d4291048e7b6?w=800&q=80",
+                    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80"
+                }},
+                {"Cù Lao Chàm", new String[]{
+                    "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80",
+                    "https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=800&q=80",
+                    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80"
+                }},
+                {"Ngũ Hành Sơn", new String[]{
+                    "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&q=80",
+                    "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800&q=80",
+                    "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=800&q=80"
+                }},
+                {"Sơn Trà", new String[]{
+                    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
+                    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80",
+                    "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=800&q=80"
+                }},
+                {"Phú Quốc", new String[]{
+                    "https://images.unsplash.com/photo-1573843981267-be1999ff37cd?w=800&q=80",
+                    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80",
+                    "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?w=800&q=80"
+                }},
+                {"Hạ Long", new String[]{
+                    "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&q=80",
+                    "https://images.unsplash.com/photo-1596895111956-bf1cf0599ce5?w=800&q=80",
+                    "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800&q=80"
+                }},
+                {"Sa Pa", new String[]{
+                    "https://images.unsplash.com/photo-1598135753163-6167c1a1ad65?w=800&q=80",
+                    "https://images.unsplash.com/photo-1562832135-14a35d25edef?w=800&q=80",
+                    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80"
+                }},
+                {"Đà Lạt", new String[]{
+                    "https://images.unsplash.com/photo-1499678329028-101435549a4e?w=800&q=80",
+                    "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=800&q=80",
+                    "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=800&q=80"
+                }},
+                {"Nha Trang", new String[]{
+                    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80",
+                    "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80",
+                    "https://images.unsplash.com/photo-1590523277543-a94d2e4eb00b?w=800&q=80"
+                }},
+                {"Huế", new String[]{
+                    "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&q=80",
+                    "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800&q=80",
+                    "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800&q=80"
+                }},
+                {"Hà Nội", new String[]{
+                    "https://images.unsplash.com/photo-1564596823821-79b107671cc6?w=800&q=80",
+                    "https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=800&q=80",
+                    "https://images.unsplash.com/photo-1596895111956-bf1cf0599ce5?w=800&q=80"
+                }}
+            };
+
+            int total = 0;
+            for (Object[] entry : imageMap) {
+                String keyword = (String) entry[0];
+                String[] urls  = (String[]) entry[1];
+
+                List<Map<String, Object>> tours = jdbcTemplate.queryForList(
+                    "SELECT TourID FROM Tours WHERE TourName LIKE ?", "%" + keyword + "%"
+                );
+
+                for (Map<String, Object> t : tours) {
+                    Long tourId = ((Number) t.get("TourID")).longValue();
+                    for (String url : urls) {
+                        jdbcTemplate.update(
+                            "INSERT INTO TourImages (TourID, ImageURL, CreatedAt, UpdatedAt) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                            tourId, url
+                        );
+                        total++;
+                    }
+                }
+            }
+            log.info("Seed: Inserted {} tour images", total);
+        } catch (Exception e) {
+            log.error("Tour image seeding error: {}", e.getMessage());
+        }
     }
 
     private void seedFaqs() {
@@ -196,12 +440,8 @@ public class FixDatabaseComponent implements CommandLineRunner {
                 jdbcTemplate.update("INSERT INTO TourHighlights (TourID, Highlight, CreatedAt, UpdatedAt) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", tourId, h);
             }
 
-            // --- FIX START: Xóa dữ liệu phụ thuộc để tránh lỗi Foreign Key ---
-            // Xóa hình ảnh hoạt động của lịch trình
+            // Xóa hình ảnh hoạt động của lịch trình trước khi xóa schedules (tránh lỗi Foreign Key)
             jdbcTemplate.update("DELETE FROM TourActivityImages WHERE ScheduleID IN (SELECT ScheduleID FROM TourSchedules WHERE TourID = ?)", tourId);
-            // Xóa chi tiết lịch trình (nếu có)
-            jdbcTemplate.update("DELETE FROM TourScheduleDetails WHERE ScheduleID IN (SELECT ScheduleID FROM TourSchedules WHERE TourID = ?)", tourId);
-            // --- FIX END ---
 
             // Update Schedules (Add 4 dynamic days starting from current time)
             jdbcTemplate.update("DELETE FROM TourSchedules WHERE TourID = ?", tourId);

@@ -92,6 +92,9 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/**").permitAll()
                 .requestMatchers("/api/v1/tours/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
                 
+                // FAQs: fully public (no auth needed to browse FAQs)
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/faqs/**").permitAll()
+                
                 .requestMatchers("/api/v1/chat/**", "/api/v1/ai/**").permitAll()
                 
                 // Allow /api/v1/demo for automation trigger endpoints
