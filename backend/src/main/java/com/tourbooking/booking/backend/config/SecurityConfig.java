@@ -72,10 +72,13 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/newsletters").permitAll()
                 .requestMatchers("/api/v1/newsletters/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
 
-                // Categories & Reviews: Public GET, Staff/Admin manage
+                // Categories: Public GET, Staff/Admin manage
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/categories/**").permitAll()
+                .requestMatchers("/api/v1/categories/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+                // Reviews: Public GET, customers may POST, Staff/Admin update/delete
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/reviews/**").permitAll()
-                .requestMatchers("/api/v1/categories/**", "/api/v1/reviews/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/reviews").authenticated()
+                .requestMatchers("/api/v1/reviews/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
 
                 // Bookings: Customer actions
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/bookings").authenticated()

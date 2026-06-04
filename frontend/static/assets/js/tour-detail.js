@@ -152,6 +152,18 @@
           <div style="font-size: 0.8rem; color: var(--text-faint); margin-top: 10px;">${r.createdAt ? new Date(r.createdAt).toLocaleString() : ''}</div>
         </div>
       `).join('');
+
+      const currentUser = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
+      if (currentUser) {
+        const uid = currentUser.id || currentUser.userId;
+        const mine = reviews.find(r => Number(r.userId) === Number(uid));
+        if (mine) {
+          if (el('reviewRating')) el('reviewRating').value = String(mine.rating ?? 5);
+          if (el('reviewComment')) el('reviewComment').value = mine.comment || '';
+          const submitBtn = el('submitReviewBtn');
+          if (submitBtn) submitBtn.textContent = 'Cập nhật đánh giá';
+        }
+      }
     } catch (e) {
       console.error('Failed to load reviews', e);
       el('reviewList').innerHTML = '<p style="color: var(--price); text-align: center;">Lỗi khi tải đánh giá.</p>';
@@ -250,11 +262,9 @@
               comment: comment.trim()
             })
           });
-          alert('Gửi đánh giá thành công!');
-          el('reviewComment').value = '';
-          el('reviewRating').value = '5';
+          alert('Đã lưu đánh giá thành công!');
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Gửi đánh giá';
+          submitBtn.textContent = 'Cập nhật đánh giá';
           loadReviews();
         } catch (err) {
           console.error(err);

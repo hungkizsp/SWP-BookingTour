@@ -51,7 +51,7 @@ public class ReviewController {
     public ApiResponse<ReviewResponse> createReview(@RequestBody ReviewRequest request) {
         return ApiResponse.<ReviewResponse>builder()
                 .code(HttpStatus.CREATED.value())
-                .message("Review created successfully")
+                .message("Review saved successfully")
                 .data(reviewService.createReview(request))
                 .build();
     }

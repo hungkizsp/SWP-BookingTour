@@ -1,5 +1,6 @@
 package com.tourbooking.booking.backend.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
@@ -66,17 +67,24 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional
     public ReviewResponse createReview(ReviewRequest request) {
-        Review review = ReviewMapper.toEntity(request);
-
         Tour tour = tourRepo.findById(request.getTourId())
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
         User user = userRepo.findById(request.getUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        review.setTour(tour);
-        review.setUser(user);
+        Review savedReview = reviewRepo.findByUser_IdAndTour_Id(user.getId(), tour.getId())
+                .map(existing -> {
+                    ReviewMapper.updateEntityFromRequest(existing, request);
+                    existing.setReviewDate(LocalDateTime.now());
+                    return reviewRepo.save(existing);
+                })
+                .orElseGet(() -> {
+                    Review review = ReviewMapper.toEntity(request);
+                    review.setTour(tour);
+                    review.setUser(user);
+                    return reviewRepo.save(review);
+                });
 
-        Review savedReview = reviewRepo.save(review);
         return ReviewMapper.toResponse(savedReview);
     }
 

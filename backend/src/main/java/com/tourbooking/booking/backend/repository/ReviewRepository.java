@@ -1,6 +1,7 @@
 package com.tourbooking.booking.backend.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -17,5 +18,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     org.springframework.data.domain.Page<Review> findByTourId(Long tourId, org.springframework.data.domain.Pageable pageable);
     org.springframework.data.domain.Page<Review> findByRating(Integer rating, org.springframework.data.domain.Pageable pageable);
     org.springframework.data.domain.Page<Review> findByTourIdAndRating(Long tourId, Integer rating, org.springframework.data.domain.Pageable pageable);
+
+    Optional<Review> findByUser_IdAndTour_Id(Long userId, Long tourId);
 
 }
