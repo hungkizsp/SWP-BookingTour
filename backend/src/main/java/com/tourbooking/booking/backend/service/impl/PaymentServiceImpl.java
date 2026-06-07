@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Optional;
+import com.tourbooking.booking.backend.repository.DiscountRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +39,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PayOSService payOSService;
     private final MailService mailService;
     private final ObjectMapper objectMapper;
+    private final DiscountRepository discountRepository;
 
     @Override
     @Transactional
@@ -57,6 +59,9 @@ public class PaymentServiceImpl implements PaymentService {
         } else {
             payment.setAmount(booking.getTotalPrice());
             payment.setStatus(PaymentStatus.SUCCESS);
+            if (booking.getStatus() == BookingStatus.PENDING) {
+                incrementDiscountUsage(booking);
+            }
             booking.setStatus(BookingStatus.CONFIRMED);
             awardLoyaltyAndSendMail(booking, payment.getAmount());
         }
@@ -223,6 +228,9 @@ public class PaymentServiceImpl implements PaymentService {
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             payment.setStatus(PaymentStatus.SUCCESS);
             payment.setPaymentDate(LocalDateTime.now());
+            if (booking.getStatus() == BookingStatus.PENDING) {
+                incrementDiscountUsage(booking);
+            }
             booking.setStatus(BookingStatus.CONFIRMED);
             bookingRepository.save(booking);
             paymentRepository.save(payment);
@@ -268,6 +276,9 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setPaymentDate(LocalDateTime.now());
         Booking booking = payment.getBooking();
+        if (booking.getStatus() == BookingStatus.PENDING) {
+            incrementDiscountUsage(booking);
+        }
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
         paymentRepository.save(payment);
@@ -294,5 +305,17 @@ public class PaymentServiceImpl implements PaymentService {
         }
         String dataStatus = data.path("status").asText("");
         return "CANCELLED".equalsIgnoreCase(dataStatus) || "FAILED".equalsIgnoreCase(dataStatus);
+    }
+
+    private void incrementDiscountUsage(Booking booking) {
+        if (booking.getDiscountCode() != null && !booking.getDiscountCode().isEmpty()) {
+            String code = booking.getDiscountCode().toUpperCase();
+            if (!"SUMMER".equals(code) && !"SUMMER2026".equals(code)) {
+                discountRepository.findByCode(code).ifPresent(discount -> {
+                    discount.setCurrentUsage(discount.getCurrentUsage() + 1);
+                    discountRepository.save(discount);
+                });
+            }
+        }
     }
 }

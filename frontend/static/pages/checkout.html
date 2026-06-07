@@ -132,9 +132,145 @@
       box-shadow: var(--shadow-sm);
     }
 
+    .counter-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .counter-btn {
+      width: 40px;
+      height: 40px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: white;
+      font-size: 1.3rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: 0.2s;
+      flex-shrink: 0;
+      color: var(--primary);
+    }
+
+    .counter-btn:hover {
+      border-color: var(--primary);
+      background: rgba(6, 78, 59, 0.06);
+    }
+
+    .counter-input {
+      text-align: center;
+      width: 64px !important;
+      height: 40px !important;
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+
+    .passenger-card {
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      background: #f9fafb;
+      transition: box-shadow 0.2s;
+    }
+
+    .passenger-card.child-card {
+      border-color: #fbbf24;
+      background: #fffbeb;
+    }
+
+    .passenger-card:focus-within {
+      box-shadow: 0 0 0 3px rgba(6, 78, 59, 0.12);
+    }
+
+    .passenger-card.child-card:focus-within {
+      box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.25);
+    }
+
+    .passenger-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .passenger-label {
+      font-weight: 800;
+      font-size: 1rem;
+      color: var(--primary);
+    }
+
+    .passenger-card.child-card .passenger-label {
+      color: #d97706;
+    }
+
+    .passenger-badge {
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 700;
+      background: rgba(6, 78, 59, 0.08);
+      color: var(--primary);
+    }
+
+    .passenger-card.child-card .passenger-badge {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .passenger-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .passenger-grid .full-width {
+      grid-column: span 2;
+    }
+
+    .passenger-input {
+      width: 100%;
+      height: 44px;
+      padding: 0 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+      background: white;
+    }
+
+    .passenger-card.child-card .passenger-input {
+      border-color: #fde68a;
+    }
+
+    .passenger-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .passenger-card.child-card .passenger-input:focus {
+      border-color: #d97706;
+    }
+
+    .passenger-input::placeholder {
+      color: #9ca3af;
+      font-weight: 500;
+    }
+
     @media (max-width: 960px) {
       .checkout-layout {
         grid-template-columns: 1fr;
+      }
+
+      .passenger-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .passenger-grid .full-width {
+        grid-column: span 1;
       }
     }
   </style>
@@ -196,30 +332,44 @@
           <h2><span class="step-number">2</span> Số lượng khách & Giảm giá</h2>
           <div class="info-grid">
             <div class="form-group">
-              <label>Tổng số người đi</label>
-              <div style="display: flex; align-items: center; gap: 20px;">
-                <button class="btn btn-outline" id="minusBtn"
-                  style="width: 50px; min-height: 50px; padding: 0;">-</button>
-                <input type="number" id="numPeople" value="1" min="1" style="text-align: center; width: 80px;">
-                <button class="btn btn-outline" id="plusBtn"
-                  style="width: 50px; min-height: 50px; padding: 0;">+</button>
+              <label>🧑 Người lớn <small style="color:var(--text-soft); font-weight:600;">(Từ 12 tuổi)</small></label>
+              <div class="counter-group">
+                <button class="counter-btn" id="minusAdultBtn" type="button">−</button>
+                <input type="number" id="adultCount" class="counter-input" value="1" min="1">
+                <button class="counter-btn" id="plusAdultBtn" type="button">+</button>
+                <span style="font-size:0.8rem; color:var(--text-soft); font-weight:600;">× 100% giá</span>
               </div>
             </div>
             <div class="form-group">
-              <label>Mã giảm giá / Voucher</label>
-              <div style="display: flex; gap: 10px;">
-                <input type="text" id="voucherCode" placeholder="Nhập mã (nếu có)..."
-                  style="text-transform: uppercase;">
-                <button class="btn btn-secondary" id="applyVoucherBtn" style="white-space: nowrap; height: 50px;">Áp
-                  dụng</button>
+              <label>👦 Trẻ em <small style="color:#d97706; font-weight:600;">(2–11 tuổi · Giảm 25%)</small></label>
+              <div class="counter-group">
+                <button class="counter-btn" id="minusChildBtn" type="button">−</button>
+                <input type="number" id="childCount" class="counter-input" value="0" min="0">
+                <button class="counter-btn" id="plusChildBtn" type="button">+</button>
+                <span style="font-size:0.8rem; color:#d97706; font-weight:600;">× 75% giá</span>
               </div>
-              <div id="voucherMsg" style="font-size: 0.75rem; margin-top: 5px; font-weight: 600;"></div>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label>🏷️ Mã giảm giá / Voucher</label>
+              <div style="display: flex; gap: 10px;">
+                <input type="text" id="voucherCode" placeholder="Nhập mã giảm giá (nếu có)..."
+                  style="text-transform: uppercase; flex: 1;">
+                <button class="btn btn-secondary" id="applyVoucherBtn" style="white-space: nowrap; height: 50px;">Áp dụng</button>
+              </div>
+              <div id="voucherMsg" style="font-size: 0.8rem; margin-top: 6px; font-weight: 600;"></div>
             </div>
           </div>
         </div>
 
+        <div class="checkout-step reveal visible" id="passengersStep" style="animation-delay: 0.15s;">
+          <h2><span class="step-number">3</span> Thông tin hành khách đi tour</h2>
+          <div id="passengersContainer" style="display: flex; flex-direction: column; gap: 25px;">
+            <!-- Render động danh sách hành khách đi cùng -->
+          </div>
+        </div>
+
         <div class="checkout-step reveal visible" style="animation-delay: 0.2s;">
-          <h2><span class="step-number">3</span> Phương thức thanh toán</h2>
+          <h2><span class="step-number">4</span> Phương thức thanh toán</h2>
 
           <div class="method-card active" data-method="PAYOS">
             <div class="icon">💳</div>
@@ -255,8 +405,12 @@
             <strong id="summaryUnitPrice">...</strong>
           </div>
           <div class="summary-item">
-            <span>Số người:</span>
-            <strong id="summaryPeople">1</strong>
+            <span>Người lớn:</span>
+            <strong id="summaryAdults">1</strong>
+          </div>
+          <div class="summary-item">
+            <span>Trẻ em:</span>
+            <strong id="summaryChildren">0</strong>
           </div>
           <div class="summary-item" id="discountItem" style="display: none; color: #ffeb3b;">
             <span>Giảm giá (<span id="summaryVoucherCode">...</span>):</span>

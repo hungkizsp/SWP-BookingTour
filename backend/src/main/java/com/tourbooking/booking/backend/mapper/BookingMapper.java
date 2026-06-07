@@ -42,11 +42,7 @@ public class BookingMapper {
     public static void updateEntityFromRequest(Booking booking, BookingRequest request) {
         if (request == null || booking == null)
             return;
-        if (request.getNumberOfPeople() != null)
-            booking.setNumberOfPeople(request.getNumberOfPeople());
-        if (request == null || booking == null)
-            return;
-        if (request.getNumberOfPeople() != null)
+        if (request.getAdultCount() != null)
             booking.setNumberOfPeople(request.getNumberOfPeople());
         if (request.getTotalPrice() != null)
             booking.setTotalPrice(request.getTotalPrice());

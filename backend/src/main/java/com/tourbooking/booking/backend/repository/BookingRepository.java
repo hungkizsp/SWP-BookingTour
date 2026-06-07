@@ -24,6 +24,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "AND (b.payment IS NULL OR b.payment.status <> 'SUCCESS')")
     List<Booking> findPendingUnpaidBefore(@Param("cutoff") LocalDateTime cutoff);
 
+    @Query("SELECT b FROM Booking b WHERE b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PENDING " +
+           "AND b.createdAt < :cutoff AND b.payment.paymentMethod = 'PAYOS'")
+    List<Booking> findPendingPayosBookingsBefore(@Param("cutoff") LocalDateTime cutoff);
+
     // UC50: Đếm booking theo status trong tháng
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.status = :status " +
            "AND b.createdAt >= :from AND b.createdAt < :to")
