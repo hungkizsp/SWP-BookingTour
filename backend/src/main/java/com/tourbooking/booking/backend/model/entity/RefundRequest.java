@@ -1,5 +1,6 @@
 package com.tourbooking.booking.backend.model.entity;
 
+import com.tourbooking.booking.backend.model.entity.enums.BookingStatus;
 import com.tourbooking.booking.backend.model.entity.enums.RefundStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -34,4 +35,12 @@ public class RefundRequest extends Base {
 
     @Column(name = "ProcessedAt")
     private LocalDateTime processedAt;
+
+    /**
+     * Trạng thái booking TRƯỚC KHI khách bấm yêu cầu hoàn tiền (CONFIRMED hoặc SUCCESS).
+     * Dùng để khôi phục chính xác khi Staff REJECT — không hardcode if/else.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "OriginalBookingStatus", length = 50)
+    private BookingStatus originalBookingStatus;
 }

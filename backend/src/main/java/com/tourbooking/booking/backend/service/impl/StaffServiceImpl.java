@@ -15,6 +15,7 @@ import com.tourbooking.booking.backend.repository.UserRepository;
 import com.tourbooking.booking.backend.service.StaffService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,7 @@ import com.tourbooking.booking.backend.service.ProgressLogService;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class StaffServiceImpl implements StaffService {
 
     private final BookingRepository bookingRepository;
@@ -82,14 +84,59 @@ public class StaffServiceImpl implements StaffService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 2.2 — Nhân viên phê duyệt / từ chối yêu cầu hoàn tiền.
+     * <ul>
+     *   <li>APPROVE: đổi Booking → CANCELLED, hoàn trả availableSlots.</li>
+     *   <li>REJECT: trả Booking về trạng thái trước đó (CONFIRMED hoặc SUCCESS).</li>
+     * </ul>
+     */
     @Override
     @Transactional
     public void processRefund(Long refundId, RefundStatus status, String staffNote) {
         RefundRequest refund = refundRequestRepository.findById(refundId)
                 .orElseThrow(() -> new RuntimeException("Refund request not found"));
-        refund.setStatus(status);
+
+        Booking booking = refund.getBooking();
+        if (booking == null) {
+            throw new RuntimeException("Refund #" + refundId + " không liên kết với Booking nào.");
+        }
+
         refund.setStaffNote(staffNote);
         refund.setProcessedAt(LocalDateTime.now());
+
+        if (status == RefundStatus.APPROVED) {
+            refund.setStatus(RefundStatus.APPROVED);
+
+            // a. Cập nhật Booking → CANCELLED
+            booking.setStatus(BookingStatus.CANCELLED);
+            bookingRepository.save(booking);
+
+            // b. Hoàn trả availableSlots vào TourSchedule bằng Atomic Update chống tranh chấp Lost Update
+            TourSchedule schedule = booking.getSchedule();
+            if (schedule != null && booking.getNumberOfPeople() != null) {
+                tourScheduleRepository.releaseAvailableSlots(schedule.getId(), booking.getNumberOfPeople());
+                log.info("[Refund] Atomic released {} slots for ScheduleID={}", booking.getNumberOfPeople(), schedule.getId());
+            }
+
+        } else if (status == RefundStatus.REJECTED) {
+            refund.setStatus(RefundStatus.REJECTED);
+
+            // Khôi phục trạng thái booking từ dữ liệu gốc đã lưu — KHÔNG hardcode
+            BookingStatus restoredStatus = refund.getOriginalBookingStatus();
+            if (restoredStatus == null) {
+                // Fallback an toàn nếu cột OriginalBookingStatus chưa được điền (dữ liệu cũ)
+                restoredStatus = BookingStatus.CONFIRMED;
+                log.warn("[Refund] RefundID={} thiếu OriginalBookingStatus → fallback CONFIRMED", refundId);
+            }
+            booking.setStatus(restoredStatus);
+            bookingRepository.save(booking);
+            log.info("[Refund] REJECT RefundID={} → Booking#{} phục hồi trạng thái: {}",
+                    refundId, booking.getId(), restoredStatus);
+        } else {
+            throw new RuntimeException("Trạng thái không hợp lệ: " + status);
+        }
+
         refundRequestRepository.save(refund);
     }
 

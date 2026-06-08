@@ -195,6 +195,22 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID(N'dbo.Passengers', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Passengers (
+    [PassengerID] BIGINT IDENTITY(1,1) PRIMARY KEY,
+    [BookingID] BIGINT NOT NULL,
+    [FullName] NVARCHAR(200) NOT NULL,
+    [DateOfBirth] DATE NULL,
+    [IdNumber] VARCHAR(50) NULL,
+    [PassengerType] VARCHAR(20) NOT NULL,
+    [CreatedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    [UpdatedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT [FK_Passengers_Bookings] FOREIGN KEY ([BookingID]) REFERENCES [dbo].[Bookings] ([BookingID]) ON DELETE CASCADE
+    );
+END
+GO
+
 IF OBJECT_ID(N'dbo.Payments', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.Payments (
@@ -453,3 +469,20 @@ BEGIN
     ');
 END
 GO
+
+-- Bổ sung cột cho các Edge Cases mới:
+-- 1. Thêm AssignedStaffID vào ChatSessions để lưu nhân viên đang chat
+IF COL_LENGTH('dbo.ChatSessions', 'AssignedStaffID') IS NULL
+BEGIN
+    ALTER TABLE dbo.ChatSessions ADD AssignedStaffID BIGINT NULL;
+    ALTER TABLE dbo.ChatSessions ADD CONSTRAINT FK_ChatSessions_Staff FOREIGN KEY (AssignedStaffID) REFERENCES dbo.Users(UserID);
+END
+GO
+
+-- 2. Thêm OriginalBookingStatus vào RefundRequests để phục hồi trạng thái gốc khi từ chối hoàn tiền
+IF COL_LENGTH('dbo.RefundRequests', 'OriginalBookingStatus') IS NULL
+BEGIN
+    ALTER TABLE dbo.RefundRequests ADD OriginalBookingStatus NVARCHAR(50) NULL;
+END
+GO
+

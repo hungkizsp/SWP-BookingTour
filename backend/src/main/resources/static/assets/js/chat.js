@@ -9,8 +9,9 @@
   const chatForm = document.getElementById('form');
   const who = document.getElementById('who');
   const escalateBtn = document.getElementById('escalateBtn');
+  const endSessionBtn = document.getElementById('endSessionBtn');
   const escalationStatus = document.getElementById('escalationStatus');
-  let currentEscalation = null;
+  let currentSession = { status: 'AI' };
 
   const userId = user?.id ?? null;
   const isGuest = !user;
@@ -76,8 +77,10 @@
       const res = await TB.apiFetch(`/api/v1/chat/messages${q}`);
       const msgs = res.data || [];
       
+      console.log("[Chat] Current messages count:", msgs.length);
+
       if (msgs.length !== lastMessageCount) {
-        console.log("[Chat] Count changed to", msgs.length, "rebuilding UI...");
+        console.log("[Chat] Count changed, rebuilding UI...");
         await render(msgs);
         lastMessageCount = msgs.length;
       }
@@ -177,7 +180,8 @@
       console.log(`[Chat] Post success for message at ${now}`);
       await load();
       
-      const isHandledByStaff = currentEscalation && (currentEscalation.status === 'STAFF_CHATTING' || currentEscalation.status === 'WAITING_STAFF');
+      const sessionStatus = currentSession?.status || 'AI';
+      const isHandledByStaff = sessionStatus === 'STAFF_CHATTING' || sessionStatus === 'WAITING_STAFF';
       if (!isHandledByStaff) {
           setTimeout(() => getAiResponse(content), 600);
       } else {
@@ -209,40 +213,246 @@
     }
   }
 
-  async function loadEscalation() {
-    try {
-      const q = isGuest ? `?guestId=${encodeURIComponent(guestId)}` : `?userId=${encodeURIComponent(userId)}`;
-      const res = await TB.apiFetch(`/api/v1/chat/escalations/active${q}`);
-      renderEscalation(res.data);
-    } catch (err) {}
+  const statusBar = document.getElementById('connection-status-bar');
+  const resetToAiBtn = document.getElementById('resetToAiBtn');
+  const chatInput = document.getElementById('text');
+  const submitBtn = chatForm ? chatForm.querySelector('button[type="submit"]') : null;
+
+  function resetToIdleMode() {
+    if (statusBar) statusBar.style.display = 'none';
+    if (escalationStatus) escalationStatus.hidden = true;
+    if (endSessionBtn) endSessionBtn.hidden = true;
+    if (escalateBtn) escalateBtn.style.display = 'inline-block';
+    if (resetToAiBtn) resetToAiBtn.style.display = 'none';
+    if (chatInput) { chatInput.disabled = false; chatInput.placeholder = 'Nhập tin nhắn của bạn...'; }
+    if (submitBtn) submitBtn.disabled = false;
   }
 
-  function renderEscalation(data) {
-    currentEscalation = data;
-    if (!escalationStatus) return;
-    if (!data) {
-      escalationStatus.hidden = true;
-      return;
+  function showWaitingStaffBar() {
+    if (statusBar) {
+      statusBar.style.display = 'block';
+      statusBar.style.background = '#eff6ff';
+      statusBar.style.color = '#1e40af';
+      statusBar.style.border = '1px solid #bfdbfe';
+      statusBar.textContent = '⏳ Hệ thống đã ghi nhận yêu cầu. Đang kết nối bạn với nhân viên hỗ trợ, vui lòng đợi trong giây lát...';
     }
-    const labels = { OPEN: 'Đã báo nhân viên.', IN_REVIEW: 'Nhân viên đang xem.', WAITING_STAFF: 'Đang đợi nhân viên.' };
-    escalationStatus.textContent = labels[data.status] || 'Nhân viên đã được thông báo.';
-    escalationStatus.hidden = false;
+    if (escalationStatus) escalationStatus.hidden = true;
+    if (escalateBtn) escalateBtn.style.display = 'none';
+    if (resetToAiBtn) resetToAiBtn.style.display = 'none';
+    if (chatInput) { chatInput.disabled = false; chatInput.placeholder = 'Nhập tin nhắn của bạn...'; }
+    if (submitBtn) submitBtn.disabled = false;
+  }
+
+  function showStaffChattingBar(staffName) {
+    if (statusBar) {
+      statusBar.style.display = 'block';
+      statusBar.style.background = '#f0fdf4';
+      statusBar.style.color = '#166534';
+      statusBar.style.border = '1px solid #bbf7d0';
+      statusBar.textContent = `🟢 Bạn đang trò chuyện với nhân viên hỗ trợ [${staffName}].`;
+    }
+    if (escalateBtn) escalateBtn.style.display = 'none';
+    if (resetToAiBtn) resetToAiBtn.style.display = 'none';
+    if (chatInput) { chatInput.disabled = false; chatInput.placeholder = 'Nhập tin nhắn của bạn...'; }
+    if (submitBtn) submitBtn.disabled = false;
+  }
+
+  function showClosedState() {
+    if (statusBar) statusBar.style.display = 'none';
+    if (chatInput) {
+      chatInput.disabled = true;
+      chatInput.placeholder = 'Cuộc trò chuyện đã kết thúc...';
+    }
+    if (submitBtn) submitBtn.disabled = true;
+    if (resetToAiBtn) resetToAiBtn.style.display = 'flex';
+  }
+
+  /** Chỉ điều khiển UI theo trạng thái chính thức của ChatSession (API / SSE). */
+  function renderSessionStatus(session) {
+    currentSession = session || { status: 'AI' };
+    const status = currentSession.status || 'AI';
+
+    switch (status) {
+      case 'WAITING_STAFF':
+        showWaitingStaffBar();
+        break;
+      case 'STAFF_CHATTING':
+        showStaffChattingBar(currentSession.assignedStaffName || 'Nhân viên hỗ trợ');
+        break;
+      case 'CLOSED':
+        showClosedState();
+        break;
+      case 'AI':
+      default:
+        resetToIdleMode();
+        break;
+    }
+  }
+
+  // Khởi tạo EventSource để lắng nghe sự kiện từ Server-Sent Events (SSE)
+  let sseSource = null;
+  function initSse() {
+    if (sseSource) {
+      sseSource.close();
+    }
+    
+    // Khi chạy ở dev server (port 3000/5500), phải trỏ thẳng về Backend host
+    // (giống cách apiFetch trong api.js xử lý)
+    const BACKEND_URL = 'http://localhost:8080';
+    const isDev = window.location.port === '3000' || window.location.port === '5500';
+    const sseUrl = isDev ? `${BACKEND_URL}/api/v1/chat/messages/stream` : '/api/v1/chat/messages/stream';
+    
+    console.log("[SSE] Connecting to:", sseUrl);
+    sseSource = new EventSource(sseUrl);
+
+    sseSource.addEventListener('chat-message', (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        console.log("[SSE] chat-message received:", msg);
+
+        if (msg.status === 'CLOSED' || msg.type === 'SESSION_CLOSED') {
+          renderSessionStatus({ status: 'CLOSED' });
+          appendSystemMessage(msg.message || 'Cuộc hỗ trợ đã kết thúc bởi nhân viên. Cảm ơn bạn!');
+          load();
+          return;
+        }
+        if (msg.status === 'STAFF_CHATTING' || msg.type === 'SESSION_ASSIGNED') {
+          renderSessionStatus({
+            status: 'STAFF_CHATTING',
+            assignedStaffName: msg.staffName || 'Nhân viên hỗ trợ'
+          });
+          load();
+          return;
+        }
+        if (msg.status === 'WAITING_STAFF') {
+          renderSessionStatus({ status: 'WAITING_STAFF' });
+          load();
+          return;
+        }
+
+        load();
+      } catch (err) {
+        console.error("[SSE] Failed to parse event message:", err);
+      }
+    });
+
+    sseSource.addEventListener('session-assigned', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        console.log("[SSE] session-assigned event received:", data);
+        renderSessionStatus({
+          status: 'STAFF_CHATTING',
+          assignedStaffName: data.staffName || 'Nhân viên hỗ trợ'
+        });
+        load();
+      } catch (err) {}
+    });
+
+    sseSource.addEventListener('session-closed', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        console.log("[SSE] session-closed event received:", data);
+        renderSessionStatus({ status: 'CLOSED' });
+        appendSystemMessage(data.message || 'Cuộc hỗ trợ đã kết thúc bởi nhân viên. Cảm ơn bạn!');
+        load();
+      } catch (err) {}
+    });
+
+    sseSource.onopen = () => {
+      console.log("[SSE] Connection established successfully.");
+    };
+
+    sseSource.onerror = (err) => {
+      console.warn("[SSE] Connection error. Sse connection closed or server offline.", err);
+    };
+  }
+
+  function appendSystemMessage(text) {
+    // Tránh append trùng lặp thông báo kết thúc
+    const existSystemMsgs = box.querySelectorAll('.msg.system-alert');
+    if (existSystemMsgs.length > 0) return;
+
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'msg ai system-alert';
+    infoDiv.style.alignSelf = 'center';
+    infoDiv.style.background = '#fee2e2';
+    infoDiv.style.border = '1px solid #fecaca';
+    infoDiv.style.color = '#991b1b';
+    infoDiv.style.padding = '10px 20px';
+    infoDiv.style.borderRadius = '8px';
+    infoDiv.style.margin = '10px 0';
+    infoDiv.innerHTML = `<div style="font-size:0.9rem; font-weight:700; text-align:center;">⚠️ ${text}</div>`;
+    
+    box.appendChild(infoDiv);
+    box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
+  }
+
+  async function loadSessionStatus() {
+    try {
+      const q = isGuest ? `?guestId=${encodeURIComponent(guestId)}` : `?userId=${encodeURIComponent(userId)}`;
+      const res = await TB.apiFetch(`/api/v1/chat/session${q}`);
+      renderSessionStatus(res.data);
+    } catch (err) {
+      console.error('Load session status error', err);
+    }
   }
 
   if (escalateBtn) {
     escalateBtn.onclick = async () => {
-      const input = document.getElementById('text');
-      const note = input.value.trim() || 'Cần hỗ trợ từ nhân viên';
+      const note = chatInput ? chatInput.value.trim() : 'Cần hỗ trợ từ nhân viên';
       try {
-        await TB.apiFetch('/api/v1/chat/escalations', { method: 'POST', body: JSON.stringify({ userId, guestId: isGuest ? guestId : null, requestNote: note }) });
-        input.value = '';
-        loadEscalation();
-      } catch (err) {}
+        await TB.apiFetch('/api/v1/chat/escalations', { 
+          method: 'POST', 
+          body: JSON.stringify({ userId, guestId: isGuest ? guestId : null, requestNote: note }) 
+        });
+        if (chatInput) chatInput.value = '';
+        await loadSessionStatus();
+      } catch (err) {
+        console.error("Escalation failed", err);
+      }
     }
   }
 
+  if (resetToAiBtn) {
+    resetToAiBtn.onclick = async () => {
+      // Gửi API thông báo đóng/hoàn thành cuộc trò chuyện ở phía DB
+      try {
+        await TB.apiFetch('/api/v1/chat/escalations/close', {
+          method: 'POST',
+          body: JSON.stringify({ userId, guestId: isGuest ? guestId : null })
+        });
+      } catch (err) {
+        console.warn("Could not close active escalation on server, resetting locally:", err);
+      }
+
+      // Mở khóa giao diện và reset các biến
+      if (chatInput) {
+        chatInput.disabled = false;
+        chatInput.placeholder = "Nhập tin nhắn của bạn...";
+        chatInput.value = "";
+      }
+      if (submitBtn) {
+        submitBtn.disabled = false;
+      }
+      
+      resetToAiBtn.style.display = 'none';
+      if (escalateBtn) escalateBtn.style.display = 'inline-block';
+      if (statusBar) statusBar.style.display = 'none';
+      
+      currentSession = { status: 'AI' };
+      lastMessageCount = -1;
+
+      // Xóa lịch sử hiển thị và chào lại tự động
+      box.innerHTML = '';
+      proactiveGreeting();
+    };
+  }
+
+  resetToIdleMode();
   load();
-  loadEscalation();
-  setInterval(load, 3000);
-  setInterval(loadEscalation, 5000);
+  loadSessionStatus();
+  initSse();
+
+  setInterval(load, 10000);
+  setInterval(loadSessionStatus, 15000);
 })();

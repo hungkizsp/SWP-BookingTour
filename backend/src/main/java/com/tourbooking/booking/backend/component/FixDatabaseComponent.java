@@ -23,6 +23,9 @@ public class FixDatabaseComponent implements CommandLineRunner {
     public void run(String... args) throws Exception {
         log.info("--- STARTING DATABASE INITIALIZATION ---");
 
+        // Tự động kiểm tra và cập nhật Database Schema nếu thiếu cột
+        migrateSchemaIfNeeded();
+
         try {
             // 1. Seed base lookup data (categories, cities)
             seedCategories();
@@ -57,6 +60,41 @@ public class FixDatabaseComponent implements CommandLineRunner {
         }
 
         log.info("--- DATABASE INITIALIZATION COMPLETED ---");
+    }
+
+    private void migrateSchemaIfNeeded() {
+        try {
+            log.info("Checking and migrating database schema...");
+            
+            // 1. Check and add AssignedStaffID to ChatSessions
+            try {
+                jdbcTemplate.execute(
+                    "IF COL_LENGTH('dbo.ChatSessions', 'AssignedStaffID') IS NULL " +
+                    "BEGIN " +
+                    "    ALTER TABLE dbo.ChatSessions ADD AssignedStaffID BIGINT NULL; " +
+                    "    ALTER TABLE dbo.ChatSessions ADD CONSTRAINT FK_ChatSessions_Staff FOREIGN KEY (AssignedStaffID) REFERENCES dbo.Users(UserID); " +
+                    "END"
+                );
+                log.info("Schema migration: AssignedStaffID column checked/added to ChatSessions.");
+            } catch (Exception e) {
+                log.warn("Failed to check/add AssignedStaffID to ChatSessions: {}", e.getMessage());
+            }
+
+            // 2. Check and add OriginalBookingStatus to RefundRequests
+            try {
+                jdbcTemplate.execute(
+                    "IF COL_LENGTH('dbo.RefundRequests', 'OriginalBookingStatus') IS NULL " +
+                    "BEGIN " +
+                    "    ALTER TABLE dbo.RefundRequests ADD OriginalBookingStatus NVARCHAR(50) NULL; " +
+                    "END"
+                );
+                log.info("Schema migration: OriginalBookingStatus column checked/added to RefundRequests.");
+            } catch (Exception e) {
+                log.warn("Failed to check/add OriginalBookingStatus to RefundRequests: {}", e.getMessage());
+            }
+        } catch (Exception e) {
+            log.error("Schema migration error: {}", e.getMessage());
+        }
     }
 
     // =====================================================================
@@ -443,9 +481,15 @@ public class FixDatabaseComponent implements CommandLineRunner {
             // Xóa hình ảnh hoạt động của lịch trình trước khi xóa schedules (tránh lỗi Foreign Key)
             jdbcTemplate.update("DELETE FROM TourActivityImages WHERE ScheduleID IN (SELECT ScheduleID FROM TourSchedules WHERE TourID = ?)", tourId);
 
-            // Update Schedules (Add 4 dynamic days starting from current time)
-            jdbcTemplate.update("DELETE FROM TourSchedules WHERE TourID = ?", tourId);
+            // Update Schedules (Chỉ xóa những schedule chưa có Booking để tránh xung đột khóa ngoại)
+            jdbcTemplate.update("DELETE FROM TourSchedules WHERE TourID = ? AND ScheduleID NOT IN (SELECT DISTINCT ScheduleID FROM Bookings)", tourId);
             for (int i = 1; i <= 4; i++) {
+                Integer exists = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM TourSchedules WHERE TourID = ? AND CAST(StartDate AS DATE) = CAST(DATEADD(day, ?, GETDATE()) AS DATE)",
+                    Integer.class, tourId, i
+                );
+                if (exists != null && exists > 0) continue;
+
                 jdbcTemplate.update("INSERT INTO TourSchedules (TourID, StartDate, EndDate, AvailableSlots, MaxSlots, Status, CreatedAt, UpdatedAt) " +
                     "VALUES (?, DATEADD(day, ?, GETDATE()), DATEADD(day, ?, GETDATE()), 20, 20, 'OPEN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
                     tourId, i, i);

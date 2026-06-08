@@ -27,5 +27,9 @@ public interface TourScheduleRepository extends JpaRepository<TourSchedule, Long
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT s FROM TourSchedule s WHERE s.id = :id")
     Optional<TourSchedule> findByIdWithLock(@Param("id") Long id);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE TourSchedule ts SET ts.availableSlots = ts.availableSlots + :people WHERE ts.id = :scheduleId")
+    void releaseAvailableSlots(@Param("scheduleId") Long scheduleId, @Param("people") Integer people);
 }
 

@@ -29,4 +29,12 @@ public class ChatSession extends Base {
 
     @Column(name = "LastMessageAt")
     private LocalDateTime lastMessageAt;
+
+    /**
+     * Staff đang phụ trách phiên này.
+     * Set NULL khi phiên được giải phóng (auto-release) để staff khác có thể tiếp nhận.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "AssignedStaffID", columnDefinition = "BIGINT")
+    private User assignedStaff;
 }

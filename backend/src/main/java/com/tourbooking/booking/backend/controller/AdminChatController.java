@@ -81,11 +81,15 @@ public class AdminChatController {
     @PostMapping("/{id}/assign")
     @Transactional
     public ApiResponse<ChatSessionSummaryResponse> assign(@PathVariable("id") Long id, Principal principal) {
-        resolveStaffId(principal);
-        ChatSession session = sessionRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Session not found"));
-        session.setStatus(ChatSessionStatus.STAFF_CHATTING);
-        session.setLastMessageAt(LocalDateTime.now());
-        sessionRepository.save(session);
+        Long staffId = resolveStaffId(principal);
+        // Dùng chatService.assignSession() có Pessimistic Write Lock — chống race condition
+        ChatSession session = chatService.assignSession(id, staffId);
+        
+        // 2. Giai đoạn 2 - Bắn sự kiện gán nhân viên sang khách hàng qua SSE
+        if (session.getAssignedStaff() != null) {
+            notificationService.publishSessionAssigned(session.getId(), session.getAssignedStaff().getFullName());
+        }
+
         return ApiResponse.<ChatSessionSummaryResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Session joined")
@@ -97,10 +101,16 @@ public class AdminChatController {
     @Transactional
     public ApiResponse<ChatSessionSummaryResponse> resolve(@PathVariable("id") Long id, Principal principal) {
         resolveStaffId(principal);
-        ChatSession session = sessionRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Session not found"));
+        ChatSession session = sessionRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Session not found"));
         session.setStatus(ChatSessionStatus.CLOSED);
+        session.setAssignedStaff(null);
         session.setLastMessageAt(LocalDateTime.now());
         sessionRepository.save(session);
+
+        // 1.2 — Push SSE "session-closed" để frontend khách hàng tự disable input
+        notificationService.publishSessionClosed(id);
+
         return ApiResponse.<ChatSessionSummaryResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Session closed")
@@ -108,9 +118,16 @@ public class AdminChatController {
                 .build();
     }
 
+    /** SSE: Staff dashboard nhận escalation notifications */
     @GetMapping("/notifications/stream")
     public SseEmitter notifications() {
         return notificationService.subscribe();
+    }
+
+    /** SSE: Client (khách hàng hoặc staff đang chat) nhận tin nhắn real-time */
+    @GetMapping("/messages/stream")
+    public SseEmitter messageStream() {
+        return notificationService.subscribeToMessages();
     }
 
     private ChatSessionSummaryResponse toSummary(ChatSession session) {

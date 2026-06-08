@@ -25,6 +25,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    /**
+     * 1.1 — Race condition: phiên chat đã được staff khác tiếp nhận.
+     * Trả về HTTP 400 với thông báo rõ ràng cho giao diện.
+     */
+    @ExceptionHandler(com.tourbooking.booking.backend.exception.ChatSessionAlreadyAssignedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleChatSessionAlreadyAssigned(
+            com.tourbooking.booking.backend.exception.ChatSessionAlreadyAssignedException e) {
+        log.warn("Chat session conflict: {}", e.getMessage());
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(HttpStatus.BAD_REQUEST.value())
+                .message(e.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException e) {
         log.error("Unhandled exception", e);

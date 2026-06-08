@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 
 import com.tourbooking.booking.backend.model.dto.request.ChatMessageRequest;
 import com.tourbooking.booking.backend.model.dto.response.ChatMessageResponse;
+import com.tourbooking.booking.backend.model.dto.response.ChatSessionStatusResponse;
 import com.tourbooking.booking.backend.model.entity.ChatMessages;
 import com.tourbooking.booking.backend.model.entity.ChatSession;
 import com.tourbooking.booking.backend.model.entity.User;
@@ -18,13 +19,16 @@ import com.tourbooking.booking.backend.model.entity.enums.ChatSessionStatus;
 import com.tourbooking.booking.backend.repository.ChatMessagesRepository;
 import com.tourbooking.booking.backend.repository.ChatSessionRepository;
 import com.tourbooking.booking.backend.repository.UserRepository;
+import com.tourbooking.booking.backend.exception.ChatSessionAlreadyAssignedException;
 import com.tourbooking.booking.backend.service.ChatNotificationService;
 import com.tourbooking.booking.backend.service.ChatService;
+import lombok.extern.slf4j.Slf4j;
 
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChatServiceImpl implements ChatService {
 
     private static final List<String> ESCALATION_KEYWORDS = List.of("nhân viên", "human", "support", "help", "ngoại lệ");
@@ -70,7 +74,14 @@ public class ChatServiceImpl implements ChatService {
             publishWaitingNotification(session, entity.getMessage());
         }
 
-        return toResponse(entity);
+        // Real-time: push tin nhắn đến tất cả client đang lắng nghe qua SSE
+        ChatMessageResponse response = toResponse(entity);
+        try {
+            notificationService.publishMessage(response);
+        } catch (Exception ex) {
+            log.warn("Could not push chat message via SSE: {}", ex.getMessage());
+        }
+        return response;
     }
 
     @Override
@@ -102,6 +113,51 @@ public class ChatServiceImpl implements ChatService {
         return sessionRepo.findByStatusInOrderByLastMessageAtDesc(ACTIVE_STATUSES);
     }
 
+    /**
+     * 1.1 — Tiếp nhận phiên chat với PESSIMISTIC WRITE LOCK.
+     * Nếu phiên không còn ở WAITING_STAFF (đã được staff khác tiếp nhận),
+     * ném ra ChatSessionAlreadyAssignedException (HTTP 400).
+     */
+    @Override
+    @Transactional
+    public ChatSession assignSession(Long sessionId, Long staffId) {
+        ChatSession session = sessionRepo.findByIdWithLock(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Phiên chat #" + sessionId + " không tồn tại."));
+
+        if (session.getStatus() != ChatSessionStatus.WAITING_STAFF) {
+            throw new ChatSessionAlreadyAssignedException(sessionId);
+        }
+
+        User staff = userRepo.findById(staffId)
+                .orElseThrow(() -> new IllegalArgumentException("Nhân viên #" + staffId + " không tồn tại."));
+
+        session.setStatus(ChatSessionStatus.STAFF_CHATTING);
+        session.setAssignedStaff(staff); // Gán nhân viên phụ trách
+        session.setLastMessageAt(LocalDateTime.now());
+        return sessionRepo.save(session);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ChatSessionStatusResponse getSessionStatus(Long userId, String guestId) {
+        ChatSession session = findLatestSession(userId, guestId);
+        if (session == null || session.getStatus() == null || session.getStatus() == ChatSessionStatus.AI) {
+            return ChatSessionStatusResponse.builder()
+                    .status(ChatSessionStatus.AI)
+                    .build();
+        }
+
+        String staffName = session.getAssignedStaff() != null
+                ? session.getAssignedStaff().getFullName()
+                : null;
+
+        return ChatSessionStatusResponse.builder()
+                .id(session.getId())
+                .status(session.getStatus())
+                .assignedStaffName(staffName)
+                .build();
+    }
+
     @Override
     @Transactional
     public void closeSession(Long userId, String guestId) {
@@ -129,18 +185,22 @@ public class ChatServiceImpl implements ChatService {
         }
         String label = buildCustomerLabel(session);
         long waitingCount = sessionRepo.countByStatus(ChatSessionStatus.WAITING_STAFF);
-        notificationService.publish(
-                com.tourbooking.booking.backend.model.dto.response.ChatNotification.builder()
-                        .sessionId(session.getId())
-                        .userId(session.getUser() == null ? null : session.getUser().getId())
-                        .guestId(session.getGuestId())
-                        .customerLabel(label)
-                        .snippet(snippet)
-                        .status(session.getStatus())
-                        .timestamp(LocalDateTime.now())
-                        .waitingCount(waitingCount)
-                        .build()
-        );
+        try {
+            notificationService.publish(
+                    com.tourbooking.booking.backend.model.dto.response.ChatNotification.builder()
+                            .sessionId(session.getId())
+                            .userId(session.getUser() == null ? null : session.getUser().getId())
+                            .guestId(session.getGuestId())
+                            .customerLabel(label)
+                            .snippet(snippet)
+                            .status(session.getStatus())
+                            .timestamp(LocalDateTime.now())
+                            .waitingCount(waitingCount)
+                            .build()
+            );
+        } catch (Exception ex) {
+            log.warn("Could not push chat notification via SSE: {}", ex.getMessage());
+        }
     }
 
     private String buildCustomerLabel(ChatSession session) {

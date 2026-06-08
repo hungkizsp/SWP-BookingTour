@@ -191,21 +191,18 @@ public class AiChatServiceImpl implements AiChatService {
     }
 
     private String fallbackResponse(String userMessage) {
-        String lower = userMessage.toLowerCase();
-        if (lower.contains("nhân viên") || lower.contains("hỗ trợ") || lower.contains("gặp người")) {
-            return "Tôi sẽ kết nối bạn với nhân viên tư vấn ngay! Bạn hãy nhấn nút **'Kết nối với nhân viên'** bên dưới nhé.";
-        }
+        String busyNotice = "🤖 Xin lỗi, hệ thống AI đang tạm thời bận hoặc gặp sự cố kết nối.";
 
         try {
             String keyword = extractKeyword(userMessage);
             String tours = buildTourContext(keyword);
-            if (tours != null && !tours.isEmpty() && !tours.contains("Hiện chưa có tour nào")) {
-                return "🤖 Hiện tại tôi đang có chút vấn đề về kết nối, nhưng đây có vẻ là những gì bạn cần:\n\n" + tours + "\n\nBạn có thể thử lại sau giây lát để tôi tư vấn kĩ hơn nhé!";
+            if (tours != null && !tours.isBlank() && !tours.startsWith("Hiện chưa có tour")) {
+                return busyNotice + "\n\n" + tours;
             }
         } catch (Exception e) {
             log.warn("Fallback tour search failed: {}", e.getMessage());
         }
 
-        return "🤖 Xin lỗi, hệ thống AI đang tạm thời quá tải hoặc gặp sự cố.\n\nBạn có thể:\n• Xem danh sách tour tại " + baseUrl + "/pages/tours.html\n• Nhấn **'Kết nối với nhân viên'** để gặp nhân viên tư vấn\n• Thử lại sau khoảng 1 phút.";
+        return busyNotice + "\n\nBạn có thể xem thêm tour tại " + baseUrl + "/pages/tours.html hoặc thử lại sau khoảng 1 phút.";
     }
 }

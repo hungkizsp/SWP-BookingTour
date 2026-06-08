@@ -64,6 +64,7 @@ public class BookingServiceImpl implements BookingService {
     private final DiscountRepository discountRepository;
     private final PaymentRepository paymentRepository;
     private final PassengerRepository passengerRepository;
+    private final com.tourbooking.booking.backend.repository.RefundRequestRepository refundRequestRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -504,18 +505,98 @@ public class BookingServiceImpl implements BookingService {
         return BookingMapper.toResponse(booking);
     }
 
+    /**
+     * 2.1 — Khách hàng gửi yêu cầu hoàn tiền.
+     * <ul>
+     *   <li>Tính refundAmount theo chính sách ngày khởi hành.</li>
+     *   <li>Cập nhật Booking.status = REFUND_REQUESTED.</li>
+     *   <li>Insert bản ghi mới vào bảng RefundRequests.</li>
+     * </ul>
+     */
     @Override
     @Transactional
     public BookingResponse requestRefund(Long id, RefundRequest request) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
         if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.SUCCESS) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
+            throw new AppException(ErrorCode.INVALID_REQUEST,
+                    "Chỉ có thể yêu cầu hoàn tiền với đơn ở trạng thái CONFIRMED hoặc SUCCESS.");
         }
+
+        // ── Tính số tiền hoàn theo chính sách ngày khởi hành ─────────────────
+        BigDecimal refundAmount = calculateRefundAmount(booking);
+
+        // Lưu vết trạng thái gốc trước khi cập nhật
+        BookingStatus originalStatus = booking.getStatus();
+
+        // ── Cập nhật trạng thái Booking ───────────────────────────────────────
         booking.setStatus(BookingStatus.REFUND_REQUESTED);
         bookingRepository.save(booking);
+
+        // ── Tạo chuỗi Reason chứa thông tin ngân hàng + lý do khách ─────────
+        String bankInfo = String.format("Ngân hàng: %s | STK: %s | Chủ TK: %s",
+                request.getBankName() != null ? request.getBankName() : "N/A",
+                request.getAccountNumber() != null ? request.getAccountNumber() : "N/A",
+                request.getAccountHolderName() != null ? request.getAccountHolderName() : "N/A");
+        String fullReason = bankInfo + " | Lý do: " + (request.getReason() != null ? request.getReason() : "Không có");
+
+        // ── Insert RefundRequest vào DB ───────────────────────────────────────
+        com.tourbooking.booking.backend.model.entity.RefundRequest refundEntity =
+                new com.tourbooking.booking.backend.model.entity.RefundRequest();
+        refundEntity.setBooking(booking);
+        refundEntity.setAmount(refundAmount);
+        refundEntity.setReason(fullReason);
+        refundEntity.setStatus(com.tourbooking.booking.backend.model.entity.enums.RefundStatus.PENDING);
+        refundEntity.setOriginalBookingStatus(originalStatus); // Lưu trạng thái gốc
+        refundRequestRepository.save(refundEntity);
+
+        log.info("[Refund] BookingID={} | RefundAmount={} | OriginalStatus={} | Reason={}", 
+                id, refundAmount, originalStatus, fullReason);
         return BookingMapper.toResponse(booking);
     }
+
+    /**
+     * 2.2 — Tính số tiền hoàn trả theo chính sách:
+     * <ul>
+     *   <li>> 7 ngày trước khởi hành → hoàn 100%</li>
+     *   <li>3–7 ngày trước khởi hành → hoàn 50%</li>
+     *   <li>&lt; 3 ngày trước khởi hành → hoàn 0%</li>
+     * </ul>
+     * Sử dụng múi giờ Việt Nam (Asia/Ho_Chi_Minh) để tránh lệch ngày khi deploy cloud.
+     */
+    private BigDecimal calculateRefundAmount(Booking booking) {
+        if (booking.getTotalPrice() == null) return BigDecimal.ZERO;
+
+        java.time.LocalDate startDate = (booking.getSchedule() != null)
+                ? booking.getSchedule().getStartDate()
+                : null;
+
+        if (startDate == null) {
+            log.warn("[Refund] BookingID={} không tìm thấy StartDate → hoàn 100%", booking.getId());
+            return booking.getTotalPrice();
+        }
+
+        // Ep múi giờ Việt Nam — tính ngày hiện tại theo giờ VN dù server ở bất kỳ đâu
+        java.time.ZoneId vnZone = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+        java.time.LocalDate today = java.time.LocalDate.now(vnZone);
+
+        long daysUntilDeparture = java.time.temporal.ChronoUnit.DAYS.between(today, startDate);
+
+        log.info("[Refund] BookingID={} | StartDate={} | TodayVN={} | DaysLeft={}",
+                booking.getId(), startDate, today, daysUntilDeparture);
+
+        if (daysUntilDeparture > 7) {
+            return booking.getTotalPrice(); // Hoàn 100%
+        } else if (daysUntilDeparture >= 3) {
+            return booking.getTotalPrice()
+                    .multiply(new BigDecimal("0.50"))
+                    .setScale(2, RoundingMode.HALF_UP); // Hoàn 50%
+        } else {
+            return BigDecimal.ZERO; // Hoàn 0%
+        }
+    }
+
 
     private String normalizeForPdf(String text) {
         if (text == null) return "n/a";

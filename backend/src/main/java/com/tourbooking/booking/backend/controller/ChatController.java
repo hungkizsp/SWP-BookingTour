@@ -10,10 +10,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.tourbooking.booking.backend.model.dto.request.ChatMessageRequest;
 import com.tourbooking.booking.backend.model.dto.response.ApiResponse;
 import com.tourbooking.booking.backend.model.dto.response.ChatMessageResponse;
+import com.tourbooking.booking.backend.model.dto.response.ChatSessionStatusResponse;
+import com.tourbooking.booking.backend.service.ChatNotificationService;
 import com.tourbooking.booking.backend.service.ChatService;
 
 import jakarta.validation.Valid;
@@ -25,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 public class ChatController {
 
     private final ChatService chatService;
+    private final ChatNotificationService notificationService;
 
     // UC11: guest chat support - send a message
     @PostMapping("/messages")
@@ -48,5 +52,25 @@ public class ChatController {
                 .data(chatService.getConversation(userId, guestId))
                 .build();
     }
-}
 
+    /**
+     * 1.2 — SSE stream: khách hàng / staff đăng ký nhận tin nhắn real-time.
+     * Thay thế HTTP polling bằng Server-Sent Events.
+     * Frontend kết nối một lần, backend push mỗi khi có tin nhắn mới.
+     */
+    @GetMapping("/messages/stream")
+    public SseEmitter messageStream() {
+        return notificationService.subscribeToMessages();
+    }
+
+    @GetMapping("/session")
+    public ApiResponse<ChatSessionStatusResponse> sessionStatus(
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) String guestId) {
+        return ApiResponse.<ChatSessionStatusResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Chat session status")
+                .data(chatService.getSessionStatus(userId, guestId))
+                .build();
+    }
+}
