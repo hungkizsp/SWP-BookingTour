@@ -24,13 +24,25 @@ public class BookingRequest {
     @Min(value = 1, message = "At least 1 adult")
     private Integer adultCount;
 
-    /** Số trẻ em (>= 0) */
+    /** Số trẻ em 2–11 tuổi (>= 0) */
     @Min(value = 0, message = "Child count cannot be negative")
     private Integer childCount = 0;
 
-    /** Tổng số người = adultCount + childCount (computed) */
+    /** Số em bé dưới 2 tuổi (>= 0, không chiếm chỗ) */
+    @Min(value = 0, message = "Infant count cannot be negative")
+    private Integer infantCount = 0;
+
+    /** Tổng số hành khách = adultCount + childCount + infantCount */
     public int getNumberOfPeople() {
-        return (adultCount != null ? adultCount : 0) + (childCount != null ? childCount : 0);
+        return (adultCount != null ? adultCount : 0)
+                + (childCount != null ? childCount : 0)
+                + (infantCount != null ? infantCount : 0);
+    }
+
+    /** Số chỗ chiếm trên schedule (ADULT + CHILD; INFANT không tính) */
+    public int getOccupiedSlots() {
+        return (adultCount != null ? adultCount : 0)
+                + (childCount != null ? childCount : 0);
     }
 
     /** Danh sách chi tiết hành khách */

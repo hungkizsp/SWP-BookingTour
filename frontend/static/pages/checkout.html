@@ -180,12 +180,21 @@
       background: #fffbeb;
     }
 
+    .passenger-card.infant-card {
+      border-color: #93c5fd;
+      background: #eff6ff;
+    }
+
     .passenger-card:focus-within {
       box-shadow: 0 0 0 3px rgba(6, 78, 59, 0.12);
     }
 
     .passenger-card.child-card:focus-within {
       box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.25);
+    }
+
+    .passenger-card.infant-card:focus-within {
+      box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.45);
     }
 
     .passenger-header {
@@ -205,6 +214,10 @@
       color: #d97706;
     }
 
+    .passenger-card.infant-card .passenger-label {
+      color: #1d4ed8;
+    }
+
     .passenger-badge {
       font-size: 0.72rem;
       padding: 3px 10px;
@@ -217,6 +230,11 @@
     .passenger-card.child-card .passenger-badge {
       background: #fef3c7;
       color: #92400e;
+    }
+
+    .passenger-card.infant-card .passenger-badge {
+      background: #dbeafe;
+      color: #1e40af;
     }
 
     .passenger-grid {
@@ -246,6 +264,10 @@
       border-color: #fde68a;
     }
 
+    .passenger-card.infant-card .passenger-input {
+      border-color: #bfdbfe;
+    }
+
     .passenger-input:focus {
       outline: none;
       border-color: var(--primary);
@@ -253,6 +275,10 @@
 
     .passenger-card.child-card .passenger-input:focus {
       border-color: #d97706;
+    }
+
+    .passenger-card.infant-card .passenger-input:focus {
+      border-color: #2563eb;
     }
 
     .passenger-input::placeholder {
@@ -349,6 +375,15 @@
                 <span style="font-size:0.8rem; color:#d97706; font-weight:600;">× 75% giá</span>
               </div>
             </div>
+            <div class="form-group">
+              <label>👶 Em bé <small style="color:#2563eb; font-weight:600;">(Dưới 2 tuổi · Không chiếm chỗ)</small></label>
+              <div class="counter-group">
+                <button class="counter-btn" id="minusInfantBtn" type="button">−</button>
+                <input type="number" id="infantCount" class="counter-input" value="0" min="0">
+                <button class="counter-btn" id="plusInfantBtn" type="button">+</button>
+                <span style="font-size:0.8rem; color:#2563eb; font-weight:600;">× 10% giá</span>
+              </div>
+            </div>
             <div class="form-group" style="grid-column: span 2;">
               <label>🏷️ Mã giảm giá / Voucher</label>
               <div style="display: flex; gap: 10px;">
@@ -406,11 +441,27 @@
           </div>
           <div class="summary-item">
             <span>Người lớn:</span>
-            <strong id="summaryAdults">1</strong>
+            <strong id="summaryAdults">1 người</strong>
+          </div>
+          <div class="summary-item" id="summaryAdultPriceRow">
+            <span style="opacity:0.75; font-size:0.85rem;">↳ Thành tiền người lớn</span>
+            <strong id="summaryAdultPrice" style="font-size:0.85rem;">0 đ</strong>
           </div>
           <div class="summary-item">
             <span>Trẻ em:</span>
-            <strong id="summaryChildren">0</strong>
+            <strong id="summaryChildren">0 trẻ em</strong>
+          </div>
+          <div class="summary-item" id="summaryChildPriceRow" style="display:none;">
+            <span style="opacity:0.75; font-size:0.85rem;">↳ Thành tiền trẻ em (75%)</span>
+            <strong id="summaryChildPrice" style="font-size:0.85rem;">0 đ</strong>
+          </div>
+          <div class="summary-item">
+            <span>Em bé:</span>
+            <strong id="summaryInfants">0 em bé</strong>
+          </div>
+          <div class="summary-item" id="summaryInfantPriceRow" style="display:none;">
+            <span style="opacity:0.75; font-size:0.85rem;">↳ Thành tiền em bé (10%)</span>
+            <strong id="summaryInfantPrice" style="font-size:0.85rem;">0 đ</strong>
           </div>
           <div class="summary-item" id="discountItem" style="display: none; color: #ffeb3b;">
             <span>Giảm giá (<span id="summaryVoucherCode">...</span>):</span>

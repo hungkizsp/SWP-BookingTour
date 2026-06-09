@@ -26,7 +26,7 @@ public class Passenger extends Base {
     @Column(name = "IdNumber", length = 50)
     private String idNumber;
 
-    /** "ADULT" hoặc "CHILD" */
+    /** ADULT | CHILD | INFANT */
     @Column(name = "PassengerType", length = 20, nullable = false)
     private String passengerType;
 }

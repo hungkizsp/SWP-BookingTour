@@ -44,14 +44,18 @@ public class BookingScheduler {
 
                 // Return slots back to schedule
                 TourSchedule schedule = booking.getSchedule();
-                if (schedule != null && booking.getNumberOfPeople() != null) {
-                    // Lock the schedule first to avoid race conditions when returning slots
-                    tourScheduleRepository.findByIdWithLock(schedule.getId()).ifPresent(lockedSchedule -> {
-                        lockedSchedule.setAvailableSlots(lockedSchedule.getAvailableSlots() + booking.getNumberOfPeople());
-                        tourScheduleRepository.save(lockedSchedule);
-                        log.info("Cancelled booking #{} and returned {} slots to schedule #{}", 
-                                booking.getId(), booking.getNumberOfPeople(), lockedSchedule.getId());
-                    });
+                if (schedule != null) {
+                    Integer slotsToRelease = booking.getOccupiedSlots() != null
+                            ? booking.getOccupiedSlots()
+                            : booking.getNumberOfPeople();
+                    if (slotsToRelease != null && slotsToRelease > 0) {
+                        tourScheduleRepository.findByIdWithLock(schedule.getId()).ifPresent(lockedSchedule -> {
+                            lockedSchedule.setAvailableSlots(lockedSchedule.getAvailableSlots() + slotsToRelease);
+                            tourScheduleRepository.save(lockedSchedule);
+                            log.info("Cancelled booking #{} and returned {} slots to schedule #{}",
+                                    booking.getId(), slotsToRelease, lockedSchedule.getId());
+                        });
+                    }
                 }
             } catch (Exception e) {
                 log.error("Error releasing slots for booking #{}", booking.getId(), e);

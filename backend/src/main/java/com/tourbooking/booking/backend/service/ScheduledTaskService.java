@@ -100,9 +100,15 @@ public class ScheduledTaskService {
 
             // Trả lại slot cho TourSchedule
             TourSchedule schedule = booking.getSchedule();
-            if (schedule != null && booking.getNumberOfPeople() != null) {
+            if (schedule != null) {
+                int slotsToRelease = booking.getOccupiedSlots() != null
+                        ? booking.getOccupiedSlots()
+                        : (booking.getNumberOfPeople() != null ? booking.getNumberOfPeople() : 0);
+                if (slotsToRelease <= 0) {
+                    continue;
+                }
                 int currentSlots = schedule.getAvailableSlots() != null ? schedule.getAvailableSlots() : 0;
-                schedule.setAvailableSlots(currentSlots + booking.getNumberOfPeople());
+                schedule.setAvailableSlots(currentSlots + slotsToRelease);
                 // Nếu đang FULL và giờ có slot → mở lại
                 if (schedule.getStatus() == TourStatus.FULL && schedule.getAvailableSlots() > 0) {
                     schedule.setStatus(TourStatus.OPEN);

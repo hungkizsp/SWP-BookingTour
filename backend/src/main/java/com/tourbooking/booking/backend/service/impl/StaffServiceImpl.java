@@ -114,9 +114,14 @@ public class StaffServiceImpl implements StaffService {
 
             // b. Hoàn trả availableSlots vào TourSchedule bằng Atomic Update chống tranh chấp Lost Update
             TourSchedule schedule = booking.getSchedule();
-            if (schedule != null && booking.getNumberOfPeople() != null) {
-                tourScheduleRepository.releaseAvailableSlots(schedule.getId(), booking.getNumberOfPeople());
-                log.info("[Refund] Atomic released {} slots for ScheduleID={}", booking.getNumberOfPeople(), schedule.getId());
+            if (schedule != null) {
+                Integer slotsToRelease = booking.getOccupiedSlots() != null
+                        ? booking.getOccupiedSlots()
+                        : booking.getNumberOfPeople();
+                if (slotsToRelease != null && slotsToRelease > 0) {
+                    tourScheduleRepository.releaseAvailableSlots(schedule.getId(), slotsToRelease);
+                    log.info("[Refund] Atomic released {} slots for ScheduleID={}", slotsToRelease, schedule.getId());
+                }
             }
 
         } else if (status == RefundStatus.REJECTED) {

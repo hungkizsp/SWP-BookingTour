@@ -16,7 +16,7 @@ public class PassengerRequest {
 
     private String idNumber;
 
-    /** "ADULT" hoặc "CHILD" */
+    /** ADULT | CHILD | INFANT (backend sẽ phân loại lại theo ngày sinh & ngày khởi hành) */
     @NotBlank(message = "Loại hành khách không được để trống")
     private String passengerType;
 }

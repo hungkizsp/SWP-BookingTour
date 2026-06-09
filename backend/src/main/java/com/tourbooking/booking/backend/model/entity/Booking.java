@@ -31,6 +31,10 @@ public class Booking extends Base {
     @Column(name = "NumberOfPeople")
     private Integer numberOfPeople;
 
+    /** Số chỗ thực tế chiếm trên schedule (ADULT + CHILD; INFANT không tính). */
+    @Column(name = "OccupiedSlots")
+    private Integer occupiedSlots;
+
     @Column(name = "TotalPrice", precision = 10, scale = 2)
     private BigDecimal totalPrice;
 

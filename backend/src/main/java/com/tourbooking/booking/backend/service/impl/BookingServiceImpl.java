@@ -23,6 +23,8 @@ import com.tourbooking.booking.backend.model.dto.request.PassengerRequest;
 import com.tourbooking.booking.backend.repository.UserRepository;
 import java.time.LocalDateTime;
 import com.tourbooking.booking.backend.service.BookingService;
+import com.tourbooking.booking.backend.service.PassengerClassificationService;
+import com.tourbooking.booking.backend.service.TourScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,7 +37,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.time.LocalDate;
-import java.time.Period;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -65,6 +66,11 @@ public class BookingServiceImpl implements BookingService {
     private final PaymentRepository paymentRepository;
     private final PassengerRepository passengerRepository;
     private final com.tourbooking.booking.backend.repository.RefundRequestRepository refundRequestRepository;
+    private final PassengerClassificationService passengerClassificationService;
+    private final TourScheduleService tourScheduleService;
+
+    private static final BigDecimal CHILD_RATE = new BigDecimal("0.75");
+    private static final BigDecimal INFANT_RATE = new BigDecimal("0.10");
 
     @Override
     @Transactional(readOnly = true)
@@ -93,127 +99,116 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
-
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         TourSchedule schedule = tourScheduleRepository.findByIdWithLock(request.getScheduleId())
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
 
-        int adultCount = request.getAdultCount() != null ? request.getAdultCount() : 1;
-        int childCount = request.getChildCount() != null ? request.getChildCount() : 0;
-        int totalPeople = adultCount + childCount;
+        int declaredAdultCount  = request.getAdultCount()  != null ? request.getAdultCount()  : 1;
+        int declaredChildCount  = request.getChildCount()  != null ? request.getChildCount()  : 0;
+        int declaredInfantCount = request.getInfantCount() != null ? request.getInfantCount() : 0;
+        LocalDate tourStartDate = schedule.getStartDate();
 
-        // ── VALIDATION 1: số phần tử passengers phải khớp với adultCount + childCount ─────────
-        List<PassengerRequest> passengerList = request.getPassengers();
-        if (passengerList == null || passengerList.size() != totalPeople) {
-            throw new AppException(ErrorCode.INVALID_REQUEST,
-                    "Số hành khách gửi lên (" + (passengerList == null ? 0 : passengerList.size()) +
-                    ") không khớp với tổng số người đặt (" + totalPeople + ").");
-        }
+        PassengerClassificationService.ClassificationResult classification =
+                passengerClassificationService.classify(
+                        request.getPassengers(),
+                        tourStartDate,
+                        declaredAdultCount,
+                        declaredChildCount,
+                        declaredInfantCount);
 
-        // ── VALIDATION 2: kiểm tra chéo tuổi thực tế — tự điều chỉnh CHILD→ADULT nếu tuổi > 11 ─
-        LocalDate today = LocalDate.now();
-        int effectiveAdults   = 0;
-        int effectiveChildren = 0;
-        List<String> resolvedTypes = new java.util.ArrayList<>();
-
-        for (int i = 0; i < passengerList.size(); i++) {
-            PassengerRequest pr = passengerList.get(i);
-            String requested = pr.getPassengerType() != null
-                    ? pr.getPassengerType().toUpperCase() : "ADULT";
-            String resolved  = requested;
-
-            if (pr.getDateOfBirth() != null) {
-                int age = Period.between(pr.getDateOfBirth(), today).getYears();
-
-                if ("CHILD".equals(requested) && age > 11) {
-                    // Khai là trẻ em nhưng tuổi thực tế đã lớn hơn 11 → tự sửa thành ADULT
-                    resolved = "ADULT";
-                    log.warn("[Booking] Hành khách #{} '{}' (tuổi {}) khai CHILD nhưng được tự sửa sang ADULT.",
-                            i + 1, pr.getFullName(), age);
-                }
-                // Nếu khai ADULT nhưng tuổi ≤ 11 → giữ nguyên ADULT (không giảm giá, bảo vệ doanh thu)
-            }
-
-            resolvedTypes.add(resolved);
-            if ("CHILD".equals(resolved)) effectiveChildren++;
-            else                            effectiveAdults++;
-        }
-
-        // UC13: Kiểm tra số chỗ trống
-        if (schedule.getAvailableSlots() < totalPeople) {
-            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
-        }
-
-        // UC14: Tính giá dựa trên loại hành khách thực tế (sau khi đã tự sửa)
-        var price      = schedule.getTour().getPrice();
-        var childPrice = price.multiply(new BigDecimal("0.75"));
-        var totalPrice = price.multiply(BigDecimal.valueOf(effectiveAdults))
-                .add(childPrice.multiply(BigDecimal.valueOf(effectiveChildren)));
+        int slotsToDeduct = classification.getSlotsToDeduct();
+        BigDecimal tourPrice = schedule.getTour().getPrice();
+        BigDecimal totalPrice = calculatePassengerTotalPrice(
+                tourPrice,
+                classification.getRealAdultCount(),
+                classification.getRealChildCount(),
+                classification.getRealInfantCount());
 
         Booking booking = new Booking();
         booking.setUser(user);
         booking.setSchedule(schedule);
-        booking.setNumberOfPeople(totalPeople);
+        booking.setNumberOfPeople(classification.getTotalPassengers());
+        booking.setOccupiedSlots(slotsToDeduct);
         booking.setTotalPrice(totalPrice);
         booking.setStatus(BookingStatus.PENDING);
-        booking.setBookingDate(java.time.LocalDateTime.now());
+        booking.setBookingDate(LocalDateTime.now());
 
         Booking saved = bookingRepository.save(booking);
 
-        // Trừ slot
-        schedule.setAvailableSlots(schedule.getAvailableSlots() - totalPeople);
-        tourScheduleRepository.save(schedule);
+        tourScheduleService.deductAvailableSlots(schedule.getId(), slotsToDeduct);
 
-        // Lưu danh sách hành khách (dùng resolvedTypes đã chỉnh sửa)
-        for (int i = 0; i < passengerList.size(); i++) {
-            PassengerRequest pr = passengerList.get(i);
-            Passenger p = new Passenger();
-            p.setBooking(saved);
-            p.setFullName(pr.getFullName());
-            p.setDateOfBirth(pr.getDateOfBirth());
-            p.setIdNumber(pr.getIdNumber());
-            p.setPassengerType(resolvedTypes.get(i));  // dùng type đã xác thực
-            passengerRepository.save(p);
+        for (PassengerClassificationService.ClassifiedPassenger classified : classification.getPassengers()) {
+            PassengerRequest pr = classified.getRequest();
+            Passenger passenger = new Passenger();
+            passenger.setBooking(saved);
+            passenger.setFullName(pr.getFullName());
+            passenger.setDateOfBirth(pr.getDateOfBirth());
+            passenger.setIdNumber(pr.getIdNumber());
+            passenger.setPassengerType(classified.getPassengerType().name());
+            passengerRepository.save(passenger);
         }
 
-        // Handle Discount
-        if (request.getDiscountCode() != null && !request.getDiscountCode().isEmpty()) {
-            String code = request.getDiscountCode().toUpperCase();
-            BigDecimal discountAmt = BigDecimal.ZERO;
-            boolean applied = false;
-
-            if ("SUMMER".equals(code)) {
-                discountAmt = saved.getTotalPrice().multiply(new BigDecimal("20")).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
-                saved.setDiscountCode("SUMMER");
-                applied = true;
-            } else {
-                Discount discount = discountRepository.findByCode(code).orElse(null);
-                if (discount != null && discount.getIsActive() &&
-                    (discount.getStartDate() == null || !LocalDateTime.now().isBefore(discount.getStartDate())) &&
-                    (discount.getEndDate() == null || !LocalDateTime.now().isAfter(discount.getEndDate())) &&
-                    (discount.getUsageLimit() == null || discount.getCurrentUsage() < discount.getUsageLimit())) {
-
-                    if (discount.getDiscountType() == DiscountType.PERCENTAGE) {
-                        discountAmt = saved.getTotalPrice().multiply(discount.getValue()).divide(new BigDecimal(100), 0, RoundingMode.HALF_UP);
-                    } else {
-                        discountAmt = discount.getValue();
-                    }
-                    saved.setDiscountCode(discount.getCode());
-                    applied = true;
-                    // Logic tăng currentUsage được chuyển sang giai đoạn CONFIRMED
-                }
-            }
-
-            if (applied) {
-                saved.setDiscountAmount(discountAmt);
-                saved.setTotalPrice(saved.getTotalPrice().subtract(discountAmt));
-            }
-        }
+        applyDiscountIfPresent(saved, request.getDiscountCode());
 
         Booking savedBooking = bookingRepository.save(saved);
         return BookingMapper.toResponse(savedBooking);
+    }
+
+    private BigDecimal calculatePassengerTotalPrice(
+            BigDecimal tourPrice,
+            int realAdultCount,
+            int realChildCount,
+            int realInfantCount) {
+        return tourPrice.multiply(BigDecimal.valueOf(realAdultCount))
+                .add(tourPrice.multiply(CHILD_RATE).multiply(BigDecimal.valueOf(realChildCount)))
+                .add(tourPrice.multiply(INFANT_RATE).multiply(BigDecimal.valueOf(realInfantCount)));
+    }
+
+    private void applyDiscountIfPresent(Booking saved, String discountCode) {
+        if (discountCode == null || discountCode.isEmpty()) {
+            return;
+        }
+
+        String code = discountCode.toUpperCase();
+        BigDecimal discountAmt = BigDecimal.ZERO;
+        boolean applied = false;
+
+        if ("SUMMER".equals(code)) {
+            discountAmt = saved.getTotalPrice().multiply(new BigDecimal("20"))
+                    .divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+            saved.setDiscountCode("SUMMER");
+            applied = true;
+        } else {
+            Discount discount = discountRepository.findByCode(code).orElse(null);
+            if (discount != null && discount.getIsActive()
+                    && (discount.getStartDate() == null || !LocalDateTime.now().isBefore(discount.getStartDate()))
+                    && (discount.getEndDate() == null || !LocalDateTime.now().isAfter(discount.getEndDate()))
+                    && (discount.getUsageLimit() == null || discount.getCurrentUsage() < discount.getUsageLimit())) {
+
+                if (discount.getDiscountType() == DiscountType.PERCENTAGE) {
+                    discountAmt = saved.getTotalPrice().multiply(discount.getValue())
+                            .divide(new BigDecimal(100), 0, RoundingMode.HALF_UP);
+                } else {
+                    discountAmt = discount.getValue();
+                }
+                saved.setDiscountCode(discount.getCode());
+                applied = true;
+            }
+        }
+
+        if (applied) {
+            saved.setDiscountAmount(discountAmt);
+            saved.setTotalPrice(saved.getTotalPrice().subtract(discountAmt));
+        }
+    }
+
+    private int resolveOccupiedSlots(Booking booking) {
+        if (booking.getOccupiedSlots() != null) {
+            return booking.getOccupiedSlots();
+        }
+        return booking.getNumberOfPeople() != null ? booking.getNumberOfPeople() : 0;
     }
 
     @Override
@@ -258,25 +253,23 @@ public class BookingServiceImpl implements BookingService {
 
             existingBooking.setSchedule(newSchedule);
         }
-        // handle change numberOfPeople (driven by adultCount / childCount)
+        // handle change occupied slots (ADULT + CHILD; INFANT không chiếm chỗ)
         if (request.getAdultCount() != null) {
+            int oldSlots = resolveOccupiedSlots(existingBooking);
+            int newSlots = request.getOccupiedSlots();
 
-            int oldValue = existingBooking.getNumberOfPeople();
-            int newValue = request.getNumberOfPeople();
-
-            int diff = newValue - oldValue;
+            int slotDiff = newSlots - oldSlots;
 
             TourSchedule schedule = tourScheduleRepository.findByIdWithLock(existingBooking.getSchedule().getId())
                     .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
 
-            // nếu tăng người
-            if (diff > 0 && schedule.getAvailableSlots() < diff) {
+            if (slotDiff > 0 && schedule.getAvailableSlots() < slotDiff) {
                 throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
             }
 
-            // update slot
-            schedule.setAvailableSlots(schedule.getAvailableSlots() - diff);
+            schedule.setAvailableSlots(schedule.getAvailableSlots() - slotDiff);
             tourScheduleRepository.save(schedule);
+            existingBooking.setOccupiedSlots(newSlots);
         }
         BookingMapper.updateEntityFromRequest(existingBooking, request);
 
@@ -496,9 +489,8 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.CANCELLED);
 
         TourSchedule schedule = booking.getSchedule();
-        if (schedule != null && booking.getNumberOfPeople() != null) {
-            schedule.setAvailableSlots(schedule.getAvailableSlots() + booking.getNumberOfPeople());
-            tourScheduleRepository.save(schedule);
+        if (schedule != null) {
+            tourScheduleService.releaseAvailableSlots(schedule.getId(), resolveOccupiedSlots(booking));
         }
 
         bookingRepository.save(booking);
@@ -699,9 +691,8 @@ public class BookingServiceImpl implements BookingService {
             // Nếu chuyển sang CANCELLED mà trước đó chưa phải CANCELLED thì hoàn lại slot
             if (newStatus == BookingStatus.CANCELLED && booking.getStatus() != BookingStatus.CANCELLED) {
                 TourSchedule schedule = booking.getSchedule();
-                if (schedule != null && booking.getNumberOfPeople() != null) {
-                    schedule.setAvailableSlots(schedule.getAvailableSlots() + booking.getNumberOfPeople());
-                    tourScheduleRepository.save(schedule);
+                if (schedule != null) {
+                    tourScheduleService.releaseAvailableSlots(schedule.getId(), resolveOccupiedSlots(booking));
                 }
             }
             

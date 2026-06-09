@@ -1,6 +1,6 @@
 /**
  * checkout.js — Luồng đặt tour với dynamic passenger forms & smart pricing
- * Adult = giá gốc | Child = giá gốc x 75%
+ * ADULT = 100% | CHILD = 75% | INFANT = 10% (không chiếm chỗ)
  */
 (async () => {
   const params     = new URLSearchParams(window.location.search);
@@ -26,23 +26,72 @@
   }
 
   // ─── UI element refs ──────────────────────────────────────────────────────────
-  const loading            = document.getElementById('checkoutLoading');
-  const content            = document.getElementById('checkoutContent');
-  const adultInput         = document.getElementById('adultCount');
-  const childInput         = document.getElementById('childCount');
+  const loading             = document.getElementById('checkoutLoading');
+  const content             = document.getElementById('checkoutContent');
+  const adultInput          = document.getElementById('adultCount');
+  const childInput          = document.getElementById('childCount');
+  const infantInput         = document.getElementById('infantCount');
   const passengersContainer = document.getElementById('passengersContainer');
-  const summaryTourName    = document.getElementById('summaryTourName');
-  const summaryDate        = document.getElementById('summaryDate');
-  const summaryUnitPrice   = document.getElementById('summaryUnitPrice');
-  const summaryAdults      = document.getElementById('summaryAdults');
-  const summaryChildren    = document.getElementById('summaryChildren');
-  const summaryTotalPrice  = document.getElementById('summaryTotalPrice');
-  const confirmBtn         = document.getElementById('confirmBtn');
+  const summaryTourName     = document.getElementById('summaryTourName');
+  const summaryDate         = document.getElementById('summaryDate');
+  const summaryUnitPrice    = document.getElementById('summaryUnitPrice');
+  const summaryAdults       = document.getElementById('summaryAdults');
+  const summaryChildren     = document.getElementById('summaryChildren');
+  const summaryInfants      = document.getElementById('summaryInfants');
+  const summaryAdultPrice   = document.getElementById('summaryAdultPrice');
+  const summaryChildPrice   = document.getElementById('summaryChildPrice');
+  const summaryInfantPrice  = document.getElementById('summaryInfantPrice');
+  const summaryChildPriceRow  = document.getElementById('summaryChildPriceRow');
+  const summaryInfantPriceRow = document.getElementById('summaryInfantPriceRow');
+  const summaryTotalPrice   = document.getElementById('summaryTotalPrice');
+  const confirmBtn          = document.getElementById('confirmBtn');
 
   // ─── State ────────────────────────────────────────────────────────────────────
   let currentPrice    = 0;
+  let tourStartDate   = null; // Date object (local midnight)
   let appliedDiscount = 0;
   let appliedVoucherCode = '';
+
+  const PASSENGER_META = {
+    ADULT:  { icon: '🧑', label: 'Người lớn', badge: 'Người lớn · 100% giá', cardClass: '' },
+    CHILD:  { icon: '👦', label: 'Trẻ em',    badge: 'Trẻ em · 75% giá',    cardClass: 'child-card' },
+    INFANT: { icon: '👶', label: 'Em bé',     badge: 'Em bé · 10% giá',     cardClass: 'infant-card' },
+  };
+
+  // ─── Date helpers ───────────────────────────────────────────────────────────────
+  function parseTourStartDate(raw) {
+    const datePart = String(raw).split('T')[0];
+    const [y, m, d] = datePart.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  function formatDateInput(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function addYears(date, years) {
+    const d = new Date(date.getTime());
+    d.setFullYear(d.getFullYear() + years);
+    return d;
+  }
+
+  function getDobBounds(type) {
+    if (!tourStartDate) return { min: '', max: '' };
+
+    const start = tourStartDate;
+    switch (type) {
+      case 'INFANT':
+        return { min: formatDateInput(addYears(start, -2)), max: formatDateInput(start) };
+      case 'CHILD':
+        return { min: formatDateInput(addYears(start, -12)), max: formatDateInput(addYears(start, -2)) };
+      case 'ADULT':
+      default:
+        return { min: '', max: formatDateInput(addYears(start, -12)) };
+    }
+  }
 
   // ─── Load user info ───────────────────────────────────────────────────────────
   document.getElementById('custName').value  = user.fullName || '';
@@ -58,6 +107,7 @@
     const tourData     = tourRes.data;
     const scheduleData = scheduleRes.data;
     currentPrice       = tourData.price;
+    tourStartDate      = parseTourStartDate(scheduleData.startDate);
 
     summaryTourName.textContent = tourData.tourName;
     const sd = new Date(scheduleData.startDate);
@@ -75,17 +125,44 @@
     window.location.href = './tours.html';
   }
 
+  // ─── Passenger counts ─────────────────────────────────────────────────────────
+  function getAdultCount()  { return Math.max(1, parseInt(adultInput.value)  || 1); }
+  function getChildCount()  { return Math.max(0, parseInt(childInput.value)  || 0); }
+  function getInfantCount() { return Math.max(0, parseInt(infantInput.value) || 0); }
+  function getTotalPeople() { return getAdultCount() + getChildCount() + getInfantCount(); }
+
+  function buildPassengerSlots() {
+    const slots = [];
+    const adults   = getAdultCount();
+    const children = getChildCount();
+    const infants  = getInfantCount();
+
+    for (let i = 0; i < adults; i++)   slots.push({ type: 'ADULT',  num: i + 1 });
+    for (let i = 0; i < children; i++) slots.push({ type: 'CHILD',  num: i + 1 });
+    for (let i = 0; i < infants; i++)  slots.push({ type: 'INFANT', num: i + 1 });
+    return slots;
+  }
+
   // ─── Pricing ──────────────────────────────────────────────────────────────────
   function updateTotals() {
     const adults   = getAdultCount();
     const children = getChildCount();
+    const infants  = getInfantCount();
 
-    summaryAdults.textContent   = adults + ' người';
+    summaryAdults.textContent   = adults   + ' người';
     summaryChildren.textContent = children + ' trẻ em';
+    summaryInfants.textContent  = infants  + ' em bé';
 
-    const adultTotal = adults   * currentPrice;
-    const childTotal = children * currentPrice * 0.75;
-    const baseTotal  = adultTotal + childTotal;
+    const adultTotal  = adults   * currentPrice;
+    const childTotal  = children * currentPrice * 0.75;
+    const infantTotal = infants  * currentPrice * 0.10;
+    const baseTotal   = adultTotal + childTotal + infantTotal;
+
+    summaryAdultPrice.textContent = adultTotal.toLocaleString('vi-VN') + ' đ';
+    summaryChildPrice.textContent = childTotal.toLocaleString('vi-VN') + ' đ';
+    summaryInfantPrice.textContent = infantTotal.toLocaleString('vi-VN') + ' đ';
+    summaryChildPriceRow.style.display  = children > 0 ? 'flex' : 'none';
+    summaryInfantPriceRow.style.display = infants  > 0 ? 'flex' : 'none';
 
     if (appliedDiscount > 0) {
       document.getElementById('discountItem').style.display = 'flex';
@@ -99,72 +176,79 @@
     summaryTotalPrice.textContent = finalTotal.toLocaleString('vi-VN');
   }
 
-  function getAdultCount()   { return Math.max(1, parseInt(adultInput.value)  || 1); }
-  function getChildCount()   { return Math.max(0, parseInt(childInput.value)  || 0); }
-  function getTotalPeople()  { return getAdultCount() + getChildCount(); }
-
-  // ─── Adult counter ────────────────────────────────────────────────────────────
-  document.getElementById('plusAdultBtn').onclick = () => {
-    adultInput.value = getAdultCount() + 1;
+  function onCountChange() {
     renderPassengerForms();
     updateTotals();
-    appliedDiscount = 0; appliedVoucherCode = ''; resetVoucherUI();
+    appliedDiscount = 0;
+    appliedVoucherCode = '';
+    resetVoucherUI();
+  }
+
+  // ─── Counters ─────────────────────────────────────────────────────────────────
+  document.getElementById('plusAdultBtn').onclick = () => {
+    adultInput.value = getAdultCount() + 1;
+    onCountChange();
   };
   document.getElementById('minusAdultBtn').onclick = () => {
     if (getAdultCount() > 1) {
       adultInput.value = getAdultCount() - 1;
-      renderPassengerForms();
-      updateTotals();
-      appliedDiscount = 0; appliedVoucherCode = ''; resetVoucherUI();
+      onCountChange();
     }
   };
-  adultInput.oninput = () => { renderPassengerForms(); updateTotals(); };
+  adultInput.oninput = onCountChange;
 
-  // ─── Child counter ────────────────────────────────────────────────────────────
   document.getElementById('plusChildBtn').onclick = () => {
     childInput.value = getChildCount() + 1;
-    renderPassengerForms();
-    updateTotals();
-    appliedDiscount = 0; appliedVoucherCode = ''; resetVoucherUI();
+    onCountChange();
   };
   document.getElementById('minusChildBtn').onclick = () => {
     if (getChildCount() > 0) {
       childInput.value = getChildCount() - 1;
-      renderPassengerForms();
-      updateTotals();
-      appliedDiscount = 0; appliedVoucherCode = ''; resetVoucherUI();
+      onCountChange();
     }
   };
-  childInput.oninput = () => { renderPassengerForms(); updateTotals(); };
+  childInput.oninput = onCountChange;
+
+  document.getElementById('plusInfantBtn').onclick = () => {
+    infantInput.value = getInfantCount() + 1;
+    onCountChange();
+  };
+  document.getElementById('minusInfantBtn').onclick = () => {
+    if (getInfantCount() > 0) {
+      infantInput.value = getInfantCount() - 1;
+      onCountChange();
+    }
+  };
+  infantInput.oninput = onCountChange;
 
   // ─── Dynamic passenger form renderer ─────────────────────────────────────────
   function renderPassengerForms() {
-    const adults   = getAdultCount();
-    const children = getChildCount();
-    const total    = adults + children;
-
-    // Preserve existing values before re-render
-    const oldData = collectPassengerData();
+    const slots = buildPassengerSlots();
+    const oldMap = mapPassengerDataByType(collectPassengerData());
 
     passengersContainer.innerHTML = '';
 
-    for (let i = 0; i < total; i++) {
-      const isChild = i >= adults;
-      const type    = isChild ? 'CHILD' : 'ADULT';
-      const num     = isChild ? (i - adults + 1) : (i + 1);
-      const icon    = isChild ? '👦' : '🧑';
-      const label   = isChild ? `Trẻ em ${num}` : `Người lớn ${num}`;
-      const badge   = isChild ? 'Trẻ em · 75% giá' : 'Người lớn · 100% giá';
+    slots.forEach((slot, i) => {
+      const meta  = PASSENGER_META[slot.type];
+      const label = `${meta.label} ${slot.num}`;
+      const old   = oldMap[`${slot.type}_${slot.num - 1}`] || {};
+      const bounds = getDobBounds(slot.type);
 
-      const old = oldData[i] || {};
+      const idPlaceholder = slot.type === 'ADULT'
+        ? 'Số định danh (CCCD/Passport)'
+        : 'Số giấy khai sinh hoặc hộ chiếu (Không bắt buộc)';
+
+      const idLabel = slot.type === 'ADULT'
+        ? 'Số CCCD / Passport <span style="color:#e53e3e">*</span>'
+        : 'Số định danh (CCCD/Passport)';
 
       const card = document.createElement('div');
-      card.className = isChild ? 'passenger-card child-card' : 'passenger-card';
+      card.className = `passenger-card ${meta.cardClass}`.trim();
 
       card.innerHTML = `
         <div class="passenger-header">
-          <span class="passenger-label">${icon} ${label}</span>
-          <span class="passenger-badge">${badge}</span>
+          <span class="passenger-label">${meta.icon} ${label}</span>
+          <span class="passenger-badge">${meta.badge}</span>
         </div>
         <div class="passenger-grid">
           <div class="form-group full-width">
@@ -176,20 +260,21 @@
           <div class="form-group">
             <label>Ngày sinh <span style="color:#e53e3e">*</span></label>
             <input class="passenger-input" type="date" id="p_dob_${i}" required
+              min="${bounds.min}" max="${bounds.max}"
               value="${escHtml(old.dateOfBirth || '')}">
           </div>
           <div class="form-group">
-            <label>Số CCCD / Passport</label>
+            <label>${idLabel}</label>
             <input class="passenger-input" type="text" id="p_id_${i}"
-              placeholder="Số giấy tờ tùy thân..."
+              placeholder="${escHtml(idPlaceholder)}"
               value="${escHtml(old.idNumber || '')}">
           </div>
-          <input type="hidden" id="p_type_${i}" value="${type}">
+          <input type="hidden" id="p_type_${i}" value="${slot.type}">
         </div>
       `;
 
       passengersContainer.appendChild(card);
-    }
+    });
   }
 
   function escHtml(str) {
@@ -200,33 +285,54 @@
       .replace(/>/g, '&gt;');
   }
 
+  function mapPassengerDataByType(data) {
+    const counters = { ADULT: 0, CHILD: 0, INFANT: 0 };
+    const map = {};
+    data.forEach(p => {
+      const idx = counters[p.passengerType] || 0;
+      map[`${p.passengerType}_${idx}`] = p;
+      counters[p.passengerType] = idx + 1;
+    });
+    return map;
+  }
+
   function collectPassengerData() {
-    const total = getTotalPeople();
+    const slots = buildPassengerSlots();
     const list  = [];
-    for (let i = 0; i < total; i++) {
+    for (let i = 0; i < slots.length; i++) {
       const nameEl = document.getElementById(`p_name_${i}`);
       if (!nameEl) break;
       list.push({
         fullName:      nameEl?.value?.trim()                            || '',
         dateOfBirth:   document.getElementById(`p_dob_${i}`)?.value   || '',
         idNumber:      document.getElementById(`p_id_${i}`)?.value?.trim() || '',
-        passengerType: document.getElementById(`p_type_${i}`)?.value  || 'ADULT',
+        passengerType: document.getElementById(`p_type_${i}`)?.value  || slots[i].type,
       });
     }
     return list;
   }
 
   function validatePassengers() {
-    const data = collectPassengerData();
+    const slots = buildPassengerSlots();
+    const data  = collectPassengerData();
+
     for (let i = 0; i < data.length; i++) {
+      const slot = slots[i];
+      const meta = PASSENGER_META[slot.type];
+
       if (!data[i].fullName) {
-        alert(`Vui lòng nhập Họ và tên cho Hành khách ${i + 1}.`);
+        alert(`Vui lòng nhập Họ và tên cho ${meta.label} ${slot.num}.`);
         document.getElementById(`p_name_${i}`)?.focus();
         return null;
       }
       if (!data[i].dateOfBirth) {
-        alert(`Vui lòng nhập Ngày sinh cho Hành khách ${i + 1}.`);
+        alert(`Vui lòng nhập Ngày sinh cho ${meta.label} ${slot.num}.`);
         document.getElementById(`p_dob_${i}`)?.focus();
+        return null;
+      }
+      if (slot.type === 'ADULT' && !data[i].idNumber) {
+        alert(`Vui lòng nhập Số CCCD/Passport cho Người lớn ${slot.num}.`);
+        document.getElementById(`p_id_${i}`)?.focus();
         return null;
       }
     }
@@ -253,7 +359,10 @@
     try {
       const adults   = getAdultCount();
       const children = getChildCount();
-      const baseTotal = adults * currentPrice + children * currentPrice * 0.75;
+      const infants  = getInfantCount();
+      const baseTotal = adults * currentPrice
+        + children * currentPrice * 0.75
+        + infants  * currentPrice * 0.10;
 
       const res = await TB.apiFetch('/api/v1/bookings/apply-voucher', {
         method: 'POST',
@@ -301,16 +410,16 @@
     confirmBtn.textContent = 'ĐANG XỬ LÝ...';
 
     try {
-      // Build request with adultCount / childCount / passengers list
       const bookingReq = {
-        userId:        user.id,
-        scheduleId:    parseInt(scheduleId),
-        adultCount:    getAdultCount(),
-        childCount:    getChildCount(),
-        discountCode:  appliedVoucherCode || null,
-        passengers:    passengers.map(p => ({
+        userId:       user.id,
+        scheduleId:   parseInt(scheduleId),
+        adultCount:   getAdultCount(),
+        childCount:   getChildCount(),
+        infantCount:  getInfantCount(),
+        discountCode: appliedVoucherCode || null,
+        passengers:   passengers.map(p => ({
           fullName:      p.fullName,
-          dateOfBirth:   p.dateOfBirth,   // "YYYY-MM-DD"
+          dateOfBirth:   p.dateOfBirth,
           idNumber:      p.idNumber || null,
           passengerType: p.passengerType
         }))

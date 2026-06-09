@@ -486,3 +486,37 @@ BEGIN
 END
 GO
 
+-- 3. Passenger & Booking: hỗ trợ ADULT / CHILD / INFANT (Customer Booking Flow)
+-- IdNumber cho phép NULL (trẻ em & em bé chưa bắt buộc có CCCD/Passport riêng)
+IF COL_LENGTH('dbo.Passengers', 'IdNumber') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.Passengers ALTER COLUMN IdNumber VARCHAR(50) NULL;
+END
+GO
+
+-- OccupiedSlots: số chỗ thực tế trừ khỏi TourSchedule (ADULT + CHILD; INFANT không chiếm chỗ)
+IF COL_LENGTH('dbo.Bookings', 'OccupiedSlots') IS NULL
+BEGIN
+    ALTER TABLE dbo.Bookings ADD OccupiedSlots INT NULL;
+END
+GO
+
+-- Backfill: booking cũ coi toàn bộ NumberOfPeople là chỗ đã chiếm
+UPDATE dbo.Bookings
+SET OccupiedSlots = NumberOfPeople
+WHERE OccupiedSlots IS NULL AND NumberOfPeople IS NOT NULL;
+GO
+
+-- Ràng buộc PassengerType chỉ nhận 3 giá trị chuẩn ngành lữ hành
+IF NOT EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_Passengers_PassengerType'
+      AND parent_object_id = OBJECT_ID('dbo.Passengers')
+)
+BEGIN
+    ALTER TABLE dbo.Passengers
+    ADD CONSTRAINT CK_Passengers_PassengerType
+        CHECK (PassengerType IN ('ADULT', 'CHILD', 'INFANT'));
+END
+GO
+
