@@ -3,8 +3,7 @@ let currentReportData = [];
 let revenueChart;
 
 const EMPTY_REPORT_MESSAGE =
-    'Không có dữ liệu thanh toán thành công nào trong khoảng thời gian đã chọn. ' +
-    'Vui lòng bấm Generate để chọn khoảng thời gian khác.';
+    'Chưa có dữ liệu doanh thu thực tế trong khoảng thời gian này';
 
 function formatLocalDate(date) {
     const y = date.getFullYear();
@@ -27,9 +26,13 @@ function isAuthHttpError(error) {
 
 function setDefaultDateRange() {
     const today = new Date();
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-    document.getElementById('startDate').value = formatLocalDate(startOfYear);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    document.getElementById('startDate').value = formatLocalDate(startOfMonth);
     document.getElementById('endDate').value = formatLocalDate(today);
+    return {
+        startDate: formatLocalDate(startOfMonth),
+        endDate: formatLocalDate(today)
+    };
 }
 
 function setReportLoading(isLoading) {
@@ -41,7 +44,8 @@ function setReportLoading(isLoading) {
     }
 }
 
-async function loadReport() {
+async function loadReport(options = {}) {
+    const { autoLoad = false } = options;
     const token = sessionStorage.getItem('token');
     if (!token) {
         handleSessionExpired();
@@ -52,6 +56,7 @@ async function loadReport() {
     const endDate = document.getElementById('endDate').value;
     const reportType = document.getElementById('reportType').value;
     const status = document.getElementById('bookingStatus').value;
+    const includeTest = status === 'INCLUDE_TEST';
 
     if (!startDate || !endDate) {
         showToast('Vui lòng chọn khoảng thời gian', 'warning');
@@ -67,7 +72,7 @@ async function loadReport() {
 
     try {
         const response = await TB.apiFetch(
-            `${FINANCIAL_REPORT_API}?start=${startDate}&end=${endDate}&type=${reportType}&status=${status}`
+            `${FINANCIAL_REPORT_API}?start=${startDate}&end=${endDate}&type=${reportType}&status=${status}&includeTest=${includeTest}`
         );
         const data = response?.data ?? response ?? [];
         currentReportData = Array.isArray(data) ? data : [];
@@ -76,10 +81,12 @@ async function loadReport() {
         updateStats(currentReportData);
         updateChart(currentReportData);
 
-        if (currentReportData.length > 0) {
-            showToast('Tạo báo cáo thành công', 'success');
-        } else {
-            showToast(EMPTY_REPORT_MESSAGE, 'info');
+        if (!autoLoad) {
+            if (currentReportData.length > 0) {
+                showToast('Tạo báo cáo thành công', 'success');
+            } else {
+                showToast(EMPTY_REPORT_MESSAGE, 'info');
+            }
         }
     } catch (error) {
         console.error('Error loading report:', error);
@@ -152,14 +159,24 @@ function updateStats(data) {
     document.getElementById('cancelRate').innerHTML = `${cancelRate}%`;
 }
 
+function setChartEmptyState(isEmpty) {
+    const emptyEl = document.getElementById('chartEmptyMessage');
+    if (emptyEl) {
+        emptyEl.style.display = isEmpty ? 'flex' : 'none';
+    }
+}
+
 function updateChart(data) {
     const ctx = document.getElementById('revenueChart').getContext('2d');
     if (revenueChart) revenueChart.destroy();
 
     if (!data || data.length === 0) {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        setChartEmptyState(true);
         return;
     }
+
+    setChartEmptyState(false);
 
     revenueChart = new Chart(ctx, {
         type: 'line',
@@ -306,8 +323,17 @@ function initFinancialReportPage() {
         }
     });
 
-    setDefaultDateRange();
-    window.addEventListener('load', loadReport);
+    window.addEventListener('load', () => {
+        const today = new Date();
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const startDate = formatLocalDate(startOfMonth);
+        const endDate = formatLocalDate(today);
+
+        document.getElementById('startDate').value = startDate;
+        document.getElementById('endDate').value = endDate;
+
+        loadReport({ autoLoad: true });
+    });
 }
 
 initFinancialReportPage();

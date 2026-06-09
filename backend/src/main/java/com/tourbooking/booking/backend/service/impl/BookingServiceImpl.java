@@ -24,9 +24,11 @@ import com.tourbooking.booking.backend.repository.UserRepository;
 import java.time.LocalDateTime;
 import com.tourbooking.booking.backend.service.BookingService;
 import com.tourbooking.booking.backend.service.PassengerClassificationService;
+import com.tourbooking.booking.backend.service.PaymentService;
 import com.tourbooking.booking.backend.service.TourScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tourbooking.booking.backend.model.dto.request.VoucherRequest;
@@ -68,6 +70,8 @@ public class BookingServiceImpl implements BookingService {
     private final com.tourbooking.booking.backend.repository.RefundRequestRepository refundRequestRepository;
     private final PassengerClassificationService passengerClassificationService;
     private final TourScheduleService tourScheduleService;
+    private final PaymentService paymentService;
+    private final Environment environment;
 
     private static final BigDecimal CHILD_RATE = new BigDecimal("0.75");
     private static final BigDecimal INFANT_RATE = new BigDecimal("0.10");
@@ -288,35 +292,35 @@ public class BookingServiceImpl implements BookingService {
 
 
     @Override
-    @Transactional(readOnly = true)
-    public List<FinancialReportResponse> getFinancialReport(String start, String end, String type, String status) {
+    @Transactional
+    public List<FinancialReportResponse> getFinancialReport(
+            String start, String end, String type, String status, boolean includeTest) {
         LocalDate startDate = LocalDate.parse(start);
         LocalDate endDate = LocalDate.parse(end);
+        boolean devProfile = isDevProfile();
+        boolean includeTestData = includeTest || "INCLUDE_TEST".equalsIgnoreCase(status);
 
-        log.info("Generating financial report from {} to {}, type: {}, status: {}", startDate, endDate, type, status);
+        log.info("Generating financial report {} to {}, type={}, status={}, includeTest={}, devProfile={}",
+                startDate, endDate, type, status, includeTestData, devProfile);
 
-        // Lấy tất cả payments trong khoảng thời gian
-        List<Payment> allPayments = paymentRepository.findAll();
-        log.info("Total payments in DB: {}", allPayments.size());
+        try {
+            int synced = paymentService.reconcilePendingPayOsPaymentsInRange(startDate, endDate);
+            log.info("Pre-report PayOS reconciliation updated {} payment(s) to SUCCESS", synced);
+        } catch (Exception e) {
+            log.warn("Pre-report PayOS reconciliation failed (report continues): {}", e.getMessage());
+        }
 
-        // Lọc payments theo ngày thanh toán (so khớp theo LocalDate, tránh lệch múi giờ)
-        List<Payment> filteredPayments = allPayments.stream()
-                .filter(p -> isPaymentWithinRange(p, startDate, endDate))
-                .filter(p -> {
-                    // Nếu filter status là "all" hoặc không có, lấy tất cả payment SUCCESS
-                    if (status == null || status.isEmpty() || "all".equalsIgnoreCase(status)) {
-                        return p.getStatus() == PaymentStatus.SUCCESS && !"TEST_DATA".equals(p.getPaymentMethod());
-                    }
-                    // Nếu filter là SUCCESS hoặc COMPLETED → lấy payment SUCCESS
-                    if ("SUCCESS".equalsIgnoreCase(status) || "COMPLETED".equalsIgnoreCase(status)) {
-                        return p.getStatus() == PaymentStatus.SUCCESS && !"TEST_DATA".equals(p.getPaymentMethod());
-                    }
-                    // Các trường hợp khác
-                    return false;
-                })
+        LocalDateTime rangeStart = startDate.atStartOfDay();
+        LocalDateTime rangeEnd = endDate.atTime(23, 59, 59, 999_999_999);
+
+        List<Payment> paymentsInRange = paymentRepository.findInDateRange(rangeStart, rangeEnd);
+        log.info("Payments in date range {} - {}: {}", startDate, endDate, paymentsInRange.size());
+
+        List<Payment> filteredPayments = paymentsInRange.stream()
+                .filter(p -> matchesFinancialReportPayment(p, status, includeTestData, devProfile))
                 .toList();
 
-        log.info("Filtered payments (SUCCESS) count: {}", filteredPayments.size());
+        log.info("Filtered payments for report count: {}", filteredPayments.size());
 
         // Lấy bookings bị CANCELLED trong khoảng thời gian (để tính cancellation rate)
         List<Booking> cancelledBookings = bookingRepository.findAll().stream()
@@ -390,15 +394,48 @@ public class BookingServiceImpl implements BookingService {
                 .toList();
     }
 
-    private boolean isPaymentWithinRange(Payment payment, LocalDate startDate, LocalDate endDate) {
-        LocalDateTime paymentDateTime = payment.getPaymentDate() != null
-                ? payment.getPaymentDate()
-                : payment.getCreatedAt();
-        if (paymentDateTime == null) {
+    private boolean isDevProfile() {
+        String[] profiles = environment.getActiveProfiles();
+        if (profiles.length == 0) {
+            return true;
+        }
+        for (String profile : profiles) {
+            if ("dev".equalsIgnoreCase(profile) || "local".equalsIgnoreCase(profile)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Lọc payment cho báo cáo tài chính.
+     * Mặc định: chỉ SUCCESS thật (loại TEST_DATA).
+     * includeTest / INCLUDE_TEST: thêm TEST_DATA và PENDING phục vụ demo local.
+     */
+    private boolean matchesFinancialReportPayment(
+            Payment payment, String statusFilter, boolean includeTestData, boolean devProfile) {
+        boolean isTestData = "TEST_DATA".equals(payment.getPaymentMethod());
+
+        if (includeTestData) {
+            if (payment.getStatus() == PaymentStatus.SUCCESS) {
+                return true;
+            }
+            if (payment.getStatus() == PaymentStatus.PENDING) {
+                return isTestData || devProfile;
+            }
             return false;
         }
-        LocalDate paymentDate = paymentDateTime.toLocalDate();
-        return !paymentDate.isBefore(startDate) && !paymentDate.isAfter(endDate);
+
+        if (statusFilter == null || statusFilter.isEmpty() || "all".equalsIgnoreCase(statusFilter)
+                || "SUCCESS".equalsIgnoreCase(statusFilter) || "COMPLETED".equalsIgnoreCase(statusFilter)) {
+            return payment.getStatus() == PaymentStatus.SUCCESS && !isTestData;
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(statusFilter)) {
+            return payment.getStatus() == PaymentStatus.FAILED;
+        }
+
+        return false;
     }
 
     private boolean isBookingWithinRange(Booking booking, LocalDate startDate, LocalDate endDate) {

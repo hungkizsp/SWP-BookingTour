@@ -64,11 +64,12 @@
                         <select id="bookingStatus" class="form-control">
                             <option value="all">All Successful Payments</option>
                             <option value="SUCCESS">Success Only</option>
+                            <option value="INCLUDE_TEST">Bao gồm dữ liệu Test (Local)</option>
                             <option value="CANCELLED">Cancellations Only</option>
                         </select>
                     </div>
                     <button onclick="loadReport()" class="btn btn-primary" style="padding: 0 25px; min-height: 48px;">Generate</button>
-                    <button onclick="seedTestData()" class="btn btn-secondary" style="margin-left: 0.5rem; opacity: 0.7;">Seed Test Data</button>
+                    <button onclick="seedTestData()" class="btn btn-secondary" style="margin-left: 0.5rem; opacity: 0.7;" title="Chỉ dùng để demo/kiểm thử — không ảnh hưởng khi vừa mở trang">Seed Test Data</button>
                     <div style="flex: 1;"></div>
                     <button onclick="exportToExcel()" class="btn btn-success" style="padding: 0 20px; min-height: 40px;">Excel</button>
                     <button onclick="exportToPDF()" class="btn btn-danger" style="padding: 0 20px; min-height: 40px;">PDF</button>
@@ -99,6 +100,9 @@
                     <h3 style="margin-bottom: 1.5rem;">Revenue Trends</h3>
                     <div style="height: 350px; position: relative;">
                         <canvas id="revenueChart"></canvas>
+                        <div id="chartEmptyMessage" style="display: none; position: absolute; inset: 0; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.95rem; text-align: center; padding: 1rem; pointer-events: none;">
+                            Chưa có dữ liệu doanh thu thực tế trong khoảng thời gian này
+                        </div>
                     </div>
                 </div>
             </div>
@@ -117,7 +121,7 @@
                         </thead>
                         <tbody id="reportBody">
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 3rem;">No data available. Click Generate to load.</td>
+                                <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">Đang tải báo cáo...</td>
                             </tr>
                         </tbody>
                     </table>

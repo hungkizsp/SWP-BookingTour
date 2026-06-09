@@ -19,24 +19,34 @@ import com.tourbooking.booking.backend.service.MailService;
 import com.tourbooking.booking.backend.service.PayOSService;
 import com.tourbooking.booking.backend.service.PaymentService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.payos.PayOS;
+import vn.payos.type.PaymentLinkData;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import com.tourbooking.booking.backend.repository.DiscountRepository;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentServiceImpl implements PaymentService {
+
+    private static final int PAYOS_CONFIRM_MAX_RETRIES = 3;
+    private static final long PAYOS_CONFIRM_RETRY_DELAY_MS = 1500L;
 
     private final BookingRepository bookingRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentLogRepository paymentLogRepository;
     private final LoyaltyService loyaltyService;
     private final PayOSService payOSService;
+    private final PayOS payOS;
     private final MailService mailService;
     private final ObjectMapper objectMapper;
     private final DiscountRepository discountRepository;
@@ -164,36 +174,166 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentResponse confirmPayOsAfterReturn(long orderCode) {
-        Optional<JsonNode> apiDataOpt = payOSService.fetchPaymentRequestByOrderCode(orderCode);
-        if (apiDataOpt.isEmpty()) {
+        AppException lastPending = null;
+        for (int attempt = 1; attempt <= PAYOS_CONFIRM_MAX_RETRIES; attempt++) {
+            try {
+                return confirmPayOsAfterReturnOnce(orderCode, attempt);
+            } catch (AppException ex) {
+                if (ex.getErrorCode() == ErrorCode.PAYOS_PAYMENT_PENDING) {
+                    lastPending = ex;
+                    if (attempt < PAYOS_CONFIRM_MAX_RETRIES) {
+                        log.info("PayOS confirm orderCode={} still PENDING (attempt {}/{}), retrying...",
+                                orderCode, attempt, PAYOS_CONFIRM_MAX_RETRIES);
+                        sleepQuietly(PAYOS_CONFIRM_RETRY_DELAY_MS);
+                        continue;
+                    }
+                }
+                throw ex;
+            }
+        }
+        throw lastPending != null ? lastPending : new AppException(ErrorCode.PAYOS_PAYMENT_PENDING);
+    }
+
+    @Override
+    @Transactional
+    public int reconcilePendingPayOsPaymentsInRange(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = endDate.atTime(23, 59, 59);
+
+        List<Payment> pendingPayments = paymentRepository.findPendingPayOsInRange(
+                PaymentStatus.PENDING, "PAYOS", start, end);
+
+        int synced = 0;
+        for (Payment payment : pendingPayments) {
+            try {
+                if (reconcileSinglePendingPayOsPayment(payment)) {
+                    synced++;
+                }
+            } catch (Exception e) {
+                log.warn("PayOS reconciliation skipped for payment #{}: {}",
+                        payment.getId(), e.getMessage());
+            }
+        }
+
+        log.info("PayOS pre-report reconciliation: {}/{} pending payments synced to SUCCESS",
+                synced, pendingPayments.size());
+        return synced;
+    }
+
+    private PaymentResponse confirmPayOsAfterReturnOnce(long orderCode, int attempt) {
+        String payOsStatus = fetchPayOsRemoteStatus(orderCode);
+        if (payOsStatus == null) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
-        JsonNode d = apiDataOpt.get();
-        String status = d.path("status").asText("").trim().toUpperCase(Locale.ROOT);
+
         String transactionCode = "PAYOS-" + orderCode;
         Payment payment = paymentRepository.findByTransactionCode(transactionCode)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
 
-        if (!PayOSService.amountsMatch(payment.getAmount(), d)) {
+        if (!remoteAmountMatchesPayment(payment, orderCode)) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        if ("PAID".equals(status)) {
-            finalizePayOsPaymentSuccess(payment, "PayOS returnUrl + API: PAID");
+        if ("PAID".equals(payOsStatus)) {
+            finalizePayOsPaymentSuccess(payment,
+                    "PayOS returnUrl + API: PAID (attempt " + attempt + ")");
             return toResponse(paymentRepository.findById(payment.getId()).orElse(payment));
         }
-        if ("PENDING".equals(status) || "PROCESSING".equals(status)) {
+        if ("PENDING".equals(payOsStatus) || "PROCESSING".equals(payOsStatus)) {
             throw new AppException(ErrorCode.PAYOS_PAYMENT_PENDING);
         }
-        if ("CANCELLED".equals(status) || "FAILED".equals(status)) {
+        if ("CANCELLED".equals(payOsStatus) || "FAILED".equals(payOsStatus)) {
             if (payment.getStatus() == PaymentStatus.PENDING) {
                 payment.setStatus(PaymentStatus.FAILED);
                 paymentRepository.save(payment);
-                savePaymentLog(payment, "PayOS API: " + status);
+                savePaymentLog(payment, "PayOS API: " + payOsStatus);
             }
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
         throw new AppException(ErrorCode.INVALID_REQUEST);
+    }
+
+    private boolean reconcileSinglePendingPayOsPayment(Payment payment) {
+        Long orderCode = parsePayOsOrderCode(payment);
+        if (orderCode == null) {
+            return false;
+        }
+
+        String payOsStatus = fetchPayOsRemoteStatus(orderCode);
+        if (payOsStatus == null) {
+            return false;
+        }
+
+        if (!remoteAmountMatchesPayment(payment, orderCode)) {
+            log.warn("PayOS reconciliation amount mismatch for payment #{}", payment.getId());
+            return false;
+        }
+
+        if ("PAID".equals(payOsStatus)) {
+            finalizePayOsPaymentSuccess(payment, "PayOS active reconciliation before financial report: PAID");
+            return true;
+        }
+
+        if ("CANCELLED".equals(payOsStatus) || "FAILED".equals(payOsStatus)) {
+            payment.setStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+            savePaymentLog(payment, "PayOS reconciliation: " + payOsStatus);
+        }
+        return false;
+    }
+
+    /**
+     * Gọi PayOS SDK (getPaymentLinkInformation), fallback REST nếu SDK lỗi.
+     */
+    private String fetchPayOsRemoteStatus(long orderCode) {
+        try {
+            PaymentLinkData linkData = payOS.getPaymentLinkInformation(orderCode);
+            if (linkData != null && linkData.getStatus() != null && !linkData.getStatus().isBlank()) {
+                return linkData.getStatus().trim().toUpperCase(Locale.ROOT);
+            }
+        } catch (Exception e) {
+            log.warn("PayOS SDK getPaymentLinkInformation({}) failed: {}", orderCode, e.getMessage());
+        }
+
+        Optional<JsonNode> apiDataOpt = payOSService.fetchPaymentRequestByOrderCode(orderCode);
+        return apiDataOpt
+                .map(d -> d.path("status").asText("").trim().toUpperCase(Locale.ROOT))
+                .filter(s -> !s.isBlank())
+                .orElse(null);
+    }
+
+    private boolean remoteAmountMatchesPayment(Payment payment, long orderCode) {
+        try {
+            PaymentLinkData linkData = payOS.getPaymentLinkInformation(orderCode);
+            if (linkData != null && linkData.getAmount() != null && payment.getAmount() != null) {
+                return payment.getAmount().compareTo(BigDecimal.valueOf(linkData.getAmount())) == 0;
+            }
+        } catch (Exception ignored) {
+            // fallback REST below
+        }
+
+        Optional<JsonNode> apiDataOpt = payOSService.fetchPaymentRequestByOrderCode(orderCode);
+        return apiDataOpt.map(d -> PayOSService.amountsMatch(payment.getAmount(), d)).orElse(true);
+    }
+
+    private static Long parsePayOsOrderCode(Payment payment) {
+        String transactionCode = payment.getTransactionCode();
+        if (transactionCode == null || !transactionCode.startsWith("PAYOS-")) {
+            return null;
+        }
+        try {
+            return Long.parseLong(transactionCode.substring("PAYOS-".length()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static void sleepQuietly(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override

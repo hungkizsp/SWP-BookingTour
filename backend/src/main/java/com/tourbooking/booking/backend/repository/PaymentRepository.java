@@ -9,6 +9,7 @@ import com.tourbooking.booking.backend.model.entity.enums.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -28,4 +29,26 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findFirstByBooking_IdAndStatusOrderByPaymentDateDesc(Long bookingId, PaymentStatus status);
 
     Optional<Payment> findFirstByBooking_IdOrderByPaymentDateDesc(Long bookingId);
+
+    @Query("""
+            SELECT p FROM Payment p
+            WHERE p.status = :status
+              AND p.paymentMethod = :paymentMethod
+              AND COALESCE(p.paymentDate, p.createdAt) >= :start
+              AND COALESCE(p.paymentDate, p.createdAt) <= :end
+            """)
+    List<Payment> findPendingPayOsInRange(
+            @Param("status") PaymentStatus status,
+            @Param("paymentMethod") String paymentMethod,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
+    @Query("""
+            SELECT p FROM Payment p
+            WHERE COALESCE(p.paymentDate, p.createdAt) >= :start
+              AND COALESCE(p.paymentDate, p.createdAt) <= :end
+            """)
+    List<Payment> findInDateRange(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 }

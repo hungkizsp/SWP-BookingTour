@@ -150,11 +150,12 @@ public class AdminController {
             @RequestParam String start,
             @RequestParam String end,
             @RequestParam(defaultValue = "daily") String type,
-            @RequestParam(defaultValue = "all") String status) {
+            @RequestParam(defaultValue = "all") String status,
+            @RequestParam(defaultValue = "false") boolean includeTest) {
         return ApiResponse.<List<FinancialReportResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Financial report generated successfully")
-                .data(bookingService.getFinancialReport(start, end, type, status))
+                .data(bookingService.getFinancialReport(start, end, type, status, includeTest))
                 .build();
     }
 

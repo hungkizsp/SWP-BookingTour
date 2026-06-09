@@ -14,7 +14,7 @@ public interface BookingService {
     BookingResponse updateBooking(Long id, BookingRequest request);
     void deleteBooking(Long id);
 
-    List<FinancialReportResponse> getFinancialReport(String start, String end, String type, String status);
+    List<FinancialReportResponse> getFinancialReport(String start, String end, String type, String status, boolean includeTest);
 
     long countActiveBookings();
 
