@@ -90,8 +90,8 @@
     try { json = text ? JSON.parse(text) : null; } catch (_) {}
     if (!res.ok) {
       const msg = (json && json.message) ? json.message : `HTTP ${res.status}`;
-      if (res.status === 401 && token) {
-        goToLogin(msg);
+      if ((res.status === 401 || res.status === 403) && token) {
+        goToLogin('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại!');
       }
       const err = new Error(msg);
       err.status = res.status;

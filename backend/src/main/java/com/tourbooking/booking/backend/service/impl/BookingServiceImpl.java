@@ -290,23 +290,18 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<FinancialReportResponse> getFinancialReport(String start, String end, String type, String status) {
-        LocalDateTime startDateTime = LocalDate.parse(start).atStartOfDay();
-        LocalDateTime endDateTime = LocalDate.parse(end).atTime(23, 59, 59);
+        LocalDate startDate = LocalDate.parse(start);
+        LocalDate endDate = LocalDate.parse(end);
 
-        log.info("Generating financial report from {} to {}, type: {}, status: {}", start, end, type, status);
+        log.info("Generating financial report from {} to {}, type: {}, status: {}", startDate, endDate, type, status);
 
         // Lấy tất cả payments trong khoảng thời gian
         List<Payment> allPayments = paymentRepository.findAll();
         log.info("Total payments in DB: {}", allPayments.size());
 
-        // Lọc payments theo ngày thanh toán (paymentDate hoặc createdAt)
+        // Lọc payments theo ngày thanh toán (so khớp theo LocalDate, tránh lệch múi giờ)
         List<Payment> filteredPayments = allPayments.stream()
-                .filter(p -> {
-                    LocalDateTime pDate = p.getPaymentDate() != null ? p.getPaymentDate() : p.getCreatedAt();
-                    if (pDate == null) return false;
-                    return (pDate.isEqual(startDateTime) || pDate.isAfter(startDateTime)) &&
-                           (pDate.isEqual(endDateTime) || pDate.isBefore(endDateTime));
-                })
+                .filter(p -> isPaymentWithinRange(p, startDate, endDate))
                 .filter(p -> {
                     // Nếu filter status là "all" hoặc không có, lấy tất cả payment SUCCESS
                     if (status == null || status.isEmpty() || "all".equalsIgnoreCase(status)) {
@@ -326,12 +321,7 @@ public class BookingServiceImpl implements BookingService {
         // Lấy bookings bị CANCELLED trong khoảng thời gian (để tính cancellation rate)
         List<Booking> cancelledBookings = bookingRepository.findAll().stream()
                 .filter(b -> b.getStatus() == BookingStatus.CANCELLED)
-                .filter(b -> {
-                    LocalDateTime bDate = b.getCreatedAt() != null ? b.getCreatedAt() : b.getUpdatedAt();
-                    if (bDate == null) return false;
-                    return (bDate.isEqual(startDateTime) || bDate.isAfter(startDateTime)) &&
-                           (bDate.isEqual(endDateTime) || bDate.isBefore(endDateTime));
-                })
+                .filter(b -> isBookingWithinRange(b, startDate, endDate))
                 .toList();
 
         // Formatter theo loại báo cáo
@@ -398,6 +388,28 @@ public class BookingServiceImpl implements BookingService {
                 })
                 .sorted((a, b) -> a.getPeriod().compareTo(b.getPeriod()))
                 .toList();
+    }
+
+    private boolean isPaymentWithinRange(Payment payment, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime paymentDateTime = payment.getPaymentDate() != null
+                ? payment.getPaymentDate()
+                : payment.getCreatedAt();
+        if (paymentDateTime == null) {
+            return false;
+        }
+        LocalDate paymentDate = paymentDateTime.toLocalDate();
+        return !paymentDate.isBefore(startDate) && !paymentDate.isAfter(endDate);
+    }
+
+    private boolean isBookingWithinRange(Booking booking, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime bookingDateTime = booking.getCreatedAt() != null
+                ? booking.getCreatedAt()
+                : booking.getUpdatedAt();
+        if (bookingDateTime == null) {
+            return false;
+        }
+        LocalDate bookingDate = bookingDateTime.toLocalDate();
+        return !bookingDate.isBefore(startDate) && !bookingDate.isAfter(endDate);
     }
 
     @Override

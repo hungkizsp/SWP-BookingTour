@@ -12,6 +12,7 @@ import com.tourbooking.booking.backend.service.TourService;
 import com.tourbooking.booking.backend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -144,6 +145,7 @@ public class AdminController {
     }
 
     @GetMapping("/financial-report")
+    @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<List<FinancialReportResponse>> getFinancialReport(
             @RequestParam String start,
             @RequestParam String end,
