@@ -14,6 +14,7 @@ public class BookingMapper {
         if (booking.getUser() != null) {
             response.setUserId(booking.getUser().getId());
             response.setUserFullName(booking.getUser().getFullName());
+            response.setUserEmail(booking.getUser().getEmail());
         }
         if (booking.getSchedule() != null) {
             response.setScheduleId(booking.getSchedule().getId());

@@ -79,8 +79,15 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getAllBookings() {
-        return bookingRepository.findAll().stream()
-                .map(BookingMapper::toResponse)
+        List<Booking> bookings = bookingRepository.findAll();
+        Map<Long, com.tourbooking.booking.backend.model.entity.RefundRequest> refundMap =
+                loadLatestRefundsByBookingId(bookings.stream().map(Booking::getId).toList());
+        return bookings.stream()
+                .map(booking -> {
+                    BookingResponse response = BookingMapper.toResponse(booking);
+                    enrichRefundInfo(response, booking.getId(), refundMap);
+                    return response;
+                })
                 .toList();
     }
 
@@ -97,7 +104,9 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse getBookingById(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
-        return BookingMapper.toResponse(booking);
+        BookingResponse response = BookingMapper.toResponse(booking);
+        enrichRefundInfo(response, id, null);
+        return response;
     }
 
     @Override
@@ -768,5 +777,38 @@ public class BookingServiceImpl implements BookingService {
                 });
             }
         }
+    }
+
+    private Map<Long, com.tourbooking.booking.backend.model.entity.RefundRequest> loadLatestRefundsByBookingId(
+            List<Long> bookingIds) {
+        if (bookingIds == null || bookingIds.isEmpty()) {
+            return Map.of();
+        }
+        return refundRequestRepository.findByBooking_IdIn(bookingIds).stream()
+                .collect(Collectors.toMap(
+                        r -> r.getBooking().getId(),
+                        r -> r,
+                        (existing, incoming) -> {
+                            LocalDateTime existingAt = existing.getCreatedAt() != null
+                                    ? existing.getCreatedAt() : LocalDateTime.MIN;
+                            LocalDateTime incomingAt = incoming.getCreatedAt() != null
+                                    ? incoming.getCreatedAt() : LocalDateTime.MIN;
+                            return incomingAt.isAfter(existingAt) ? incoming : existing;
+                        }));
+    }
+
+    private void enrichRefundInfo(
+            BookingResponse response,
+            Long bookingId,
+            Map<Long, com.tourbooking.booking.backend.model.entity.RefundRequest> refundMap) {
+        com.tourbooking.booking.backend.model.entity.RefundRequest refund = refundMap != null
+                ? refundMap.get(bookingId)
+                : refundRequestRepository.findTopByBooking_IdOrderByCreatedAtDesc(bookingId).orElse(null);
+        if (refund == null) {
+            return;
+        }
+        response.setRefundReason(refund.getReason());
+        response.setRefundStatus(refund.getStatus() != null ? refund.getStatus().name() : null);
+        response.setRefundAmount(refund.getAmount());
     }
 }

@@ -10,6 +10,7 @@ public class BookingResponse {
     private Long id;
     private Long userId;
     private String userFullName;
+    private String userEmail;
     private Long scheduleId;
     private Long tourId;
     private String tourName;
@@ -19,4 +20,7 @@ public class BookingResponse {
     private BigDecimal discountAmount;
     private String discountCode;
     private BookingStatus status;
+    private String refundReason;
+    private String refundStatus;
+    private BigDecimal refundAmount;
 }

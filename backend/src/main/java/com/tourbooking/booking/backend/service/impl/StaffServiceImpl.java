@@ -177,6 +177,7 @@ public class StaffServiceImpl implements StaffService {
                     res.setId(b.getId());
                     res.setUserId(b.getUser() != null ? b.getUser().getId() : null);
                     res.setUserFullName(b.getUser() != null ? b.getUser().getFullName() : "Guest");
+                    res.setUserEmail(b.getUser() != null ? b.getUser().getEmail() : null);
                     res.setScheduleId(b.getSchedule() != null ? b.getSchedule().getId() : null);
                     res.setTourName(b.getSchedule() != null && b.getSchedule().getTour() != null
                             ? b.getSchedule().getTour().getTourName()

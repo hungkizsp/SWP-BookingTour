@@ -57,6 +57,7 @@
                                 <th>ID</th>
                                 <th>Customer</th>
                                 <th>Tour</th>
+                                <th>Booking Date</th>
                                 <th>Total</th>
                                 <th>Status</th>
                                 <th>Refund Info</th>
@@ -65,7 +66,7 @@
                         </thead>
                         <tbody id="bookingTable">
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 2rem;">Loading bookings...</td>
+                                <td colspan="8" style="text-align: center; padding: 2rem;">Loading bookings...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -75,6 +76,58 @@
     </div>
 
     <script>
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function getCustomerName(item) {
+            return item.userFullName
+                || (item.user && item.user.fullName)
+                || 'Guest';
+        }
+
+        function getCustomerEmail(item) {
+            return item.userEmail
+                || (item.user && item.user.email)
+                || 'N/A';
+        }
+
+        function formatBookingDate(value) {
+            if (!value) return 'N/A';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return 'N/A';
+            return date.toLocaleString('vi-VN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatRefundInfo(item) {
+            if (!item.refundReason && !item.refundStatus && !item.refundAmount) {
+                return '<span style="color:#ccc;">None</span>';
+            }
+
+            const parts = [];
+            if (item.refundStatus) {
+                parts.push(`<span class="badge badge-warning">${escapeHtml(item.refundStatus)}</span>`);
+            }
+            if (item.refundAmount != null) {
+                parts.push(`<strong>${Number(item.refundAmount).toLocaleString('vi-VN')}đ</strong>`);
+            }
+            if (item.refundReason) {
+                parts.push(`<span style="color:#666;">${escapeHtml(item.refundReason)}</span>`);
+            }
+            return parts.join('<br>');
+        }
+
         async function loadBookings() {
             try {
                 const status = document.getElementById('statusFilter').value;
@@ -90,7 +143,7 @@
 
                 const table = document.getElementById('bookingTable');
                 if (list.length === 0) {
-                    table.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No bookings found.</td></tr>';
+                    table.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">No bookings found.</td></tr>';
                     return;
                 }
 
@@ -98,13 +151,14 @@
                     <tr>
                         <td>#${item.id}</td>
                         <td>
-                            <div style="font-weight:700;">${item.user ? item.user.fullName : 'Guest'}</div>
-                            <div style="font-size:0.75rem; color:#666;">${item.user ? item.user.email : 'N/A'}</div>
+                            <div style="font-weight:700;">${escapeHtml(getCustomerName(item))}</div>
+                            <div style="font-size:0.75rem; color:#666;">${escapeHtml(getCustomerEmail(item))}</div>
                         </td>
-                        <td>${item.tourName}</td>
-                        <td style="font-weight:800; color:var(--price);">${Number(item.totalPrice).toLocaleString()}đ</td>
+                        <td>${escapeHtml(item.tourName || 'N/A')}</td>
+                        <td style="font-size:0.85rem; white-space:nowrap;">${formatBookingDate(item.bookingDate)}</td>
+                        <td style="font-weight:800; color:var(--price);">${Number(item.totalPrice).toLocaleString('vi-VN')}đ</td>
                         <td><span class="badge ${getStatusClass(item.status)}">${item.status}</span></td>
-                        <td style="font-size:0.8rem; max-width:200px;">${item.refundReason || '<span style="color:#ccc;">None</span>'}</td>
+                        <td style="font-size:0.8rem; max-width:220px; line-height:1.4;">${formatRefundInfo(item)}</td>
                         <td>
                             <div style="display:flex; gap:5px;">
                                 ${item.status === 'REFUND_REQUESTED' ? `
@@ -121,7 +175,7 @@
                 `).join('');
             } catch (err) {
                 console.error(err);
-                document.getElementById('bookingTable').innerHTML = '<tr><td colspan="7" style="text-align: center; color: red;">Error loading data.</td></tr>';
+                document.getElementById('bookingTable').innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">Error loading data.</td></tr>';
             }
         }
 
