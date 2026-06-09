@@ -24,7 +24,8 @@ public class ReviewController {
             @RequestParam(required = false) Integer rating,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
         return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.PagedResponse<ReviewResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Successfully retrieved reviews (page " + page + ")")

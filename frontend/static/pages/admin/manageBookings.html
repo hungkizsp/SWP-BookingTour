@@ -39,7 +39,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                     <h2>All Bookings</h2>
                     <div style="display: flex; gap: 10px;">
-                        <select id="statusFilter" class="form-control" onchange="loadBookings()" style="width: 200px;">
+                        <select id="statusFilter" class="form-control" onchange="loadBookings(0)" style="width: 200px;">
                             <option value="ALL">All Status</option>
                             <option value="PENDING">Pending</option>
                             <option value="CONFIRMED">Confirmed</option>
@@ -71,11 +71,15 @@
                         </tbody>
                     </table>
                 </div>
+                <div id="pagination" class="pagination-container"></div>
             </div>
         </main>
     </div>
 
     <script>
+        const PAGE_SIZE = 10;
+        let allBookings = [];
+        let currentPage = 0;
         function escapeHtml(text) {
             if (!text) return '';
             return String(text)
@@ -128,26 +132,60 @@
             return parts.join('<br>');
         }
 
-        async function loadBookings() {
-            try {
-                const status = document.getElementById('statusFilter').value;
-                const res = await TB.apiFetch('/api/v1/bookings');
-                let list = res.data || [];
+        function renderPagination(totalPages, page) {
+            const container = document.getElementById('pagination');
+            if (!allBookings.length) {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
 
-                if (status !== 'ALL') {
-                    list = list.filter(b => b.status === status);
+            container.style.display = 'flex';
+            const totalPagesSafe = Math.max(totalPages, 1);
+            let html = `
+                <button class="page-btn" ${page === 0 ? 'disabled' : ''} onclick="goToPage(${page - 1})">&laquo;</button>
+            `;
+
+            for (let i = 0; i < totalPagesSafe; i++) {
+                if (i === 0 || i === totalPagesSafe - 1 || (i >= page - 2 && i <= page + 2)) {
+                    html += `<button class="page-btn ${i === page ? 'active' : ''}" onclick="goToPage(${i})">${i + 1}</button>`;
+                } else if (i === page - 3 || i === page + 3) {
+                    html += `<span class="page-info">...</span>`;
                 }
+            }
 
-                // Sắp xếp ID mới nhất lên đầu
-                list.sort((a, b) => b.id - a.id);
+            html += `
+                <button class="page-btn" ${page >= totalPagesSafe - 1 ? 'disabled' : ''} onclick="goToPage(${page + 1})">&raquo;</button>
+                <span class="page-info">Trang ${page + 1} / ${totalPagesSafe}</span>
+            `;
+            container.innerHTML = html;
+        }
 
-                const table = document.getElementById('bookingTable');
-                if (list.length === 0) {
-                    table.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">No bookings found.</td></tr>';
-                    return;
-                }
+        function goToPage(page) {
+            const totalPages = Math.ceil(allBookings.length / PAGE_SIZE);
+            if (page < 0 || page >= totalPages) return;
+            currentPage = page;
+            renderBookingsPage();
+        }
 
-                table.innerHTML = list.map(item => `
+        function renderBookingsPage() {
+            const table = document.getElementById('bookingTable');
+            const totalPages = Math.ceil(allBookings.length / PAGE_SIZE) || 1;
+
+            if (currentPage >= totalPages) {
+                currentPage = Math.max(0, totalPages - 1);
+            }
+
+            const start = currentPage * PAGE_SIZE;
+            const pageItems = allBookings.slice(start, start + PAGE_SIZE);
+
+            if (!pageItems.length) {
+                table.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">No bookings found.</td></tr>';
+                renderPagination(0, 0);
+                return;
+            }
+
+            table.innerHTML = pageItems.map(item => `
                     <tr>
                         <td>#${item.id}</td>
                         <td>
@@ -173,9 +211,28 @@
                         </td>
                     </tr>
                 `).join('');
+
+            renderPagination(totalPages, currentPage);
+        }
+
+        async function loadBookings(page = 0) {
+            currentPage = page;
+            try {
+                const status = document.getElementById('statusFilter').value;
+                const res = await TB.apiFetch('/api/v1/bookings');
+                let list = res.data || [];
+
+                if (status !== 'ALL') {
+                    list = list.filter(b => b.status === status);
+                }
+
+                allBookings = list.sort((a, b) => b.id - a.id);
+                renderBookingsPage();
             } catch (err) {
                 console.error(err);
+                allBookings = [];
                 document.getElementById('bookingTable').innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">Error loading data.</td></tr>';
+                renderPagination(0, 0);
             }
         }
 
@@ -195,7 +252,7 @@
             try {
                 await TB.apiFetch(`/api/v1/bookings/${id}/status?status=${newStatus}`, { method: 'PUT' });
                 showToast('Status updated successfully');
-                loadBookings();
+                loadBookings(currentPage);
             } catch (err) {
                 showToast('Update failed: ' + err.message, 'error');
             }
@@ -206,7 +263,7 @@
             try {
                 await TB.apiFetch(`/api/v1/bookings/${id}`, { method: 'DELETE' });
                 showToast('Booking deleted');
-                loadBookings();
+                loadBookings(currentPage);
             } catch (err) {
                 showToast('Delete failed', 'error');
             }

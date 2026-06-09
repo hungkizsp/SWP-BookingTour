@@ -66,7 +66,7 @@
             <div class="card">
                 <div class="filter-bar" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
                     <div class="form-group" style="margin-bottom: 0; min-width: 150px;">
-                        <select id="ratingFilter" class="form-control" onchange="loadReviews()">
+                        <select id="ratingFilter" class="form-control" onchange="loadReviews(0)">
                             <option value="all">All Ratings</option>
                             <option value="5">5 Stars</option>
                             <option value="4">4 Stars</option>
@@ -76,7 +76,7 @@
                         </select>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <input type="text" id="tourFilter" class="form-control" placeholder="Search by Tour ID..." onkeyup="loadReviews()">
+                        <input type="text" id="tourFilter" class="form-control" placeholder="Search by Tour ID..." onkeyup="loadReviews(0)">
                     </div>
                     <button onclick="loadReviews()" class="btn btn-secondary">Refresh</button>
                 </div>
@@ -201,28 +201,31 @@
             document.getElementById('rating3').innerText = '-';
         }
 
-        function renderPagination(totalPages, currentPage) {
+        function renderPagination(totalPages, page) {
             const container = document.getElementById('pagination');
-            if (totalPages <= 1) {
+            const totalPagesSafe = Math.max(totalPages, 1);
+            if (totalPages <= 0) {
                 container.style.display = 'none';
+                container.innerHTML = '';
                 return;
             }
             container.style.display = 'flex';
-            
+
             let html = `
-                <button class="page-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="loadReviews(${currentPage - 1})">&laquo;</button>
+                <button class="page-btn" ${page === 0 ? 'disabled' : ''} onclick="loadReviews(${page - 1})">&laquo;</button>
             `;
-            
-            for (let i = 0; i < totalPages; i++) {
-                if (i === 0 || i === totalPages - 1 || (i >= currentPage - 2 && i <= currentPage + 2)) {
-                    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadReviews(${i})">${i + 1}</button>`;
-                } else if (i === currentPage - 3 || i === currentPage + 3) {
+
+            for (let i = 0; i < totalPagesSafe; i++) {
+                if (i === 0 || i === totalPagesSafe - 1 || (i >= page - 2 && i <= page + 2)) {
+                    html += `<button class="page-btn ${i === page ? 'active' : ''}" onclick="loadReviews(${i})">${i + 1}</button>`;
+                } else if (i === page - 3 || i === page + 3) {
                     html += `<span class="page-info">...</span>`;
                 }
             }
-            
+
             html += `
-                <button class="page-btn" ${currentPage === totalPages - 1 ? 'disabled' : ''} onclick="loadReviews(${currentPage + 1})">&raquo;</button>
+                <button class="page-btn" ${page >= totalPagesSafe - 1 ? 'disabled' : ''} onclick="loadReviews(${page + 1})">&raquo;</button>
+                <span class="page-info">Trang ${page + 1} / ${totalPagesSafe}</span>
             `;
             container.innerHTML = html;
         }
@@ -234,7 +237,7 @@
                         method: "DELETE"
                     });
                     showToast('Review deleted successfully!', 'success');
-                    loadReviews();
+                    loadReviews(currentPage);
                 } catch (error) {
                     showToast('Error: ' + error.message, 'error');
                 }
