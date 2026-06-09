@@ -468,11 +468,14 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BigDecimal getMonthlyRevenue() {
         YearMonth current = YearMonth.now();
-        LocalDateTime start = current.atDay(1).atStartOfDay();
-        LocalDateTime end = current.atEndOfMonth().atTime(23, 59, 59);
-        BigDecimal revenue = paymentRepository.sumAmountByStatusAndDateBetween(
-                com.tourbooking.booking.backend.model.entity.enums.PaymentStatus.SUCCESS, start, end);
-        return revenue != null ? revenue : BigDecimal.ZERO;
+        LocalDateTime rangeStart = current.atDay(1).atStartOfDay();
+        LocalDateTime rangeEnd = current.atEndOfMonth().atTime(23, 59, 59, 999_999_999);
+        boolean devProfile = isDevProfile();
+
+        return paymentRepository.findInDateRange(rangeStart, rangeEnd).stream()
+                .filter(p -> matchesFinancialReportPayment(p, "INCLUDE_TEST", true, devProfile))
+                .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     @Override

@@ -331,6 +331,7 @@ function initFinancialReportPage() {
 
         document.getElementById('startDate').value = startDate;
         document.getElementById('endDate').value = endDate;
+        document.getElementById('bookingStatus').value = 'INCLUDE_TEST';
 
         loadReport({ autoLoad: true });
     });
