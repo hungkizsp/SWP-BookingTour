@@ -1,10 +1,10 @@
-﻿let mockRefunds = [
+let mockRefunds = [
     { id: 1, bookingId: 1002, amount: 300.00, status: 'REQUESTED', reason: 'Flight delayed' },
     { id: 2, bookingId: 1005, amount: 150.00, status: 'PROCESSED', reason: 'Customer sick' }
 ];
 
 document.addEventListener('DOMContentLoaded', async () => {
-    const userStr = localStorage.getItem('user');
+    const userStr = sessionStorage.getItem('user');
     if (!userStr) { window.location.href = '/pages/auth/login.html'; return; }
     const user = JSON.parse(userStr);
 

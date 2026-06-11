@@ -18,8 +18,10 @@
                 <a href="./dashboard.html" class="nav-item">Dashboard</a>
                 <a href="./manageTours.html" class="nav-item active">Tours</a>
                 <a href="./manageCategories.html" class="nav-item">Categories</a>
+                <a href="./manageBookings.html" class="nav-item">Bookings</a>
                 <a href="./manageUsers.html" class="nav-item">Users</a>
                 <a href="./manageReview.html" class="nav-item">Reviews</a>
+                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
                 <a href="./financialReport.html" class="nav-item">Financial Report</a>
             </nav>
         </aside>
@@ -300,13 +302,9 @@
                         <p><strong>Description:</strong></p>
                         <p>${escapeHtml(t.description || 'No description available')}</p>
                     </div>
-                    ${t.imageUrls && t.imageUrls.length > 0 ? `
-                    <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
-                        <p><strong>Images:</strong></p>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                            ${t.imageUrls.map(url => `<img src="${TB.normalizeImageUrl(url)}" style="width: 150px; height: 100px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;">`).join('')}
+                            ${(t.imageUrls || []).map(url => `<img src="${TB.normalizeImageUrl(url)}" style="width: 150px; height: 100px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;">`).join('')}
                         </div>
-                    </div>` : ''}
                     <div style="margin-top: 1rem; border-top: 1px solid var(--border); padding-top: 1rem;">
                         <p><strong>Transport:</strong> ${escapeHtml(t.transportType || 'N/A')}</p>
                     </div>
@@ -348,44 +346,44 @@
             try {
                 const response = await TB.apiFetch(`${PUBLIC_API}/${id}`);
                 const t = response.data;
-                currentEditId = id;
-                document.getElementById('modalTitle').innerText = 'Edit Tour';
-                document.getElementById('tourId').value = t.id;
-                document.getElementById('tourName').value = t.tourName || '';
-                document.getElementById('price').value = t.price || '';
-                document.getElementById('duration').value = t.duration || '';
-                document.getElementById('startLocation').value = t.startLocation || '';
-                document.getElementById('endLocation').value = t.endLocation || '';
-                document.getElementById('transportType').value = t.transportType || '';
-                document.getElementById('description').value = t.description || '';
-                document.getElementById('itinerary').value = t.itinerary || '';
-                document.getElementById('categoryId').value = t.categoryId || '';
+                    currentEditId = id;
+                    document.getElementById('modalTitle').innerText = 'Edit Tour';
+                    document.getElementById('tourId').value = t.id;
+                    document.getElementById('tourName').value = t.tourName || '';
+                    document.getElementById('price').value = t.price || '';
+                    document.getElementById('duration').value = t.duration || '';
+                    document.getElementById('startLocation').value = t.startLocation || '';
+                    document.getElementById('endLocation').value = t.endLocation || '';
+                    document.getElementById('transportType').value = t.transportType || '';
+                    document.getElementById('description').value = t.description || '';
+                    document.getElementById('itinerary').value = t.itinerary || '';
+                    document.getElementById('categoryId').value = t.categoryId || '';
 
-                document.getElementById('tourImages').value = '';
-                document.getElementById('existingImages').value = (t.imageUrls && t.imageUrls.length > 0) ? JSON.stringify(t.imageUrls) : '';
+                    document.getElementById('tourImages').value = '';
+                    document.getElementById('existingImages').value = (t.imageUrls && t.imageUrls.length > 0) ? JSON.stringify(t.imageUrls) : '';
 
-                // Schedules
-                const scheduleContainer = document.getElementById('scheduleContainer');
-                scheduleContainer.innerHTML = '';
-                if (t.schedules && t.schedules.length > 0) {
-                    t.schedules.forEach(s => addScheduleRow(s));
-                }
+                    // Schedules
+                    const scheduleContainer = document.getElementById('scheduleContainer');
+                    scheduleContainer.innerHTML = '';
+                    if (t.schedules && t.schedules.length > 0) {
+                        t.schedules.forEach(s => addScheduleRow(s));
+                    }
 
-                const previewContainer = document.getElementById('imagePreviewContainer');
-                previewContainer.innerHTML = '';
-                if (t.imageUrls && t.imageUrls.length > 0) {
-                    t.imageUrls.forEach(urlOrData => {
-                        const img = document.createElement('img');
-                        img.src = TB.normalizeImageUrl(urlOrData);
-                        img.className = 'preview-img';
-                        img.style.width = '80px';
-                        img.style.height = '80px';
-                        img.style.objectFit = 'cover';
-                        img.style.borderRadius = '4px';
-                        img.style.border = '1px solid #ddd';
-                        previewContainer.appendChild(img);
-                    });
-                }
+                    const previewContainer = document.getElementById('imagePreviewContainer');
+                    previewContainer.innerHTML = '';
+                    if (t.imageUrls && t.imageUrls.length > 0) {
+                        t.imageUrls.forEach(urlOrData => {
+                            const img = document.createElement('img');
+                            img.src = TB.normalizeImageUrl(urlOrData);
+                            img.className = 'preview-img';
+                            img.style.width = '80px';
+                            img.style.height = '80px';
+                            img.style.objectFit = 'cover';
+                            img.style.borderRadius = '4px';
+                            img.style.border = '1px solid #ddd';
+                            previewContainer.appendChild(img);
+                        });
+                    }
 
                 document.getElementById('tourModal').style.display = 'flex';
             } catch (error) {

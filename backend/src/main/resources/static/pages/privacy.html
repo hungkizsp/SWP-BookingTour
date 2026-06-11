@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chính sách bảo mật - TourBooking</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .static-page-wrapper {
+      max-width: 900px;
+      margin: 120px auto 80px;
+      padding: 50px;
+      background: white;
+      border-radius: 24px;
+      box-shadow: var(--shadow-md);
+    }
+    .static-page-wrapper h1 {
+      font-size: 2.5rem;
+      margin-bottom: 40px;
+      color: var(--primary-dark);
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+    }
+    .static-page-wrapper h2 {
+      font-size: 1.5rem;
+      color: var(--primary);
+      margin: 30px 0 15px;
+    }
+    .static-page-wrapper p, .static-page-wrapper li {
+      font-size: 1rem;
+      color: var(--text-soft);
+      line-height: 1.8;
+      margin-bottom: 15px;
+    }
+    .static-page-wrapper ul {
+      padding-left: 20px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="top-bar">
+    <div class="top-info">
+      <span>📞 Hotline: 0913 599 745</span>
+    </div>
+    <div class="top-links"><a href="./index.html">Quay lại trang chủ</a></div>
+  </div>
+
+  <div class="static-page-wrapper" id="privacyContent">
+    <h1>Chính sách bảo mật (Privacy Policy)</h1>
+    <div id="policyList">
+      <div style="text-align: center; padding: 50px;"><div class="loader"></div> Đang tải chính sách...</div>
+    </div>
+    
+    <div style="margin-top: 50px; text-align: center;">
+      <a href="./index.html" class="btn">VỀ TRANG CHỦ</a>
+    </div>
+  </div>
+
+  <footer style="background: #064e3b; color: white; padding: 40px 0; text-align: center;">
+    &copy; 2024 DANANGBEST. All rights reserved.
+  </footer>
+
+  <script src="../assets/js/api.js"></script>
+  <script>
+    async function loadPolicies() {
+      try {
+        const res = await TB.apiFetch('/api/v1/privacy-policies');
+        const policies = res.data || res || [];
+        
+        const listEl = document.getElementById('policyList');
+        if(!policies || policies.length === 0) {
+          listEl.innerHTML = `
+            <h2>1. Mục đích thu thập thông tin</h2>
+            <p>Thu thập thông tin cá nhân (họ tên, email, số điện thoại) của khách hàng để xử lý các yêu cầu đặt tour, liên hệ xác nhận chuyến đi, và cải thiện chất lượng dịch vụ chăm sóc khách hàng.</p>
+            <h2>2. Phạm vi sử dụng thông tin</h2>
+            <p>Thông tin cá nhân được sử dụng trong nội bộ công ty để hỗ trợ việc tổ chức tour, giải quyết khiếu nại và cung cấp các khuyến mãi (nếu khách hàng đồng ý nhận). Chúng tôi cam kết tuyệt đối không bán, trao đổi thông tin khách hàng cho bên thứ ba vì mục đích thương mại.</p>
+            <h2>3. Thời gian lưu trữ</h2>
+            <p>Dữ liệu cá nhân sẽ được lưu trữ an toàn trên hệ thống máy chủ của TourBooking cho đến khi khách hàng có yêu cầu hủy bỏ hoặc tự động đăng nhập xóa tài khoản.</p>
+            <h2>4. Cam kết bảo mật</h2>
+            <p>Bảo vệ thông tin cá nhân của quý khách là ưu tiên hàng đầu của chúng tôi. Hệ thống sử dụng công nghệ mã hóa tiên tiến nhất (SSL) để bảo vệ sự an toàn của dữ liệu.</p>
+          `;
+          return;
+        }
+
+        listEl.innerHTML = policies.map(p => `
+          <h2>${p.title}</h2>
+          <div>${p.content}</div>
+        `).join('');
+
+      } catch (err) {
+        console.error(err);
+        document.getElementById('policyList').innerHTML = '<div style="text-align:center; color:red;">Không thể tải dữ liệu chính sách.</div>';
+      }
+    }
+    loadPolicies();
+  </script>
+</body>
+</html>

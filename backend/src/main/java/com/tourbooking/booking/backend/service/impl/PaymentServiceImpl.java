@@ -6,6 +6,9 @@ import com.tourbooking.booking.backend.exception.AppException;
 import com.tourbooking.booking.backend.exception.ErrorCode;
 import com.tourbooking.booking.backend.model.dto.request.PaymentRequest;
 import com.tourbooking.booking.backend.model.dto.response.PaymentResponse;
+import com.tourbooking.booking.backend.model.dto.response.VNPayConfirmResponse;
+import com.tourbooking.booking.backend.service.VNPayService;
+import com.tourbooking.booking.backend.config.VNPayConfig;
 import com.tourbooking.booking.backend.model.entity.Booking;
 import com.tourbooking.booking.backend.model.entity.Payment;
 import com.tourbooking.booking.backend.model.entity.PaymentLog;
@@ -30,8 +33,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import com.tourbooking.booking.backend.repository.DiscountRepository;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +52,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentLogRepository paymentLogRepository;
     private final LoyaltyService loyaltyService;
     private final PayOSService payOSService;
+    private final VNPayService vnPayService;
     private final PayOS payOS;
     private final MailService mailService;
     private final ObjectMapper objectMapper;
@@ -123,6 +130,124 @@ public class PaymentServiceImpl implements PaymentService {
                 .checkoutUrl(checkoutUrl)
                 .orderCode(orderCode)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public PaymentResponse createVNPayPayment(Long bookingId, HttpServletRequest request) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        BigDecimal payAmount = booking.getTotalPrice();
+        if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        String txnRef = bookingId + "_" + System.currentTimeMillis();
+        String transactionCode = "VNPAY-" + txnRef;
+        long vnpAmount = payAmount.multiply(BigDecimal.valueOf(100)).longValue();
+
+        String checkoutUrl = vnPayService.createPaymentUrl(
+                txnRef,
+                vnpAmount,
+                "Thanh toan dat tour #" + bookingId,
+                VNPayConfig.getIpAddress(request));
+
+        Payment payment = new Payment();
+        payment.setBooking(booking);
+        payment.setAmount(payAmount);
+        payment.setPaymentMethod("VNPAY");
+        payment.setTransactionCode(transactionCode);
+        payment.setStatus(PaymentStatus.PENDING);
+        payment.setPaymentDate(LocalDateTime.now());
+        Payment saved = paymentRepository.save(payment);
+        savePaymentLog(saved, "VNPay link created");
+
+        return PaymentResponse.builder()
+                .paymentId(saved.getId())
+                .bookingId(bookingId)
+                .amount(saved.getAmount())
+                .paymentMethod(saved.getPaymentMethod())
+                .status(saved.getStatus().name())
+                .checkoutUrl(checkoutUrl)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public VNPayConfirmResponse confirmVNPayReturn(Map<String, String> params) {
+        if (params == null || params.isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (!vnPayService.validateReturn(params)) {
+            throw new AppException(ErrorCode.VNPAY_SIGNATURE_INVALID);
+        }
+
+        String txnRef = params.get("vnp_TxnRef");
+        String responseCode = params.get("vnp_ResponseCode");
+        String transactionCode = "VNPAY-" + txnRef;
+
+        Payment payment = paymentRepository.findByTransactionCode(transactionCode)
+                .orElseThrow(() -> new AppException(ErrorCode.INVALID_REQUEST));
+
+        if (!vnPayAmountMatches(payment, params.get("vnp_Amount"))) {
+            savePaymentLog(payment, "VNPay return: amount mismatch");
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        Long bookingId = parseBookingIdFromTxnRef(txnRef);
+
+        if ("00".equals(responseCode)) {
+            finalizePayOsPaymentSuccess(payment, "VNPay return: ResponseCode=00");
+            Payment refreshed = paymentRepository.findById(payment.getId()).orElse(payment);
+            return VNPayConfirmResponse.builder()
+                    .success(true)
+                    .message("Thanh toán VNPay thành công")
+                    .bookingId(bookingId)
+                    .transactionRef(txnRef)
+                    .responseCode(responseCode)
+                    .payment(toResponse(refreshed))
+                    .build();
+        }
+
+        if (payment.getStatus() == PaymentStatus.PENDING) {
+            payment.setStatus(PaymentStatus.FAILED);
+            paymentRepository.save(payment);
+            savePaymentLog(payment, "VNPay return failed: ResponseCode=" + responseCode);
+        }
+
+        return VNPayConfirmResponse.builder()
+                .success(false)
+                .message("Thanh toán VNPay không thành công (mã: " + responseCode + ")")
+                .bookingId(bookingId)
+                .transactionRef(txnRef)
+                .responseCode(responseCode)
+                .payment(toResponse(payment))
+                .build();
+    }
+
+    private static Long parseBookingIdFromTxnRef(String txnRef) {
+        if (txnRef == null || !txnRef.contains("_")) {
+            return null;
+        }
+        try {
+            return Long.parseLong(txnRef.substring(0, txnRef.indexOf('_')));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static boolean vnPayAmountMatches(Payment payment, String vnpAmount) {
+        if (vnpAmount == null || vnpAmount.isBlank() || payment.getAmount() == null) {
+            return true;
+        }
+        try {
+            long expected = payment.getAmount().multiply(BigDecimal.valueOf(100)).longValue();
+            return expected == Long.parseLong(vnpAmount.trim());
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     @Override

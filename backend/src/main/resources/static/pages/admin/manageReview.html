@@ -18,8 +18,10 @@
                 <a href="./dashboard.html" class="nav-item">Dashboard</a>
                 <a href="./manageTours.html" class="nav-item">Tours</a>
                 <a href="./manageCategories.html" class="nav-item">Categories</a>
+                <a href="./manageBookings.html" class="nav-item">Bookings</a>
                 <a href="./manageUsers.html" class="nav-item">Users</a>
                 <a href="./manageReview.html" class="nav-item active">Reviews</a>
+                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
                 <a href="./financialReport.html" class="nav-item">Financial Report</a>
             </nav>
         </aside>
@@ -109,7 +111,7 @@
         const API = "/api/v1/reviews";
 
         // Auth check
-        const currentUser = JSON.parse(localStorage.getItem('user'));
+        const currentUser = JSON.parse(sessionStorage.getItem('user'));
         if (!currentUser || currentUser.role !== 'ADMIN') {
             window.location.href = '/pages/auth/login.html';
         } else {
@@ -121,8 +123,8 @@
             if (window.TB && TB.logout) {
                 TB.logout();
             } else {
-                localStorage.removeItem('user');
-                localStorage.removeItem('token');
+                sessionStorage.removeItem('user');
+                sessionStorage.removeItem('token');
                 window.location.href = '/pages/auth/login.html';
             }
         });

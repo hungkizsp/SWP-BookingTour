@@ -33,8 +33,8 @@
           method: 'POST',
           body: JSON.stringify(payload)
         });
-        localStorage.setItem('token', res.data.token);
-        localStorage.setItem('user', JSON.stringify(res.data.user));
+        sessionStorage.setItem('token', res.data.token);
+        sessionStorage.setItem('user', JSON.stringify(res.data.user));
         msgEl.style.color = 'green';
         msgEl.textContent = 'Login successful!';
         
@@ -61,7 +61,8 @@
       const payload = {
         email: document.getElementById('regEmail').value,
         fullName: document.getElementById('regName').value,
-        password: document.getElementById('regPassword').value
+        password: document.getElementById('regPassword').value,
+        role: document.getElementById('regRole') ? document.getElementById('regRole').value : 'CUSTOMER'
       };
       const msgEl = document.getElementById('registerMessage');
       msgEl.style.color = '#333';

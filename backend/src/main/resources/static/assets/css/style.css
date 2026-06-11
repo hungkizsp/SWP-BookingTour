@@ -60,6 +60,10 @@
   box-sizing: border-box;
 }
 
+input, select, textarea, button {
+  font-family: inherit;
+}
+
 body {
   font-family: 'Manrope', 'Inter', sans-serif;
   color: var(--text-main);

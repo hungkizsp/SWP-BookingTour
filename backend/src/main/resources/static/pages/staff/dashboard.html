@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -68,7 +68,7 @@
     <script src="/assets/js/api.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const userStr = localStorage.getItem('user');
+            const userStr = sessionStorage.getItem('user');
             if (!userStr) {
                 window.location.href = '/pages/auth/login.html';
                 return;

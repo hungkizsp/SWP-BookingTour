@@ -17,7 +17,7 @@
         span.style.cursor = 'pointer';
         span.innerHTML = `<strong>${escapeHtml(cat.name)}</strong>`;
         span.onclick = () => {
-          window.location.href = `./tours.html?categoryId=${cat.id}`;
+          window.location.href = `./tours.html?cat=${cat.id}`;
         };
         categoryList.appendChild(span);
       });

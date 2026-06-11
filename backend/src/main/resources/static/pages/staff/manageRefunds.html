@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -68,7 +68,7 @@
 
     <script>
         (function() {
-            var userStr = localStorage.getItem('user');
+            var userStr = sessionStorage.getItem('user');
             if (!userStr) { window.location.href = '/pages/auth/login.html'; return; }
             var user = JSON.parse(userStr);
             if (user.role === 'ADMIN') { window.location.href = '/pages/admin/dashboard.html'; return; }

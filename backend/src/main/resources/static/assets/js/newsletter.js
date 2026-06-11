@@ -1,7 +1,7 @@
 (() => {
   const form = document.getElementById('form');
   const msg = document.getElementById('msg');
-  const user = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+  const user = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
   const navActions = document.getElementById('navActions');
   if (user) {
     const pill = document.createElement('span');

@@ -1,14 +1,13 @@
 package com.tourbooking.booking.backend;
 
+import com.tourbooking.booking.backend.config.DotenvInitializer;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 
 @SpringBootApplication
 @EnableScheduling
@@ -27,18 +26,7 @@ public class BookingApplication {
      * set.
      */
     static void loadEnvFileIntoSystemProperties() {
-        Path[] candidates = new Path[] {
-                Paths.get(".env"),
-                Paths.get("backend", ".env"),
-                Paths.get("..", ".env")
-        };
-        Path envPath = null;
-        for (Path p : candidates) {
-            if (Files.isRegularFile(p)) {
-                envPath = p.toAbsolutePath().normalize();
-                break;
-            }
-        }
+        Path envPath = DotenvInitializer.resolveEnvFile();
         if (envPath == null) {
             return;
         }

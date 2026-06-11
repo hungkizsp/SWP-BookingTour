@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    const userStr = localStorage.getItem('user');
+    const userStr = sessionStorage.getItem('user');
     if (!userStr) { window.location.href = '/pages/auth/login.html'; return; }
     const user = JSON.parse(userStr);
 

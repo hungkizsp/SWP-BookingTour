@@ -445,6 +445,18 @@
           confirmBtn.disabled    = false;
           confirmBtn.textContent = 'XÁC NHẬN ĐẶT TOUR';
         }
+      } else if (selectedMethod === 'VNPAY') {
+        const paymentRes = await TB.apiFetch(`/api/v1/payments/vnpay/create/${bookingId}`, {
+          method: 'POST'
+        });
+
+        if (paymentRes.data?.checkoutUrl) {
+          window.location.href = paymentRes.data.checkoutUrl;
+        } else {
+          alert('Không thể tạo liên kết VNPay. Vui lòng liên hệ hỗ trợ.');
+          confirmBtn.disabled    = false;
+          confirmBtn.textContent = 'XÁC NHẬN ĐẶT TOUR';
+        }
       } else {
         alert('Đặt tour thành công! Vui lòng đến văn phòng Danangbest để hoàn tất thanh toán.');
         window.location.href = './index.html';

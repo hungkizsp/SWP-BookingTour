@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Bookings - TourBooking Admin</title>
+    <link rel="stylesheet" href="../../assets/css/admin-common.css">
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/toast.js"></script>
+</head>
+
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <a href="./dashboard.html" class="logo">TourBooking</a>
+            <nav>
+                <a href="./dashboard.html" class="nav-item">Dashboard</a>
+                <a href="./manageTours.html" class="nav-item">Tours</a>
+                <a href="./manageCategories.html" class="nav-item">Categories</a>
+                <a href="./manageBookings.html" class="nav-item active">Bookings</a>
+                <a href="./manageUsers.html" class="nav-item">Users</a>
+                <a href="./manageReview.html" class="nav-item">Reviews</a>
+                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
+                <a href="./financialReport.html" class="nav-item">Financial Report</a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <h1>Booking Management</h1>
+                <div class="user-actions">
+                    <span id="userInfo">Loading...</span>
+                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                </div>
+            </header>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                    <h2>All Bookings</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <select id="statusFilter" class="form-control" onchange="loadBookings(0)" style="width: 200px;">
+                            <option value="ALL">All Status</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="CONFIRMED">Confirmed</option>
+                            <option value="REFUND_REQUESTED">Refund Requested ⚠️</option>
+                            <option value="CANCELLED">Cancelled</option>
+                            <option value="SUCCESS">Success / Paid</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Customer</th>
+                                <th>Tour</th>
+                                <th>Booking Date</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                                <th>Refund Info</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingTable">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 2rem;">Loading bookings...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="pagination" class="pagination-container"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const PAGE_SIZE = 10;
+        let allBookings = [];
+        let currentPage = 0;
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function getCustomerName(item) {
+            return item.userFullName
+                || (item.user && item.user.fullName)
+                || 'Guest';
+        }
+
+        function getCustomerEmail(item) {
+            return item.userEmail
+                || (item.user && item.user.email)
+                || 'N/A';
+        }
+
+        function formatBookingDate(value) {
+            if (!value) return 'N/A';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return 'N/A';
+            return date.toLocaleString('vi-VN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatRefundInfo(item) {
+            if (!item.refundReason && !item.refundStatus && !item.refundAmount) {
+                return '<span style="color:#ccc;">None</span>';
+            }
+
+            const parts = [];
+            if (item.refundStatus) {
+                parts.push(`<span class="badge badge-warning">${escapeHtml(item.refundStatus)}</span>`);
+            }
+            if (item.refundAmount != null) {
+                parts.push(`<strong>${Number(item.refundAmount).toLocaleString('vi-VN')}đ</strong>`);
+            }
+            if (item.refundReason) {
+                parts.push(`<span style="color:#666;">${escapeHtml(item.refundReason)}</span>`);
+            }
+            return parts.join('<br>');
+        }
+
+        function renderPagination(totalPages, page) {
+            const container = document.getElementById('pagination');
+            if (!allBookings.length) {
+                container.style.display = 'none';
+                container.innerHTML = '';
+                return;
+            }
+
+            container.style.display = 'flex';
+            const totalPagesSafe = Math.max(totalPages, 1);
+            let html = `
+                <button class="page-btn" ${page === 0 ? 'disabled' : ''} onclick="goToPage(${page - 1})">&laquo;</button>
+            `;
+
+            for (let i = 0; i < totalPagesSafe; i++) {
+                if (i === 0 || i === totalPagesSafe - 1 || (i >= page - 2 && i <= page + 2)) {
+                    html += `<button class="page-btn ${i === page ? 'active' : ''}" onclick="goToPage(${i})">${i + 1}</button>`;
+                } else if (i === page - 3 || i === page + 3) {
+                    html += `<span class="page-info">...</span>`;
+                }
+            }
+
+            html += `
+                <button class="page-btn" ${page >= totalPagesSafe - 1 ? 'disabled' : ''} onclick="goToPage(${page + 1})">&raquo;</button>
+                <span class="page-info">Trang ${page + 1} / ${totalPagesSafe}</span>
+            `;
+            container.innerHTML = html;
+        }
+
+        function goToPage(page) {
+            const totalPages = Math.ceil(allBookings.length / PAGE_SIZE);
+            if (page < 0 || page >= totalPages) return;
+            currentPage = page;
+            renderBookingsPage();
+        }
+
+        function renderBookingsPage() {
+            const table = document.getElementById('bookingTable');
+            const totalPages = Math.ceil(allBookings.length / PAGE_SIZE) || 1;
+
+            if (currentPage >= totalPages) {
+                currentPage = Math.max(0, totalPages - 1);
+            }
+
+            const start = currentPage * PAGE_SIZE;
+            const pageItems = allBookings.slice(start, start + PAGE_SIZE);
+
+            if (!pageItems.length) {
+                table.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">No bookings found.</td></tr>';
+                renderPagination(0, 0);
+                return;
+            }
+
+            table.innerHTML = pageItems.map(item => `
+                    <tr>
+                        <td>#${item.id}</td>
+                        <td>
+                            <div style="font-weight:700;">${escapeHtml(getCustomerName(item))}</div>
+                            <div style="font-size:0.75rem; color:#666;">${escapeHtml(getCustomerEmail(item))}</div>
+                        </td>
+                        <td>${escapeHtml(item.tourName || 'N/A')}</td>
+                        <td style="font-size:0.85rem; white-space:nowrap;">${formatBookingDate(item.bookingDate)}</td>
+                        <td style="font-weight:800; color:var(--price);">${Number(item.totalPrice).toLocaleString('vi-VN')}đ</td>
+                        <td><span class="badge ${getStatusClass(item.status)}">${item.status}</span></td>
+                        <td style="font-size:0.8rem; max-width:220px; line-height:1.4;">${formatRefundInfo(item)}</td>
+                        <td>
+                            <div style="display:flex; gap:5px;">
+                                ${item.status === 'REFUND_REQUESTED' ? `
+                                    <button onclick="updateStatus(${item.id}, 'CANCELLED')" class="btn btn-danger btn-sm">Approve Cancel</button>
+                                    <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-secondary btn-sm">Reject</button>
+                                ` : ''}
+                                ${item.status === 'PENDING' ? `
+                                    <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-success btn-sm">Confirm</button>
+                                ` : ''}
+                                <button onclick="deleteBooking(${item.id})" class="btn btn-outline btn-sm">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+            renderPagination(totalPages, currentPage);
+        }
+
+        async function loadBookings(page = 0) {
+            currentPage = page;
+            try {
+                const status = document.getElementById('statusFilter').value;
+                const res = await TB.apiFetch('/api/v1/bookings');
+                let list = res.data || [];
+
+                if (status !== 'ALL') {
+                    list = list.filter(b => b.status === status);
+                }
+
+                allBookings = list.sort((a, b) => b.id - a.id);
+                renderBookingsPage();
+            } catch (err) {
+                console.error(err);
+                allBookings = [];
+                document.getElementById('bookingTable').innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">Error loading data.</td></tr>';
+                renderPagination(0, 0);
+            }
+        }
+
+        function getStatusClass(status) {
+            switch (status) {
+                case 'CONFIRMED': return 'badge-success';
+                case 'SUCCESS': return 'badge-success';
+                case 'CANCELLED': return 'badge-danger';
+                case 'REFUND_REQUESTED': return 'badge-warning';
+                case 'PENDING': return 'badge-info';
+                default: return '';
+            }
+        }
+
+        async function updateStatus(id, newStatus) {
+            if (!confirm(`Update booking #${id} to ${newStatus}?`)) return;
+            try {
+                await TB.apiFetch(`/api/v1/bookings/${id}/status?status=${newStatus}`, { method: 'PUT' });
+                showToast('Status updated successfully');
+                loadBookings(currentPage);
+            } catch (err) {
+                showToast('Update failed: ' + err.message, 'error');
+            }
+        }
+
+        async function deleteBooking(id) {
+            if (!confirm('Permanent delete this booking?')) return;
+            try {
+                await TB.apiFetch(`/api/v1/bookings/${id}`, { method: 'DELETE' });
+                showToast('Booking deleted');
+                loadBookings(currentPage);
+            } catch (err) {
+                showToast('Delete failed', 'error');
+            }
+        }
+
+        const user = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
+        if (!user || user.role !== 'ADMIN') {
+            window.location.href = '../auth/login.html';
+        } else {
+            document.getElementById('userInfo').textContent = user.fullName;
+            loadBookings();
+        }
+
+        document.getElementById('logoutBtn').onclick = () => {
+            sessionStorage.clear();
+            window.location.href = '../auth/login.html';
+        };
+    </script>
+
+    <style>
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-warning {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .btn-sm {
+            font-size: 0.75rem;
+            padding: 5px 8px;
+        }
+
+        .btn-outline {
+            border: 1px solid #ccc;
+            background: transparent;
+            color: #666;
+        }
+
+        .btn-outline:hover {
+            background: #f5f5f5;
+        }
+    </style>
+</body>
+
+</html>

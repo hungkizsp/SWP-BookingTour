@@ -1,5 +1,5 @@
-﻿document.addEventListener('DOMContentLoaded', () => {
-    const userStr = localStorage.getItem('user');
+document.addEventListener('DOMContentLoaded', () => {
+    const userStr = sessionStorage.getItem('user');
     if (!userStr || JSON.parse(userStr).role !== 'GUIDE') {
         window.location.href = '/pages/auth/login.html';
     }
@@ -45,8 +45,9 @@ function renderUploadedGallery(urls) {
     cont.innerHTML = '<div style="width:100%; font-size:0.8rem; font-weight:700; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Activity Photos</div>';
     
     urls.forEach(url => {
+        const fullUrl = TB.normalizeImageUrl(url);
         const img = document.createElement('img');
-        img.src = url;
+        img.src = fullUrl;
         img.className = 'preview-img';
         img.style.cssText = 'width:80px; height:80px; object-fit:cover; border-radius:10px; cursor:pointer; border:1px solid #f1f5f9; transition:transform 0.2s;';
         img.onmouseover = () => img.style.transform = 'scale(1.05)';
@@ -124,7 +125,7 @@ window.uploadPhotos = async function() {
     
     const token = TB.getToken();
     try {
-        const res = await fetch(`/api/v1/guides/tours/${sid}/photos`, {
+        const res = await fetch(`http://localhost:8080/api/v1/guides/tours/${sid}/photos`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: formData

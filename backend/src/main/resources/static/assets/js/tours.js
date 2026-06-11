@@ -87,7 +87,7 @@
 
       card.innerHTML = `
         <div class="tour-card-img-wrapper">
-          <img src="${t.imageUrl || (t.imageUrls && t.imageUrls[0]) || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg'}" class="tour-card-img" alt="${t.tourName}">
+          <img src="${TB.normalizeImageUrl(t.imageUrl || (t.imageUrls && t.imageUrls[0]) || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg')}" class="tour-card-img" alt="${t.tourName}">
           <div class="tour-card-badge">✨ ${t.categoryName || 'Sản phẩm nổi bật'}</div>
         </div>
         <div class="tour-card-body">
@@ -125,10 +125,13 @@
   }
 
   function updatePagination(data) {
-    if (pageInfo) pageInfo.textContent = `${data.number + 1} / ${data.totalPages || 1}`;
-    if (totalInfo) totalInfo.textContent = `${data.totalElements} tour được tìm thấy`;
-    if (prevBtn) prevBtn.disabled = data.first;
-    if (nextBtn) nextBtn.disabled = data.last;
+    if (!data) return;
+    const page = Number(data.page ?? 0);
+    const total = Number(data.totalPages ?? 1);
+    if (pageInfo) pageInfo.textContent = `${page + 1} / ${total || 1}`;
+    if (totalInfo) totalInfo.textContent = `${data.totalElements || 0} tour được tìm thấy`;
+    if (prevBtn) prevBtn.disabled = (page === 0);
+    if (nextBtn) nextBtn.disabled = (page + 1 >= total);
   }
 
   function attachCompareListeners() {
@@ -179,12 +182,14 @@
 
   async function fetchCategories() {
     try {
-      const res = await TB.apiFetch('/api/v1/categories');
+      // Increase size to 100 to get all categories for the filter
+      const res = await TB.apiFetch('/api/v1/categories?size=100');
       const catsBody = document.getElementById('categoryFilters');
-      if (res.data && catsBody) {
+      const cats = res.data?.content || [];
+      if (catsBody) {
         catsBody.innerHTML = `
           <option value="">Tất cả danh mục</option>
-          ${res.data.map(c => `
+          ${cats.map(c => `
             <option value="${c.id}">${c.categoryName}</option>
           `).join('')}
         `;

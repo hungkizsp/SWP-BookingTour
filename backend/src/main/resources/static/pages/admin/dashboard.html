@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../assets/css/admin-common.css">
     <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/toast.js"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -376,8 +377,10 @@
                 <a href="./dashboard.html" class="nav-item active"> Dashboard</a>
                 <a href="./manageTours.html" class="nav-item"> Tours</a>
                 <a href="./manageCategories.html" class="nav-item"> Categories</a>
+                <a href="./manageBookings.html" class="nav-item"> Bookings</a>
                 <a href="./manageUsers.html" class="nav-item"> Users</a>
                 <a href="./manageReview.html" class="nav-item"> Reviews</a>
+                <a href="./manageNewsletter.html" class="nav-item"> Newsletters</a>
                 <a href="./financialReport.html" class="nav-item"> Financial Report</a>
             </nav>
         </aside>
@@ -549,14 +552,31 @@
         document.getElementById('currentMonthLabel').textContent =
             monthNames[now.getMonth()] + ' ' + now.getFullYear();
 
+        function handleSessionExpired() {
+            const msg = 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại!';
+            if (typeof showToast === 'function') showToast(msg, 'error');
+            else showError(msg);
+            sessionStorage.removeItem('token');
+            sessionStorage.removeItem('user');
+            setTimeout(() => { window.location.href = '/pages/auth/login.html'; }, 1200);
+        }
+
+        function isAuthError(result) {
+            return result?.status === 'rejected'
+                && (result.reason?.status === 401 || result.reason?.status === 403);
+        }
+
         // ── Load Stats ──────────────────────────────────────────
         async function loadStats() {
             const btn = document.getElementById('refreshBtn');
             btn.classList.add('spinning');
 
             const token = sessionStorage.getItem('token');
-            if (!token) { window.location.href = '/pages/auth/login.html'; return; }
-            const headers = { 'Authorization': `Bearer ${token}` };
+            if (!token) {
+                handleSessionExpired();
+                btn.classList.remove('spinning');
+                return;
+            }
 
             try {
                 const [usersRes, revenueRes, bookingsRes] = await Promise.allSettled([
@@ -564,6 +584,11 @@
                     TB.apiFetch('/api/v1/admin/revenue/month'),
                     TB.apiFetch('/api/v1/admin/bookings/active')
                 ]);
+
+                if ([usersRes, revenueRes, bookingsRes].some(isAuthError)) {
+                    handleSessionExpired();
+                    return;
+                }
 
                 // ── Total + Online Users
                 if (usersRes.status === 'fulfilled' && usersRes.value) {
@@ -586,6 +611,10 @@
                     document.getElementById('onlineUsers').textContent = '—';
                     document.getElementById('totalUsersSub').textContent = 'Không thể tải';
                     document.getElementById('onlineUsersSub').textContent = 'Không thể tải';
+                    if (usersRes.status === 'rejected') {
+                        console.error('users/count failed:', usersRes.reason);
+                        showError('Không tải được thống kê người dùng: ' + (usersRes.reason?.message || 'Lỗi kết nối'));
+                    }
                 }
 
                 // ── Monthly Revenue
@@ -598,6 +627,10 @@
                 } else {
                     document.getElementById('totalRevenue').textContent = '$0';
                     document.getElementById('revenueSub').textContent = 'Chưa có dữ liệu';
+                    if (revenueRes.status === 'rejected') {
+                        console.error('revenue/month failed:', revenueRes.reason);
+                        showError('Không tải được doanh thu tháng: ' + (revenueRes.reason?.message || 'Lỗi kết nối'));
+                    }
                 }
 
                 // ── Active Bookings
@@ -610,13 +643,23 @@
                 } else {
                     document.getElementById('activeBookings').textContent = '0';
                     document.getElementById('bookingsSub').textContent = 'Chưa có dữ liệu';
+                    if (bookingsRes.status === 'rejected') {
+                        console.error('bookings/active failed:', bookingsRes.reason);
+                        showError('Không tải được booking đang hoạt động: ' + (bookingsRes.reason?.message || 'Lỗi kết nối'));
+                    }
                 }
 
                 document.getElementById('lastUpdated').textContent = `Cập nhật lúc ${getNow()}`;
 
             } catch (err) {
                 console.error('loadStats error:', err);
-                showError('Không thể tải dữ liệu thống kê. Vui lòng thử lại.');
+                if (err?.status === 401 || err?.status === 403) {
+                    handleSessionExpired();
+                } else {
+                    const msg = 'Không thể tải dữ liệu thống kê: ' + (err?.message || 'Vui lòng thử lại.');
+                    showError(msg);
+                    if (typeof showToast === 'function') showToast(msg, 'error');
+                }
             } finally {
                 btn.classList.remove('spinning');
             }
@@ -650,8 +693,8 @@
 
         loadStats();
 
-        // ── Auto-refresh every 60s
-        setInterval(loadStats, 60_000);
+        // ── Tự động làm mới mỗi 30 giây
+        setInterval(loadStats, 30_000);
 
         // ── Logout
         document.getElementById('logoutBtn').addEventListener('click', () => {

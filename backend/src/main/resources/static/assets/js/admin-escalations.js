@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   const listEl = document.getElementById('escalationList');
   const reloadBtn = document.getElementById('reloadEscalations');
   const infoEl = document.getElementById('escalationInfo');
@@ -6,36 +6,91 @@
   async function refresh() {
     try {
       const res = await TB.apiFetch('/api/v1/admin/chat/escalations');
-      renderList(res.data || []);
+      const items = res.data || [];
+      renderList(items);
       if (infoEl) infoEl.hidden = true;
     } catch (err) {
       if (infoEl) {
         infoEl.hidden = false;
         infoEl.textContent = 'Unable to load sessions: ' + (err.message || 'Unknown error');
-      } else {
-        console.error('Unable to load sessions:', err);
       }
     }
   }
 
   function renderList(items) {
-    listEl.innerHTML = '';
+    const existingCards = Array.from(listEl.querySelectorAll('.escalation-card'));
+    const keepIds = new Set(items.map(i => i.id));
+
+    // Remove cards no longer in the list
+    existingCards.forEach(card => {
+      const id = parseInt(card.getAttribute('data-id'));
+      if (!keepIds.has(id)) card.remove();
+    });
+
     if (!items.length) {
       listEl.innerHTML = '<p class="muted">No sessions waiting for staff.</p>';
       return;
     }
-    items.forEach(item => listEl.appendChild(buildCard(item)));
+
+    items.forEach(item => {
+      let card = listEl.querySelector(`.escalation-card[data-id="${item.id}"]`);
+      if (card) {
+        updateCard(card, item);
+      } else {
+        card = buildCard(item);
+        listEl.appendChild(card);
+      }
+    });
+
+    // Sort cards by last activity (if possible) or just keep order
+    // For now, let's keep it simple.
+  }
+
+  function updateCard(card, session) {
+    // 1. Update Badge
+    const badge = card.querySelector('.status-badge');
+    const cleanStatus = session.status?.toLowerCase() || '';
+    badge.className = `status-badge status-${cleanStatus}`;
+    badge.textContent = formatBadgeStatus(session.status);
+    
+    // 2. Update Meta
+    const meta = card.querySelector('.escalation-meta');
+    if (session.lastMessageAt) {
+        meta.innerHTML = `<div><strong>Last activity:</strong> ${new Date(session.lastMessageAt).toLocaleString()}</div>`;
+    }
+
+    // 3. Update Conversation (Only if last activity changed or count changed?)
+    // To keep it simple, we reload conversation
+    const convo = card.querySelector('.escalation-conversation');
+    const lastCount = parseInt(convo.getAttribute('data-count') || '0');
+    loadConversation(session, convo, false); // false = silent update
+
+    // 4. Update Buttons state
+    const joinBtn = card.querySelector('button.btn-secondary');
+    if (session.status === 'STAFF_CHATTING') {
+      if (joinBtn) {
+        joinBtn.disabled = true;
+        joinBtn.textContent = 'Session accepted';
+      }
+    } else {
+      if (joinBtn) {
+        joinBtn.disabled = false;
+        joinBtn.textContent = 'Accept session';
+      }
+    }
+  }
+
+  function formatBadgeStatus(s) {
+    if(s === 'WAITING_STAFF') return 'Waiting Staff';
+    if(s === 'STAFF_CHATTING') return 'Staff Chatting';
+    return s || 'Unknown';
   }
 
   function buildCard(session) {
     const card = document.createElement('section');
     card.className = 'card escalation-card';
+    card.setAttribute('data-id', session.id);
 
-    function formatBadgeStatus(s) {
-      if(s === 'WAITING_STAFF') return 'Waiting Staff';
-      if(s === 'STAFF_CHATTING') return 'Staff Chatting';
-      return s;
-    }
     const cleanStatus = session.status?.toLowerCase() || '';
 
     const header = document.createElement('div');
@@ -116,20 +171,27 @@
     return card;
   }
 
-  async function loadConversation(session, container) {
-    container.innerHTML = '<p class="muted">Loading conversation...</p>';
+  async function loadConversation(session, container, showSpinner = true) {
+    if (showSpinner) container.innerHTML = '<p class="muted">Loading conversation...</p>';
     const query = session.userId ? `?userId=${encodeURIComponent(session.userId)}` : `?guestId=${encodeURIComponent(session.guestId || '')}`;
     try {
       const res = await TB.apiFetch(`/api/v1/chat/messages${query}`);
-      container.innerHTML = '';
       const messages = res.data || [];
+      const currentCount = parseInt(container.getAttribute('data-count') || '0');
+      
+      if (messages.length === currentCount && !showSpinner) return; // No change
+
+      container.innerHTML = '';
       if (!messages.length) {
         container.innerHTML = '<p class="muted">No messages yet.</p>';
-        return;
+      } else {
+        messages.forEach(m => container.append(renderMessage(m)));
       }
-      messages.forEach(m => container.append(renderMessage(m)));
+      container.setAttribute('data-count', messages.length);
+      // Auto scroll to bottom
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     } catch (err) {
-      container.innerHTML = `<p class="muted">Unable to load messages.</p>`;
+      if (showSpinner) container.innerHTML = `<p class="muted">Unable to load messages.</p>`;
     }
   }
 
@@ -162,4 +224,6 @@
   });
 
   refresh();
+  // Auto refresh every 4 seconds
+  setInterval(refresh, 4000);
 })();

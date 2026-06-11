@@ -28,6 +28,7 @@
   }
 
   function goToLogin(message) {
+    if (!message && getToken()) return; // Không tự thoát nếu chỉ mất kết nối tạm thời
     if (message) setAuthNotice(message);
     clearAuthState();
     if (window.location.pathname !== LOGIN_PATH) {
@@ -50,7 +51,9 @@
       return;
     }
 
-    if (sessionEventSource && sessionEventToken === token) {
+    if (sessionEventSource && 
+        sessionEventSource.readyState !== 2 && // 2 is CLOSED
+        sessionEventToken === token) {
       return;
     }
 
@@ -60,14 +63,23 @@
     const url = `${BACKEND_URL}/api/v1/auth/events?token=${encodeURIComponent(token)}`;
     sessionEventSource = new EventSource(url);
 
-    sessionEventSource.onmessage = (event) => {
-      if (!event?.data) return;
-      goToLogin(event.data || 'Tài khoản đã được đăng nhập ở nơi khác. Vui lòng đăng nhập lại.');
-    };
+    sessionEventSource.addEventListener('session_invalidated', (event) => {
+      console.log('Session invalidated:', event.data);
+      goToLogin(event.data);
+    });
+
+    sessionEventSource.addEventListener('ping', () => {
+      // heart beat received
+    });
 
     sessionEventSource.onerror = () => {
-      if (!getToken()) {
-        stopSessionStream();
+      if (sessionEventSource) {
+        sessionEventSource.close();
+        sessionEventSource = null;
+      }
+      // Reconnect after 3s only if token exists
+      if (getToken()) {
+        setTimeout(connectSessionStream, 3000);
       }
     };
   }
@@ -78,7 +90,7 @@
     const fullPath = (isDev && path.startsWith('/')) ? BACKEND_URL + path : path;
 
     const headers = new Headers(options.headers || {});
-    if (!headers.has('Content-Type') && options.body) {
+    if (!headers.has('Content-Type') && options.body && !(options.body instanceof FormData)) {
       headers.set('Content-Type', 'application/json');
     }
     const token = getToken();
@@ -101,8 +113,42 @@
     return json;
   }
 
+  async function apiFetchBlob(path, options = {}) {
+    const BACKEND_URL = 'http://localhost:8080';
+    const isDev = window.location.port === '3000' || window.location.port === '5500';
+    const fullPath = (isDev && path.startsWith('/')) ? BACKEND_URL + path : path;
+
+    const headers = new Headers(options.headers || {});
+    const token = getToken();
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+
+    const res = await fetch(fullPath, { ...options, headers });
+    if (!res.ok) {
+      const text = await res.text();
+      let json = null;
+      try { json = JSON.parse(text); } catch (_) {}
+      const msg = (json && json.message) ? json.message : `HTTP ${res.status}`;
+      if ((res.status === 401 || res.status === 403) && token) {
+        goToLogin('Phiên đăng nhập hết hạn, vui lòng đăng nhập lại!');
+      }
+      throw new Error(msg);
+    }
+    return res.blob();
+  }
+
+  function normalizeImageUrl(url) {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    const BACKEND_URL = 'http://localhost:8080';
+    // Nếu url bắt đầu bằng /uploads/ hoặc các đường dẫn tĩnh khác
+    if (url.startsWith('/')) return BACKEND_URL + url;
+    return BACKEND_URL + '/' + url;
+  }
+
   window.TB = window.TB || {};
   window.TB.apiFetch = apiFetch;
+  window.TB.apiFetchBlob = apiFetchBlob;
+  window.TB.normalizeImageUrl = normalizeImageUrl;
   window.TB.clearAuthState = clearAuthState;
   window.TB.getAuthNotice = getAuthNotice;
   window.TB.clearAuthNotice = clearAuthNotice;
@@ -135,14 +181,15 @@
     if (authWatchStarted) return;
     authWatchStarted = true;
     if (window.location.pathname === LOGIN_PATH) return;
-    connectSessionStream();
+    // connectSessionStream(); // DISABLED to prevent thread starvation during review
     validateCurrentSession();
     setInterval(() => {
-      if (getToken()) {
-        connectSessionStream();
-        validateCurrentSession();
-      }
-    }, 15000);
+        const token = getToken();
+        if (token) {
+            // Disabled: if (!sessionEventSource || sessionEventSource.readyState === 2) connectSessionStream();
+            validateCurrentSession();
+        }
+    }, 60000);
   }
 
   if (document.readyState === 'loading') {

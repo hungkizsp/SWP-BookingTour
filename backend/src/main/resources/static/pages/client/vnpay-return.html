@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả VNPay - DANA</title>
+    <link rel="stylesheet" href="../../assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .result-card {
+            max-width: 520px;
+            margin: 100px auto;
+            padding: 40px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .status-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        .success { color: #10b981; }
+        .error { color: #ef4444; }
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 24px;
+        }
+        .actions a {
+            display: inline-block;
+            padding: 12px 20px;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+        .btn-primary-link {
+            background: var(--primary, #064e3b);
+            color: white;
+        }
+        .btn-secondary-link {
+            background: #f3f4f6;
+            color: #374151;
+        }
+    </style>
+</head>
+<body style="background: #f3f4f6;">
+    <div class="result-card">
+        <div id="statusIcon" class="status-icon">⏳</div>
+        <h1 id="statusTitle">Đang xử lý...</h1>
+        <p id="statusMessage" style="color: #6b7280; margin: 20px 0; line-height: 1.6;"></p>
+        <div class="actions" id="actionLinks" style="display: none;">
+            <a href="../../user/bookings.html" class="btn-primary-link">Xem tour đã đặt</a>
+            <a href="../checkout.html" class="btn-secondary-link">Thanh toán lại</a>
+        </div>
+    </div>
+
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/vnpay-return.js"></script>
+</body>
+</html>

@@ -10,13 +10,25 @@
     return;
   }
 
+  let currentTours = [];
+
+  const toDateObj = (d) => {
+    if (Array.isArray(d)) return new Date(d[0], d[1] - 1, d[2]);
+    return new Date(d);
+  };
+
+  const formatDate = (d) => {
+    const dt = toDateObj(d);
+    return Number.isNaN(dt.getTime()) ? '' : dt.toLocaleDateString('vi-VN');
+  };
+
   async function load() {
     try {
       const idString = ids.join(',');
       const res = await TB.apiFetch(`/api/v1/tours/compare?ids=${idString}`);
-      const tours = res.data || [];
+      currentTours = res.data || [];
 
-      if (tours.length === 0) {
+      if (currentTours.length === 0) {
         localStorage.removeItem('compareIds');
         empty.style.display = 'block';
         return;
@@ -29,7 +41,7 @@
       tableHead.innerHTML = `
         <tr>
           <th class="label-cell">THÔNG TIN CHUNG</th>
-          ${tours.map(t => `
+          ${currentTours.map(t => `
             <th class="tour-header-cell">
               <div style="width: 100%; height: 180px; overflow:hidden; border-radius:12px; margin-bottom:15px; background: #f1f5f9;">
                 <img src="${(t.imageUrls && t.imageUrls[0]) || 'https://images.unsplash.com/photo-1552074284-5e88ef1aef18?auto=format&fit=crop&w=800'}" 
@@ -48,7 +60,7 @@
         return `
           <tr>
             <td class="label-cell">${label}</td>
-            ${tours.map(t => `<td>${contentFn(t)}</td>`).join('')}
+            ${currentTours.map(t => `<td>${contentFn(t)}</td>`).join('')}
           </tr>
         `;
       };
@@ -62,15 +74,25 @@
       `);
 
       bodyHtml += renderRow('Điểm nhấn nổi bật', t => `
-        <ul style="margin: 0; padding-left: 18px; font-size: 0.85rem; color: var(--text-soft); line-height: 1.6;">
-          ${(t.highlights || []).map(h => `<li>${h}</li>`).join('') || '<li>Đang cập nhật...</li>'}
-        </ul>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          ${(t.highlights || []).map(h => `
+            <div style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.85rem; color: var(--text-soft); line-height: 1.4;">
+              <span style="color: #10b981; font-weight: 800;">✓</span>
+              <span>${h}</span>
+            </div>
+          `).join('') || '<div style="font-size: 0.85rem; color: var(--text-faint);">Đang cập nhật...</div>'}
+        </div>
       `);
 
-      bodyHtml += renderRow('Giới thiệu hành trình', t => {
-        if (!t.itinerary) return '<div class="itinerary-summary">Đang cập nhật nội dung...</div>';
+      bodyHtml += renderRow('Mô tả chi tiết', t => `
+        <div style="font-size: 0.82rem; line-height: 1.6; color: var(--text-soft); text-align: justify;">
+          ${t.description ? (t.description.length > 500 ? t.description.substring(0, 500) + '...' : t.description) : 'Đang cập nhật mô tả...'}
+        </div>
+      `);
+
+      bodyHtml += renderRow('Lịch trình tóm tắt', t => {
+        if (!t.itinerary) return '<div class="itinerary-summary">Đang cập nhật...</div>';
         try {
-          // Thử parse nếu là JSON
           const items = JSON.parse(t.itinerary);
           if (Array.isArray(items)) {
             return `
@@ -78,24 +100,21 @@
                 ${items.slice(0, 3).map(item => `
                   <div style="margin-bottom: 8px;">
                     <div style="font-weight: 800; color: var(--primary-dark);">${item.title}</div>
-                    <div style="color: var(--text-soft);">${item.content}</div>
+                    <div style="color: var(--text-soft); text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${item.content}</div>
                   </div>
                 `).join('')}
-                ${items.length > 3 ? '<div style="color: var(--accent); font-weight: 700; font-size: 0.75rem;">... Xem thêm chi tiết</div>' : ''}
+                <button class="btn-text-action" onclick="showFullItinerary(${t.id})">... Xem thêm chi tiết</button>
               </div>
             `;
           }
-        } catch (e) {
-          // Trả về text thường nếu không phải JSON hoặc lỗi parse
-          return `<div class="itinerary-summary">${t.itinerary.substring(0, 200)}...</div>`;
-        }
-        return `<div class="itinerary-summary">${t.itinerary}</div>`;
+        } catch (e) {}
+        return `<div class="itinerary-summary">${t.itinerary.substring(0, 150)}...</div>`;
       });
 
       bodyHtml += renderRow('Lịch khởi hành & Khung giờ', t => `
         <div style="margin-bottom: 8px; font-size: 0.8rem; font-weight: 600; color: var(--text-soft);">Các ngày gần nhất:</div>
         <div>
-          ${(t.schedules || []).slice(0, 4).map(s => `<span class="schedule-tag">${new Date(s.startDate).toLocaleDateString('vi-VN')}</span>`).join('') || '<span style="font-size:0.8rem;">Liên hệ để biết lịch</span>'}
+          ${(t.schedules || []).slice(0, 4).map(s => `<span class="schedule-tag">${formatDate(s.startDate) || '—'}</span>`).join('') || '<span style="font-size:0.8rem;">Liên hệ để biết lịch</span>'}
         </div>
       `);
 
@@ -140,6 +159,47 @@
       empty.style.display = 'block';
     }
   }
+
+  // Exposed globally for onclick
+  window.showFullItinerary = (tourId) => {
+    const tour = currentTours.find(t => t.id == tourId);
+    if (!tour || !tour.itinerary) return;
+    
+    try {
+      const items = JSON.parse(tour.itinerary);
+      const modal = document.getElementById('itineraryModal');
+      const modalBody = document.getElementById('modalBody');
+      const modalTitle = document.getElementById('modalTitle');
+
+      modalTitle.textContent = `Lịch trình chi tiết: ${tour.tourName}`;
+      modalBody.innerHTML = items.map(item => `
+        <div class="itinerary-item-full">
+          <div class="time-title">${item.title}</div>
+          <div class="content-text">${item.content}</div>
+        </div>
+      `).join('');
+
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    } catch (e) {
+      console.error('Failed to parse itinerary', e);
+    }
+  };
+
+  const closeModal = document.getElementById('closeModal');
+  const modal = document.getElementById('itineraryModal');
+  if (closeModal) {
+    closeModal.onclick = () => {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    };
+  }
+  window.onclick = (event) => {
+    if (event.target == modal) {
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+  };
 
   load();
 })();

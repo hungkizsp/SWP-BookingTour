@@ -19,7 +19,7 @@
   controls.appendChild(info);
   controls.appendChild(badge);
 
-  const BACKEND_URL = 'http://localhost:8081';
+  const BACKEND_URL = 'http://localhost:8080';
   const evt = new EventSource(`${BACKEND_URL}/api/v1/admin/chat/notifications/stream?token=${encodeURIComponent(token)}`);
   evt.onmessage = (event) => {
     let payload;

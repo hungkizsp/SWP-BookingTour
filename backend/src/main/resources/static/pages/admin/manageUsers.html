@@ -18,8 +18,10 @@
                 <a href="./dashboard.html" class="nav-item">Dashboard</a>
                 <a href="./manageTours.html" class="nav-item">Tours</a>
                 <a href="./manageCategories.html" class="nav-item">Categories</a>
+                <a href="./manageBookings.html" class="nav-item">Bookings</a>
                 <a href="./manageUsers.html" class="nav-item active">Users</a>
                 <a href="./manageReview.html" class="nav-item">Reviews</a>
+                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
                 <a href="./financialReport.html" class="nav-item">Financial Report</a>
             </nav>
         </aside>
@@ -185,8 +187,8 @@
 
                 let html = "";
                 users.forEach(u => {
-                    const currentUser = JSON.parse(localStorage.getItem('user'));
-                    const isSelf = u.id === currentUser.id;
+                    const currentUser = JSON.parse(sessionStorage.getItem('user')) || {};
+                    const isSelf = currentUser.id && u.id === currentUser.id;
 
                     html += `
                         <tr>
