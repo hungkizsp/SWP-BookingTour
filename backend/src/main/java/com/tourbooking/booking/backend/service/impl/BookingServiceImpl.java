@@ -73,15 +73,14 @@ public class BookingServiceImpl implements BookingService {
     private final PaymentService paymentService;
     private final Environment environment;
 
-    private static final BigDecimal CHILD_RATE = new BigDecimal("0.75");
-    private static final BigDecimal INFANT_RATE = new BigDecimal("0.10");
+    private final com.tourbooking.booking.backend.repository.DiscountPolicyRepository discountPolicyRepository;
 
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponse> getAllBookings() {
         List<Booking> bookings = bookingRepository.findAll();
-        Map<Long, com.tourbooking.booking.backend.model.entity.RefundRequest> refundMap =
-                loadLatestRefundsByBookingId(bookings.stream().map(Booking::getId).toList());
+        Map<Long, com.tourbooking.booking.backend.model.entity.RefundRequest> refundMap = loadLatestRefundsByBookingId(
+                bookings.stream().map(Booking::getId).toList());
         return bookings.stream()
                 .map(booking -> {
                     BookingResponse response = BookingMapper.toResponse(booking);
@@ -118,18 +117,17 @@ public class BookingServiceImpl implements BookingService {
         TourSchedule schedule = tourScheduleRepository.findByIdWithLock(request.getScheduleId())
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
 
-        int declaredAdultCount  = request.getAdultCount()  != null ? request.getAdultCount()  : 1;
-        int declaredChildCount  = request.getChildCount()  != null ? request.getChildCount()  : 0;
+        int declaredAdultCount = request.getAdultCount() != null ? request.getAdultCount() : 1;
+        int declaredChildCount = request.getChildCount() != null ? request.getChildCount() : 0;
         int declaredInfantCount = request.getInfantCount() != null ? request.getInfantCount() : 0;
         LocalDate tourStartDate = schedule.getStartDate();
 
-        PassengerClassificationService.ClassificationResult classification =
-                passengerClassificationService.classify(
-                        request.getPassengers(),
-                        tourStartDate,
-                        declaredAdultCount,
-                        declaredChildCount,
-                        declaredInfantCount);
+        PassengerClassificationService.ClassificationResult classification = passengerClassificationService.classify(
+                request.getPassengers(),
+                tourStartDate,
+                declaredAdultCount,
+                declaredChildCount,
+                declaredInfantCount);
 
         int slotsToDeduct = classification.getSlotsToDeduct();
         BigDecimal tourPrice = schedule.getTour().getPrice();
@@ -174,9 +172,20 @@ public class BookingServiceImpl implements BookingService {
             int realAdultCount,
             int realChildCount,
             int realInfantCount) {
+
+        BigDecimal childRate = discountPolicyRepository.findByPassengerType("CHILD")
+                .filter(com.tourbooking.booking.backend.model.entity.DiscountPolicy::getIsActive)
+                .map(com.tourbooking.booking.backend.model.entity.DiscountPolicy::getRate)
+                .orElse(new BigDecimal("0.75"));
+
+        BigDecimal infantRate = discountPolicyRepository.findByPassengerType("INFANT")
+                .filter(com.tourbooking.booking.backend.model.entity.DiscountPolicy::getIsActive)
+                .map(com.tourbooking.booking.backend.model.entity.DiscountPolicy::getRate)
+                .orElse(new BigDecimal("0.10"));
+
         return tourPrice.multiply(BigDecimal.valueOf(realAdultCount))
-                .add(tourPrice.multiply(CHILD_RATE).multiply(BigDecimal.valueOf(realChildCount)))
-                .add(tourPrice.multiply(INFANT_RATE).multiply(BigDecimal.valueOf(realInfantCount)));
+                .add(tourPrice.multiply(childRate).multiply(BigDecimal.valueOf(realChildCount)))
+                .add(tourPrice.multiply(infantRate).multiply(BigDecimal.valueOf(realInfantCount)));
     }
 
     private void applyDiscountIfPresent(Booking saved, String discountCode) {
@@ -299,7 +308,6 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.deleteById(id);
     }
 
-
     @Override
     @Transactional
     public List<FinancialReportResponse> getFinancialReport(
@@ -339,10 +347,10 @@ public class BookingServiceImpl implements BookingService {
 
         // Formatter theo loại báo cáo
         DateTimeFormatter formatter = switch (type.toLowerCase()) {
-            case "weekly"  -> DateTimeFormatter.ofPattern("yyyy-'W'ww", Locale.getDefault());
+            case "weekly" -> DateTimeFormatter.ofPattern("yyyy-'W'ww", Locale.getDefault());
             case "monthly" -> DateTimeFormatter.ofPattern("yyyy-MM");
-            case "yearly"  -> DateTimeFormatter.ofPattern("yyyy");
-            default        -> DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            case "yearly" -> DateTimeFormatter.ofPattern("yyyy");
+            default -> DateTimeFormatter.ofPattern("yyyy-MM-dd");
         };
 
         // Group payments theo period
@@ -353,8 +361,7 @@ public class BookingServiceImpl implements BookingService {
                             return date != null ? date.format(formatter) : "Unknown";
                         },
                         TreeMap::new,
-                        Collectors.toList()
-                ));
+                        Collectors.toList()));
 
         // Group cancellations theo period
         Map<String, Long> cancelledByPeriod = cancelledBookings.stream()
@@ -363,8 +370,7 @@ public class BookingServiceImpl implements BookingService {
                             LocalDateTime date = b.getCreatedAt() != null ? b.getCreatedAt() : b.getUpdatedAt();
                             return date != null ? date.format(formatter) : "Unknown";
                         },
-                        Collectors.counting()
-                ));
+                        Collectors.counting()));
 
         // Nếu không có payment nào, trả về danh sách rỗng với log warning
         if (groupedPayments.isEmpty()) {
@@ -378,9 +384,14 @@ public class BookingServiceImpl implements BookingService {
 
                     long bookingCount = periodPayments.size();
 
-                    // Revenue = tổng Payment.amount của các payment SUCCESS
+                    // Revenue = tổng Payment.amount của các payment SUCCESS, nếu REFUNDED thì tính là giá trị âm
                     BigDecimal revenue = periodPayments.stream()
-                            .map(p -> p.getAmount() != null ? p.getAmount() : BigDecimal.ZERO)
+                            .map(p -> {
+                                if (p.getAmount() == null) return BigDecimal.ZERO;
+                                boolean isRefund = p.getStatus() == PaymentStatus.REFUNDED ||
+                                                   (p.getBooking() != null && p.getBooking().getStatus() == BookingStatus.REFUNDED);
+                                return isRefund ? p.getAmount().negate() : p.getAmount();
+                            })
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                     long cancellations = cancelledByPeriod.getOrDefault(period, 0L);
@@ -389,7 +400,8 @@ public class BookingServiceImpl implements BookingService {
                             ? revenue.divide(BigDecimal.valueOf(bookingCount), 2, RoundingMode.HALF_UP)
                             : BigDecimal.ZERO;
 
-                    log.info("Period: {}, bookings: {}, revenue: {}, cancellations: {}", period, bookingCount, revenue, cancellations);
+                    log.info("Period: {}, bookings: {}, revenue: {}, cancellations: {}", period, bookingCount, revenue,
+                            cancellations);
 
                     return FinancialReportResponse.builder()
                             .period(period)
@@ -418,33 +430,19 @@ public class BookingServiceImpl implements BookingService {
 
     /**
      * Lọc payment cho báo cáo tài chính.
-     * Mặc định: chỉ SUCCESS thật (loại TEST_DATA).
-     * includeTest / INCLUDE_TEST: thêm TEST_DATA và PENDING phục vụ demo local.
+     * Cập nhật mới: Lấy TẤT CẢ các trạng thái payment. 
      */
     private boolean matchesFinancialReportPayment(
             Payment payment, String statusFilter, boolean includeTestData, boolean devProfile) {
         boolean isTestData = "TEST_DATA".equals(payment.getPaymentMethod());
 
-        if (includeTestData) {
-            if (payment.getStatus() == PaymentStatus.SUCCESS) {
-                return true;
-            }
-            if (payment.getStatus() == PaymentStatus.PENDING) {
-                return isTestData || devProfile;
-            }
+        // Nếu status filter khác rỗng và không phải là "all" hay "COMPLETED", 
+        // ta có thể filter theo request nếu cần. Mặc định giờ báo cáo muốn all.
+        if (!includeTestData && isTestData) {
             return false;
         }
 
-        if (statusFilter == null || statusFilter.isEmpty() || "all".equalsIgnoreCase(statusFilter)
-                || "SUCCESS".equalsIgnoreCase(statusFilter) || "COMPLETED".equalsIgnoreCase(statusFilter)) {
-            return payment.getStatus() == PaymentStatus.SUCCESS && !isTestData;
-        }
-
-        if ("CANCELLED".equalsIgnoreCase(statusFilter)) {
-            return payment.getStatus() == PaymentStatus.FAILED;
-        }
-
-        return false;
+        return true;
     }
 
     private boolean isBookingWithinRange(Booking booking, LocalDate startDate, LocalDate endDate) {
@@ -483,10 +481,11 @@ public class BookingServiceImpl implements BookingService {
         BigDecimal discountAmount = BigDecimal.ZERO;
         String message = "Mã giảm giá không hợp lệ hoặc đã hết hạn";
         boolean isValid = false;
-        
+
         // Check for specific hardcoded voucher first (legacy)
         if ("SUMMER".equalsIgnoreCase(request.getVoucherCode())) {
-            discountAmount = request.getCurrentTotal().multiply(new BigDecimal("20")).divide(new BigDecimal("100"), 0, RoundingMode.HALF_UP);
+            discountAmount = request.getCurrentTotal().multiply(new BigDecimal("20")).divide(new BigDecimal("100"), 0,
+                    RoundingMode.HALF_UP);
             isValid = true;
             message = "Áp dụng mã SUMMER thành công (-20%)";
         } else if ("SUMMER2026".equalsIgnoreCase(request.getVoucherCode())) {
@@ -499,7 +498,7 @@ public class BookingServiceImpl implements BookingService {
             if (discountOpt.isPresent()) {
                 Discount discount = discountOpt.get();
                 LocalDateTime now = LocalDateTime.now();
-                
+
                 // Validate discount
                 if (!Boolean.TRUE.equals(discount.getIsActive())) {
                     message = "Mã giảm giá này hiện không còn hoạt động";
@@ -509,13 +508,16 @@ public class BookingServiceImpl implements BookingService {
                     message = "Mã giảm giá đã hết hạn";
                 } else if (discount.getUsageLimit() != null && discount.getCurrentUsage() >= discount.getUsageLimit()) {
                     message = "Mã giảm giá đã hết lượt sử dụng";
-                } else if (discount.getMinimumBookingAmount() != null && request.getCurrentTotal().compareTo(discount.getMinimumBookingAmount()) < 0) {
-                    message = "Đơn hàng chưa đạt giá trị tối thiểu " + discount.getMinimumBookingAmount().longValue() + "đ";
+                } else if (discount.getMinimumBookingAmount() != null
+                        && request.getCurrentTotal().compareTo(discount.getMinimumBookingAmount()) < 0) {
+                    message = "Đơn hàng chưa đạt giá trị tối thiểu " + discount.getMinimumBookingAmount().longValue()
+                            + "đ";
                 } else {
                     // Valid!
                     isValid = true;
                     if (discount.getDiscountType() == DiscountType.PERCENTAGE) {
-                        discountAmount = request.getCurrentTotal().multiply(discount.getValue()).divide(new BigDecimal(100), 0, RoundingMode.HALF_UP);
+                        discountAmount = request.getCurrentTotal().multiply(discount.getValue())
+                                .divide(new BigDecimal(100), 0, RoundingMode.HALF_UP);
                         message = "Áp dụng mã thành công (-" + discount.getValue() + "%)";
                     } else {
                         discountAmount = discount.getValue();
@@ -524,12 +526,12 @@ public class BookingServiceImpl implements BookingService {
                 }
             }
         }
-        
+
         BigDecimal finalTotal = request.getCurrentTotal().subtract(discountAmount);
         if (finalTotal.compareTo(BigDecimal.ZERO) < 0) {
             finalTotal = BigDecimal.ZERO;
         }
-        
+
         return VoucherResponse.builder()
                 .isValid(isValid)
                 .discountAmount(discountAmount)
@@ -561,9 +563,9 @@ public class BookingServiceImpl implements BookingService {
     /**
      * 2.1 — Khách hàng gửi yêu cầu hoàn tiền.
      * <ul>
-     *   <li>Tính refundAmount theo chính sách ngày khởi hành.</li>
-     *   <li>Cập nhật Booking.status = REFUND_REQUESTED.</li>
-     *   <li>Insert bản ghi mới vào bảng RefundRequests.</li>
+     * <li>Tính refundAmount theo chính sách ngày khởi hành.</li>
+     * <li>Cập nhật Booking.status = REFUND_REQUESTED.</li>
+     * <li>Insert bản ghi mới vào bảng RefundRequests.</li>
      * </ul>
      */
     @Override
@@ -595,8 +597,7 @@ public class BookingServiceImpl implements BookingService {
         String fullReason = bankInfo + " | Lý do: " + (request.getReason() != null ? request.getReason() : "Không có");
 
         // ── Insert RefundRequest vào DB ───────────────────────────────────────
-        com.tourbooking.booking.backend.model.entity.RefundRequest refundEntity =
-                new com.tourbooking.booking.backend.model.entity.RefundRequest();
+        com.tourbooking.booking.backend.model.entity.RefundRequest refundEntity = new com.tourbooking.booking.backend.model.entity.RefundRequest();
         refundEntity.setBooking(booking);
         refundEntity.setAmount(refundAmount);
         refundEntity.setReason(fullReason);
@@ -604,7 +605,7 @@ public class BookingServiceImpl implements BookingService {
         refundEntity.setOriginalBookingStatus(originalStatus); // Lưu trạng thái gốc
         refundRequestRepository.save(refundEntity);
 
-        log.info("[Refund] BookingID={} | RefundAmount={} | OriginalStatus={} | Reason={}", 
+        log.info("[Refund] BookingID={} | RefundAmount={} | OriginalStatus={} | Reason={}",
                 id, refundAmount, originalStatus, fullReason);
         return BookingMapper.toResponse(booking);
     }
@@ -612,14 +613,16 @@ public class BookingServiceImpl implements BookingService {
     /**
      * 2.2 — Tính số tiền hoàn trả theo chính sách:
      * <ul>
-     *   <li>> 7 ngày trước khởi hành → hoàn 100%</li>
-     *   <li>3–7 ngày trước khởi hành → hoàn 50%</li>
-     *   <li>&lt; 3 ngày trước khởi hành → hoàn 0%</li>
+     * <li>> 7 ngày trước khởi hành → hoàn 100%</li>
+     * <li>3–7 ngày trước khởi hành → hoàn 50%</li>
+     * <li>&lt; 3 ngày trước khởi hành → hoàn 0%</li>
      * </ul>
-     * Sử dụng múi giờ Việt Nam (Asia/Ho_Chi_Minh) để tránh lệch ngày khi deploy cloud.
+     * Sử dụng múi giờ Việt Nam (Asia/Ho_Chi_Minh) để tránh lệch ngày khi deploy
+     * cloud.
      */
     private BigDecimal calculateRefundAmount(Booking booking) {
-        if (booking.getTotalPrice() == null) return BigDecimal.ZERO;
+        if (booking.getTotalPrice() == null)
+            return BigDecimal.ZERO;
 
         java.time.LocalDate startDate = (booking.getSchedule() != null)
                 ? booking.getSchedule().getStartDate()
@@ -650,9 +653,9 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
-
     private String normalizeForPdf(String text) {
-        if (text == null) return "n/a";
+        if (text == null)
+            return "n/a";
         String normalized = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFD);
         return normalized.replaceAll("\\p{M}", "").replace("đ", "d").replace("Đ", "D");
     }
@@ -686,10 +689,11 @@ public class BookingServiceImpl implements BookingService {
                 cs.newLineAtOffset(0, -18);
                 cs.showText("Total: " + String.valueOf(booking.getTotalPrice()) + " VND");
                 cs.newLineAtOffset(0, -18);
-                
+
                 String customerName = "n/a";
                 if (booking.getUser() != null) {
-                    customerName = normalizeForPdf(booking.getUser().getFullName()) + " (" + booking.getUser().getEmail() + ")";
+                    customerName = normalizeForPdf(booking.getUser().getFullName()) + " ("
+                            + booking.getUser().getEmail() + ")";
                 }
                 cs.showText("Customer: " + customerName);
                 cs.endText();
@@ -710,14 +714,16 @@ public class BookingServiceImpl implements BookingService {
         User admin = userRepository.findByEmail("admin@gmail.com").orElse(null);
         if (admin == null) {
             List<User> users = userRepository.findAll();
-            if (!users.isEmpty()) admin = users.get(0);
+            if (!users.isEmpty())
+                admin = users.get(0);
         }
-        
+
         List<TourSchedule> schedules = tourScheduleRepository.findAll();
-        if (schedules.isEmpty() || admin == null) return;
-        
+        if (schedules.isEmpty() || admin == null)
+            return;
+
         TourSchedule schedule = schedules.get(0);
-        
+
         for (int i = 0; i < 5; i++) {
             Booking booking = new Booking();
             booking.setUser(admin);
@@ -728,7 +734,7 @@ public class BookingServiceImpl implements BookingService {
             booking.setStatus(BookingStatus.CONFIRMED);
             booking.setBookingDate(LocalDateTime.now().minusDays(i));
             booking = bookingRepository.save(booking);
-            
+
             Payment payment = new Payment();
             payment.setBooking(booking);
             payment.setAmount(booking.getTotalPrice());
@@ -748,7 +754,7 @@ public class BookingServiceImpl implements BookingService {
 
         try {
             BookingStatus newStatus = BookingStatus.valueOf(status.toUpperCase());
-            
+
             // Nếu chuyển sang CANCELLED mà trước đó chưa phải CANCELLED thì hoàn lại slot
             if (newStatus == BookingStatus.CANCELLED && booking.getStatus() != BookingStatus.CANCELLED) {
                 TourSchedule schedule = booking.getSchedule();
@@ -756,12 +762,12 @@ public class BookingServiceImpl implements BookingService {
                     tourScheduleService.releaseAvailableSlots(schedule.getId(), resolveOccupiedSlots(booking));
                 }
             }
-            
-            if ((newStatus == BookingStatus.CONFIRMED || newStatus == BookingStatus.SUCCESS) 
+
+            if ((newStatus == BookingStatus.CONFIRMED || newStatus == BookingStatus.SUCCESS)
                     && booking.getStatus() == BookingStatus.PENDING) {
                 incrementDiscountUsage(booking);
             }
-            
+
             booking.setStatus(newStatus);
             bookingRepository.save(booking);
             return BookingMapper.toResponse(booking);
@@ -793,9 +799,11 @@ public class BookingServiceImpl implements BookingService {
                         r -> r,
                         (existing, incoming) -> {
                             LocalDateTime existingAt = existing.getCreatedAt() != null
-                                    ? existing.getCreatedAt() : LocalDateTime.MIN;
+                                    ? existing.getCreatedAt()
+                                    : LocalDateTime.MIN;
                             LocalDateTime incomingAt = incoming.getCreatedAt() != null
-                                    ? incoming.getCreatedAt() : LocalDateTime.MIN;
+                                    ? incoming.getCreatedAt()
+                                    : LocalDateTime.MIN;
                             return incomingAt.isAfter(existingAt) ? incoming : existing;
                         }));
     }

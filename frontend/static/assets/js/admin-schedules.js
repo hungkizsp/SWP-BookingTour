@@ -34,7 +34,9 @@ async function loadSchedules() {
                 <td>${s.guideId ? 'Guide #' + s.guideId : '<span style="color:#d97706">Unassigned</span>'}</td>
                 <td>${s.status}</td>
                 <td>
-                    <button class="action-btn" onclick="openAssignModal(${s.id})">Assign</button>
+                    ${s.status === 'COMPLETED'
+                        ? '<button class="action-btn" style="background: #cbd5e1; color: #64748b; cursor: not-allowed;" disabled title="Schedule completed - cannot re-assign guide">Assign</button>'
+                        : '<button class="action-btn" onclick="openAssignModal(' + s.id + ')">Assign</button>'}
                     <button class="action-btn" style="background: #64748b" onclick="openDetailsModal(${s.id})">Details</button>
                 </td>
             `;
@@ -87,8 +89,9 @@ window.openDetailsModal = async function(scheduleId) {
         photoCont.innerHTML = '';
         if (s.imageUrls && s.imageUrls.length) {
             s.imageUrls.forEach(url => {
+                const imgUrl = url.startsWith('/uploads') ? 'http://localhost:8080' + url : url;
                 const img = document.createElement('img');
-                img.src = url;
+                img.src = imgUrl;
                 img.style.width = '180px';
                 img.style.height = '120px';
                 img.style.flexShrink = '0';
@@ -96,7 +99,7 @@ window.openDetailsModal = async function(scheduleId) {
                 img.style.borderRadius = '10px';
                 img.style.cursor = 'pointer';
                 img.style.border = '1px solid #e2e8f0';
-                img.onclick = () => window.open(url, '_blank');
+                img.onclick = () => window.open(imgUrl, '_blank');
                 photoCont.appendChild(img);
             });
         } else {

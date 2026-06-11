@@ -520,3 +520,19 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID(N'dbo.DiscountPolicies', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.DiscountPolicies (
+        PolicyID BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        PassengerType VARCHAR(50) NOT NULL UNIQUE,
+        Rate DECIMAL(5,2) NOT NULL,
+        IsActive BIT NOT NULL DEFAULT 1,
+        CreatedAt DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        UpdatedAt DATETIME2 NOT NULL DEFAULT SYSDATETIME()
+    );
+    
+    INSERT INTO dbo.DiscountPolicies (PassengerType, Rate, IsActive) VALUES ('CHILD', 0.75, 1);
+    INSERT INTO dbo.DiscountPolicies (PassengerType, Rate, IsActive) VALUES ('INFANT', 0.10, 1);
+END
+GO
+

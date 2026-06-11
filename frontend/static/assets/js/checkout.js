@@ -51,11 +51,14 @@
   let tourStartDate   = null; // Date object (local midnight)
   let appliedDiscount = 0;
   let appliedVoucherCode = '';
+  let childRate = 0.75;
+  let infantRate = 0.10;
 
-  const PASSENGER_META = {
+  // Update meta visually later if needed, but keeping it simple for now or dynamic
+  let PASSENGER_META = {
     ADULT:  { icon: '🧑', label: 'Người lớn', badge: 'Người lớn · 100% giá', cardClass: '' },
-    CHILD:  { icon: '👦', label: 'Trẻ em',    badge: 'Trẻ em · 75% giá',    cardClass: 'child-card' },
-    INFANT: { icon: '👶', label: 'Em bé',     badge: 'Em bé · 10% giá',     cardClass: 'infant-card' },
+    CHILD:  { icon: '👦', label: 'Trẻ em',    badge: 'Trẻ em · Đang cập nhật giá',    cardClass: 'child-card' },
+    INFANT: { icon: '👶', label: 'Em bé',     badge: 'Em bé · Đang cập nhật giá',     cardClass: 'infant-card' },
   };
 
   // ─── Date helpers ───────────────────────────────────────────────────────────────
@@ -99,15 +102,38 @@
 
   // ─── Fetch tour & schedule ────────────────────────────────────────────────────
   try {
-    const [tourRes, scheduleRes] = await Promise.all([
+    const [tourRes, scheduleRes, discountRes] = await Promise.all([
       TB.apiFetch(`/api/v1/tours/${tourId}`),
-      TB.apiFetch(`/api/v1/tours/schedules/${scheduleId}`)
+      TB.apiFetch(`/api/v1/tours/schedules/${scheduleId}`),
+      TB.apiFetch(`/api/v1/discount-policies`).catch(e => ({ data: [] }))
     ]);
 
     const tourData     = tourRes.data;
     const scheduleData = scheduleRes.data;
+    const policies     = discountRes.data || discountRes || [];
     currentPrice       = tourData.price;
     tourStartDate      = parseTourStartDate(scheduleData.startDate);
+
+    policies.forEach(p => {
+        if (p.passengerType === 'CHILD' && p.isActive) childRate = p.rate;
+        if (p.passengerType === 'INFANT' && p.isActive) infantRate = p.rate;
+    });
+
+    const childPct = Math.round(childRate * 100);
+    const infantPct = Math.round(infantRate * 100);
+
+    PASSENGER_META.CHILD.badge = `Trẻ em · ${childPct}% giá`;
+    PASSENGER_META.INFANT.badge = `Em bé · ${infantPct}% giá`;
+
+    // Update HTML labels in checkout.html (not in the checkout.js passenger cards)
+    const childRateLbl = document.getElementById('childRateLabel');
+    const infantRateLbl = document.getElementById('infantRateLabel');
+    const summaryChildPct = document.getElementById('summaryChildPct');
+    const summaryInfantPct = document.getElementById('summaryInfantPct');
+    if (childRateLbl) childRateLbl.textContent = `× ${childPct}% giá`;
+    if (infantRateLbl) infantRateLbl.textContent = `× ${infantPct}% giá`;
+    if (summaryChildPct) summaryChildPct.textContent = `${childPct}%`;
+    if (summaryInfantPct) summaryInfantPct.textContent = `${infantPct}%`;
 
     summaryTourName.textContent = tourData.tourName;
     const sd = new Date(scheduleData.startDate);
@@ -154,8 +180,8 @@
     summaryInfants.textContent  = infants  + ' em bé';
 
     const adultTotal  = adults   * currentPrice;
-    const childTotal  = children * currentPrice * 0.75;
-    const infantTotal = infants  * currentPrice * 0.10;
+    const childTotal  = children * currentPrice * childRate;
+    const infantTotal = infants  * currentPrice * infantRate;
     const baseTotal   = adultTotal + childTotal + infantTotal;
 
     summaryAdultPrice.textContent = adultTotal.toLocaleString('vi-VN') + ' đ';
@@ -263,7 +289,7 @@
               min="${bounds.min}" max="${bounds.max}"
               value="${escHtml(old.dateOfBirth || '')}">
           </div>
-          <div class="form-group">
+          <div class="form-group" style="${slot.type === 'INFANT' ? 'display:none;' : ''}">
             <label>${idLabel}</label>
             <input class="passenger-input" type="text" id="p_id_${i}"
               placeholder="${escHtml(idPlaceholder)}"
@@ -361,8 +387,8 @@
       const children = getChildCount();
       const infants  = getInfantCount();
       const baseTotal = adults * currentPrice
-        + children * currentPrice * 0.75
-        + infants  * currentPrice * 0.10;
+        + children * currentPrice * childRate
+        + infants  * currentPrice * infantRate;
 
       const res = await TB.apiFetch('/api/v1/bookings/apply-voucher', {
         method: 'POST',

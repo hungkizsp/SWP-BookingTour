@@ -78,6 +78,11 @@
       <h3 style="margin-top:0;">Hủy Đặt Tour</h3>
       <p style="font-size:0.9rem; color:var(--text-faint);">Bạn có chắc chắn muốn hủy đặt tour <strong id="cancelCode"></strong> không?</p>
       
+      <div style="margin-top:16px;">
+        <label style="font-weight:600; font-size:0.9rem;">Lí do hủy tour <span style="color:#ef4444">*</span></label>
+        <textarea rows="2" placeholder="Vui lòng cho chúng tôi biết lí do bạn hủy tour..." id="cancelReason" style="width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; margin-top: 6px;" required></textarea>
+      </div>
+      
       <div style="margin-top:16px; padding:12px; background:#f0f9ff; border-radius:8px; border:1px solid #bae6fd;">
         <strong>Yêu Cầu Hoàn Tiền</strong>
         <p style="font-size:0.85rem; margin:4px 0 0;">Vì bạn hủy trước 7 ngày, bạn sẽ được hoàn 100% số tiền. Vui lòng nhập tài khoản ngân hàng để nhận lại tiền.</p>
@@ -235,6 +240,7 @@
       $('cancelModal').style.display = 'none';
       $('reviewModal').style.display = 'none';
       $('refundInfo').value = '';
+      if($('cancelReason')) $('cancelReason').value = '';
       $('reviewComment').value = '';
       currentBooking = null;
     }
@@ -242,8 +248,14 @@
     async function confirmCancel() {
       if (!currentBooking?.id) return;
       const info = $('refundInfo').value.trim();
+      const reason = $('cancelReason').value.trim();
       const status = String(currentBooking.status || '').toUpperCase();
       const isPaid = (status === 'CONFIRMED' || status === 'SUCCESS');
+
+      if (!reason) {
+        alert("Vui lòng nhập lí do hủy tour!");
+        return;
+      }
 
       if (isPaid && !info) {
         alert("Vui lòng nhập thông tin nhận tiền hoàn (Ngân hàng - STK - Tên)!");
@@ -260,12 +272,12 @@
           // Nếu đã thanh toán -> Gửi yêu cầu hoàn tiền (Service sẽ đổi status sang REFUND_REQUESTED)
           await TB.apiFetch(`/api/v1/bookings/${encodeURIComponent(currentBooking.id)}/refund`, {
             method: 'POST',
-            body: JSON.stringify({ bookingId: currentBooking.id, reason: info })
+            body: JSON.stringify({ bookingId: currentBooking.id, reason: reason, refundInfo: info })
           });
           alert("Đã gửi yêu cầu hoàn tiền thành công. Admin sẽ kiểm tra và xác nhận sớm nhất.");
         } else {
           // Nếu chưa thanh toán (PENDING) -> Hủy trực tiếp
-          await TB.apiFetch(`/api/v1/bookings/${encodeURIComponent(currentBooking.id)}/cancel`, { method: 'POST' });
+          await TB.apiFetch(`/api/v1/bookings/${encodeURIComponent(currentBooking.id)}/cancel?reason=${encodeURIComponent(reason)}`, { method: 'POST' });
           alert("Đã hủy đặt tour thành công.");
         }
 
