@@ -23,7 +23,12 @@ async function loadSchedules() {
     const tbody = document.querySelector('#schedulesTable tbody');
     try {
         const res = await TB.apiFetch('/api/v1/staff/schedules'); 
-        allSchedules = res.data || [];
+        let data = res.data || [];
+        
+        // Latest-first Pagination logic (10 items per page)
+        data.sort((a, b) => b.id - a.id);
+        allSchedules = data.slice(0, 10);
+        
         tbody.innerHTML = '';
         allSchedules.forEach(s => {
             const row = document.createElement('tr');

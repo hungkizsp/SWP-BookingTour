@@ -189,7 +189,11 @@
       const u = uRes?.data || {};
       const points = Number(pRes?.data || 0);
       const bookings = Array.isArray(bRes?.data) ? bRes.data : [];
-      const done = bookings.filter(b => ['COMPLETED', 'SUCCESS'].includes(String(b?.status || '').toUpperCase())).length;
+      const done = bookings.filter(b => {
+        const s = String(b?.status || '').toUpperCase();
+        return (s === 'CONFIRMED' || s === 'COMPLETED' || s === 'SUCCESS') && 
+               (!b.refundStatus || b.refundStatus === 'NONE' || b.refundStatus === 'null');
+      }).length;
 
       $('fullName').textContent = u.fullName || '-';
       $('email').textContent = u.email || '-';

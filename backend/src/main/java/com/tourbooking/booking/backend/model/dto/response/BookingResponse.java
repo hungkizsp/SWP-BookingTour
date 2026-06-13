@@ -15,6 +15,8 @@ public class BookingResponse {
     private Long tourId;
     private String tourName;
     private LocalDateTime bookingDate;
+    private java.time.LocalDate departureDate;
+    private java.util.List<PassengerResponse> passengers;
     private Integer numberOfPeople;
     private BigDecimal totalPrice;
     private BigDecimal discountAmount;

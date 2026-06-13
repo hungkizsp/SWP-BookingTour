@@ -18,6 +18,7 @@ public class BookingMapper {
         }
         if (booking.getSchedule() != null) {
             response.setScheduleId(booking.getSchedule().getId());
+            response.setDepartureDate(booking.getSchedule().getStartDate());
             if (booking.getSchedule().getTour() != null) {
                 response.setTourId(booking.getSchedule().getTour().getId());
                 response.setTourName(booking.getSchedule().getTour().getTourName());
@@ -29,6 +30,20 @@ public class BookingMapper {
         response.setDiscountAmount(booking.getDiscountAmount());
         response.setDiscountCode(booking.getDiscountCode());
         response.setStatus(booking.getStatus());
+        
+        if (booking.getPassengers() != null) {
+            java.util.List<com.tourbooking.booking.backend.model.dto.response.PassengerResponse> passengerResponses = booking.getPassengers().stream().map(p -> {
+                com.tourbooking.booking.backend.model.dto.response.PassengerResponse pr = new com.tourbooking.booking.backend.model.dto.response.PassengerResponse();
+                pr.setId(p.getId());
+                pr.setFullName(p.getFullName());
+                pr.setDateOfBirth(p.getDateOfBirth());
+                pr.setIdNumber(p.getIdNumber());
+                pr.setPassengerType(p.getPassengerType());
+                return pr;
+            }).collect(java.util.stream.Collectors.toList());
+            response.setPassengers(passengerResponses);
+        }
+        
         return response;
     }
 

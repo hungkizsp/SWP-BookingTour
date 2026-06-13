@@ -161,11 +161,22 @@
               </div>
               <span class="status-badge ${badge.cls}">${badge.label}</span>
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; font-size:0.9rem;">
-              <div><strong style="color:var(--text-faint);">Ngày đặt:</strong> ${String(b.bookingDate || '').slice(0, 10)}</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; font-size:0.9rem; margin-bottom: 15px;">
+              <div><strong style="color:var(--text-faint);">Ngày đặt:</strong> ${String(b.bookingDate || '').slice(0, 10).replace(/-/g, '/')}</div>
+              <div><strong style="color:var(--text-faint);">Ngày khởi hành:</strong> ${b.departureDate ? b.departureDate.replace(/-/g, '/') : 'Chưa xác định'}</div>
               <div><strong style="color:var(--text-faint);">Số người:</strong> ${b.numberOfPeople || 1}</div>
               <div style="grid-column: span 2;"><strong style="color:var(--text-faint);">Tổng tiền:</strong> <span style="color:var(--price); font-weight:800; font-size:1.1rem;">${formatCurrency(b.totalPrice)}</span></div>
             </div>
+            
+            ${b.passengers && b.passengers.length > 0 ? `
+            <div style="border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 15px; margin-bottom: 15px;">
+              <strong style="font-size:0.9rem; color:var(--text-base);">Danh sách hành khách:</strong>
+              <ul style="margin: 8px 0 0 20px; font-size: 0.85rem; color: var(--text-faint);">
+                ${b.passengers.map(p => `<li>${p.fullName} - ${p.passengerType} ${p.dateOfBirth ? `(SN: ${p.dateOfBirth})` : ''}</li>`).join('')}
+              </ul>
+            </div>
+            ` : ''}
+
             <div class="booking-actions">
               <button class="btn btn-secondary" onclick="downloadInvoice(${b.id})" style="font-size:0.8rem; height:40px;">TẢI HÓA ĐƠN</button>
               ${canCancel ? `<button class="btn" style="background:#fef2f2; color:#ef4444; border:1px solid #fee2e2; font-size:0.8rem; height:40px;" onclick="openCancelModal(${b.id})">HỦY TOUR</button>` : ''}

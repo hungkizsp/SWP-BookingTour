@@ -154,21 +154,13 @@ public class AuthController {
 
     // ================= VERIFY EMAIL =================
     @GetMapping("/verify")
-    public ApiResponse<String> verifyEmail(@RequestParam String token) {
+    public org.springframework.http.ResponseEntity<Void> verifyEmail(@RequestParam String token) {
         boolean isValid = userService.verifyEmail(token);
+        
+        String redirectUrl = "http://localhost:3000/pages/auth/login.html?verified=" + isValid;
 
-        if (!isValid) {
-            return ApiResponse.<String>builder()
-                    .code(HttpStatus.BAD_REQUEST.value())
-                    .message("Invalid or expired token")
-                    .data(null)
-                    .build();
-        }
-
-        return ApiResponse.<String>builder()
-                .code(HttpStatus.OK.value())
-                .message("Email verified successfully")
-                .data(null)
+        return org.springframework.http.ResponseEntity.status(HttpStatus.FOUND)
+                .header("Location", redirectUrl)
                 .build();
     }
 

@@ -283,7 +283,8 @@
           infoEl.style.borderColor = '#86efac';
           infoEl.style.color = '#166534';
         } else {
-          const startDateRaw = currentBooking.startDate 
+          const startDateRaw = currentBooking.departureDate 
+                            || currentBooking.startDate 
                             || currentBooking.scheduleStartDate 
                             || currentBooking.tourStartDate
                             || (currentBooking.schedule && currentBooking.schedule.startDate)
@@ -294,6 +295,7 @@
             const startD = new Date(startDateRaw); startD.setHours(0,0,0,0);
             daysUntil = Math.ceil((startD - today) / (1000 * 60 * 60 * 24));
           }
+          console.log("Cancel Tour - startDateRaw:", startDateRaw, "daysUntil:", daysUntil, "currentBooking:", currentBooking);
 
           if (daysUntil !== null) {
             const { rate, label } = getRefundRate(daysUntil);

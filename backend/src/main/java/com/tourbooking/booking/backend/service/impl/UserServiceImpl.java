@@ -85,14 +85,16 @@ public class UserServiceImpl implements UserService {
         }
 
         User user = UserMapper.toEntity(request);
-        if (user.getRole() == null) {
-            user.setRole(com.tourbooking.booking.backend.model.entity.enums.UserRole.CUSTOMER);
-        }
+        user.setRole(com.tourbooking.booking.backend.model.entity.enums.UserRole.CUSTOMER);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setIsActive(false); // Require verification
 
-        User savedUser = userRepository.save(user);
-        return UserMapper.toResponse(savedUser);
+        try {
+            User savedUser = userRepository.save(user);
+            return UserMapper.toResponse(savedUser);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new AppException(ErrorCode.EMAIL_EXISTED);
+        }
     }
 
     @Override

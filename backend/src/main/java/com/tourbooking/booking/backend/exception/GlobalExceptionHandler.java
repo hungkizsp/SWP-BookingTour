@@ -104,4 +104,18 @@ public class GlobalExceptionHandler {
                 .build();
         return ResponseEntity.status(e.getStatusCode()).body(response);
     }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolationException(org.springframework.dao.DataIntegrityViolationException e) {
+        log.warn("Data integrity violation: {}", e.getMessage());
+        String message = "Dữ liệu không hợp lệ hoặc đã tồn tại.";
+        if (e.getMessage() != null && e.getMessage().contains("UQ__Users")) {
+             message = "Email này đã được đăng ký. Vui lòng sử dụng email khác.";
+        }
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(HttpStatus.CONFLICT.value())
+                .message(message)
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
 }

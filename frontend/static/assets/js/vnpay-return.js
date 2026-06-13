@@ -30,7 +30,7 @@ async function confirmVNPayReturn() {
             msgEl.innerHTML =
                 `${result.message || 'Giao dịch đã được ghi nhận.'}<br>` +
                 `Mã tham chiếu: <b>${escapeHtml(result.transactionRef || '—')}</b><br>` +
-                `Bạn sẽ được chuyển đến <b>Tour đã đặt</b> trong <span id="countdown">5</span> giây...`;
+                `Bạn sẽ được chuyển về <b>Trang chủ</b> trong <span id="countdown">5</span> giây...`;
 
             let timeLeft = 5;
             const timer = setInterval(() => {
@@ -39,7 +39,7 @@ async function confirmVNPayReturn() {
                 if (countdownEl) countdownEl.innerText = timeLeft;
                 if (timeLeft <= 0) {
                     clearInterval(timer);
-                    window.location.href = '../../user/bookings.html';
+                    window.location.href = 'http://localhost:3000/pages/index.html';
                 }
             }, 1000);
             return;

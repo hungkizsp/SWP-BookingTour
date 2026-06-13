@@ -99,6 +99,10 @@
   // ─── Load user info ───────────────────────────────────────────────────────────
   document.getElementById('custName').value  = user.fullName || '';
   document.getElementById('custEmail').value = user.email    || '';
+  const custPhone = document.getElementById('custPhone');
+  if (custPhone) {
+    custPhone.value = user.phoneNumber || '';
+  }
 
   // ─── Fetch tour & schedule ────────────────────────────────────────────────────
   try {
@@ -351,15 +355,53 @@
         document.getElementById(`p_name_${i}`)?.focus();
         return null;
       }
+      if (/[^a-zA-ZÀ-Ỹà-ỹ\s]/.test(data[i].fullName) || /\s{2,}/.test(data[i].fullName)) {
+        alert(`Họ và tên cho ${meta.label} ${slot.num} không được chứa ký tự đặc biệt hoặc khoảng trắng liên tiếp.`);
+        document.getElementById(`p_name_${i}`)?.focus();
+        return null;
+      }
+
       if (!data[i].dateOfBirth) {
         alert(`Vui lòng nhập Ngày sinh cho ${meta.label} ${slot.num}.`);
         document.getElementById(`p_dob_${i}`)?.focus();
         return null;
       }
-      if (slot.type === 'ADULT' && !data[i].idNumber) {
-        alert(`Vui lòng nhập Số CCCD/Passport cho Người lớn ${slot.num}.`);
-        document.getElementById(`p_id_${i}`)?.focus();
+
+      const dob = new Date(data[i].dateOfBirth);
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+          age--;
+      }
+      
+      if (slot.type === 'ADULT' && age <= 18) {
+        alert(`Ngày sinh không hợp lệ cho ${meta.label} ${slot.num}. Người lớn phải lớn hơn 18 tuổi.`);
+        document.getElementById(`p_dob_${i}`)?.focus();
         return null;
+      }
+      if (slot.type === 'CHILD' && (age < 2 || age > 11)) {
+        alert(`Ngày sinh không hợp lệ cho ${meta.label} ${slot.num}. Trẻ em phải từ 2 đến 11 tuổi.`);
+        document.getElementById(`p_dob_${i}`)?.focus();
+        return null;
+      }
+      if (slot.type === 'INFANT' && age >= 2) {
+        alert(`Ngày sinh không hợp lệ cho ${meta.label} ${slot.num}. Em bé phải nhỏ hơn 2 tuổi.`);
+        document.getElementById(`p_dob_${i}`)?.focus();
+        return null;
+      }
+
+      if (slot.type === 'ADULT') {
+        if (!data[i].idNumber) {
+          alert(`Vui lòng nhập Số CCCD cho ${meta.label} ${slot.num}.`);
+          document.getElementById(`p_id_${i}`)?.focus();
+          return null;
+        }
+        if (!/^\d{12}$/.test(data[i].idNumber)) {
+          alert(`Số CCCD cho ${meta.label} ${slot.num} phải gồm đúng 12 chữ số hợp lệ.`);
+          document.getElementById(`p_id_${i}`)?.focus();
+          return null;
+        }
       }
     }
     return data;

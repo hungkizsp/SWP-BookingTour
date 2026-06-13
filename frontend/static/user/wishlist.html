@@ -97,7 +97,7 @@
         container.style.display = 'grid';
         let html = "";
         pageData.content.forEach(tour => {
-            const imageUrl = tour.images && tour.images.length > 0 ? tour.images[0].imageUrl : '../assets/images/default-tour.jpg';
+            const imageUrl = tour.imageUrls && tour.imageUrls.length > 0 ? TB.normalizeImageUrl(tour.imageUrls[0]) : '../assets/images/default-tour.jpg';
             html += `
             <div class="wishlist-card">
                 <img src="${imageUrl}" class="wishlist-img">
