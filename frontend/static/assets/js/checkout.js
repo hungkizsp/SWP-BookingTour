@@ -19,10 +19,17 @@
     return;
   }
 
-  const user = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
+  const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+  let user = userStr ? JSON.parse(userStr) : null;
   if (!user) {
     TB.goToLogin('Vui lòng đăng nhập để tiếp tục đặt tour.');
     return;
+  }
+  try {
+    const authRes = await TB.apiFetch('/api/v1/auth/me');
+    if (authRes && authRes.data) user = authRes.data;
+  } catch (err) {
+    console.warn("Could not fetch latest profile", err);
   }
 
   // ─── UI element refs ──────────────────────────────────────────────────────────
@@ -92,7 +99,7 @@
         return { min: formatDateInput(addYears(start, -12)), max: formatDateInput(addYears(start, -2)) };
       case 'ADULT':
       default:
-        return { min: '', max: formatDateInput(addYears(start, -12)) };
+        return { min: '', max: formatDateInput(addYears(start, -18)) };
     }
   }
 
@@ -101,7 +108,7 @@
   document.getElementById('custEmail').value = user.email    || '';
   const custPhone = document.getElementById('custPhone');
   if (custPhone) {
-    custPhone.value = user.phoneNumber || '';
+    custPhone.value = user.phoneNumber || user.phone || '';
   }
 
   // ─── Fetch tour & schedule ────────────────────────────────────────────────────
@@ -279,6 +286,7 @@
         <div class="passenger-header">
           <span class="passenger-label">${meta.icon} ${label}</span>
           <span class="passenger-badge">${meta.badge}</span>
+          ${(slot.type === 'ADULT' && slot.num === 1) ? `<button type="button" id="ocr_btn_${i}" class="btn btn-secondary" style="margin-left:auto; padding: 6px 12px; font-size: 0.8rem; background: #e2e8f0; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;" onclick="window.importCCCD(${i})">Import CCCD</button>` : ''}
         </div>
         <div class="passenger-grid">
           <div class="form-group full-width">
@@ -368,15 +376,15 @@
       }
 
       const dob = new Date(data[i].dateOfBirth);
-      const today = new Date();
+      const today = tourStartDate || new Date();
       let age = today.getFullYear() - dob.getFullYear();
       const m = today.getMonth() - dob.getMonth();
       if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
           age--;
       }
       
-      if (slot.type === 'ADULT' && age <= 18) {
-        alert(`Ngày sinh không hợp lệ cho ${meta.label} ${slot.num}. Người lớn phải lớn hơn 18 tuổi.`);
+      if (slot.type === 'ADULT' && age < 18) {
+        alert(`Ngày sinh không hợp lệ cho ${meta.label} ${slot.num}. Người lớn phải từ 18 tuổi trở lên.`);
         document.getElementById(`p_dob_${i}`)?.focus();
         return null;
       }
@@ -467,6 +475,66 @@
       card.classList.add('active');
       selectedMethod = card.dataset.method;
     };
+  });
+
+  // ─── OCR CCCD ─────────────────────────────────────────────────────────────────
+  const cccdInput = document.createElement('input');
+  cccdInput.type = 'file';
+  cccdInput.accept = 'image/*';
+  cccdInput.style.display = 'none';
+  document.body.appendChild(cccdInput);
+  
+  let currentOCRIndex = 0;
+  window.importCCCD = function(index) {
+    currentOCRIndex = index;
+    cccdInput.click();
+  };
+  
+  cccdInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const btn = document.getElementById(`ocr_btn_${currentOCRIndex}`);
+    if (btn) btn.textContent = 'Đang quét...';
+    
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, 'vie');
+      console.log("OCR Result:", text);
+      
+      const idMatch = text.match(/\d{12}/);
+      if (idMatch) {
+        const idEl = document.getElementById(`p_id_${currentOCRIndex}`);
+        if(idEl) idEl.value = idMatch[0];
+      }
+      
+      const dobMatch = text.match(/(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/);
+      if (dobMatch) {
+         const yyyy = dobMatch[3];
+         const mm = dobMatch[2];
+         const dd = dobMatch[1];
+         const dobEl = document.getElementById(`p_dob_${currentOCRIndex}`);
+         if(dobEl) dobEl.value = `${yyyy}-${mm}-${dd}`;
+      }
+      
+      const lines = text.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+         const line = lines[i].trim();
+         if (/^[A-Z\sÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴÝỶỸ]{5,}$/.test(line)) {
+            if (!line.includes("CỘNG HÒA") && !line.includes("ĐỘC LẬP")) {
+                const nameEl = document.getElementById(`p_name_${currentOCRIndex}`);
+                if(nameEl) nameEl.value = line;
+                break;
+            }
+         }
+      }
+      alert('Đã nhận diện thông tin, vui lòng kiểm tra lại!');
+    } catch (err) {
+      console.error(err);
+      alert('Không thể nhận diện hình ảnh.');
+    } finally {
+      if (btn) btn.textContent = 'Import CCCD';
+      cccdInput.value = '';
+    }
   });
 
   // ─── Confirm booking ──────────────────────────────────────────────────────────

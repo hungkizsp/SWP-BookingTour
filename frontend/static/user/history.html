@@ -1,37 +1,131 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lịch Sử Đặt Tour - TourBooking</title>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
   <style>
-    .layout { display:grid; grid-template-columns: 240px 1fr; gap: 24px; align-items:start; margin-top: 20px; }
-    .sidebar-menu { display: flex; flex-direction: column; gap: 8px; }
-    .sidebar-menu a { padding: 12px 16px; border-radius: 8px; text-decoration: none; color: var(--text-base); font-weight: 600; }
-    .sidebar-menu a:hover { background: rgba(0,0,0,0.05); }
-    .sidebar-menu a.active { background: var(--primary); color: white; }
-    
-    .booking-card { border: 1px solid rgba(0,0,0,0.1); border-radius: 12px; padding: 20px; margin-bottom: 16px; position: relative; }
-    .booking-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(0,0,0,0.1); padding-bottom: 12px; margin-bottom: 12px; }
-    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
-    .status-badge.success { background: #dcfce7; color: #166534; }
-    .status-badge.pending { background: #fef08a; color: #854d0e; }
-    .status-badge.cancelled { background: #fee2e2; color: #991b1b; }
-    
-    .booking-actions { display: flex; gap: 10px; margin-top: 16px; }
-    
-    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
-    .modal-box { background: white; padding: 24px; border-radius: 12px; width: 100%; max-width: 500px; }
-    .modal-box textarea { width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; margin-top: 12px; }
-    
+    .layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 24px;
+      align-items: start;
+      margin-top: 20px;
+    }
+
+    .sidebar-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-menu a {
+      padding: 12px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text-base);
+      font-weight: 600;
+    }
+
+    .sidebar-menu a:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .sidebar-menu a.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .booking-card {
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .booking-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px dashed rgba(0, 0, 0, 0.1);
+      padding-bottom: 12px;
+      margin-bottom: 12px;
+    }
+
+    .status-badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .status-badge.success {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-badge.pending {
+      background: #fef08a;
+      color: #854d0e;
+    }
+
+    .status-badge.cancelled {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .booking-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-box {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .modal-box textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      font-family: inherit;
+      margin-top: 12px;
+    }
+
     @media (max-width: 768px) {
-      .layout { grid-template-columns: 1fr; }
-      .sidebar-menu { flex-direction: row; overflow-x: auto; }
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar-menu {
+        flex-direction: row;
+        overflow-x: auto;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="page-shell">
@@ -77,8 +171,9 @@
   <div class="modal-overlay" id="cancelModal">
     <div class="modal-box">
       <h3 style="margin-top:0;">Hủy Đặt Tour</h3>
-      <p style="font-size:0.9rem; color:var(--text-faint);">Bạn có chắc chắn muốn hủy đặt tour <strong id="cancelCode"></strong> không?</p>
-      
+      <p style="font-size:0.9rem; color:var(--text-faint);">Bạn có chắc chắn muốn hủy đặt tour <strong
+          id="cancelCode"></strong> không?</p>
+
       <div style="margin-top:16px;">
         <!-- Nội quy hủy cố định -->
         <div style="background:#fff7ed; border:1px solid #fdba74; border-radius:8px; padding:12px; margin-bottom:12px;">
@@ -93,32 +188,69 @@
         </div>
 
         <!-- Thông tin hòan tiền động -->
-        <div id="refundPolicyInfo" style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:12px; margin-bottom:12px; font-size:0.85rem; color:#0369a1;">
+        <div id="refundPolicyInfo"
+          style="background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:12px; margin-bottom:12px; font-size:0.85rem; color:#0369a1;">
           Đang tính toán...
         </div>
       </div>
 
       <div id="bankFields" style="margin-top:12px;">
         <label style="font-size: 0.85rem; font-weight: 600;">Ngân hàng</label>
-        <select id="bankName" style="width: 100%; padding: 8px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #ccc;">
-            <option value="">Chọn ngân hàng</option>
-            <option value="Vietcombank">Vietcombank</option>
-            <option value="Techcombank">Techcombank</option>
-            <option value="BIDV">BIDV</option>
-            <option value="MB Bank">MB Bank</option>
-            <option value="VietinBank">VietinBank</option>
+        <select id="bankName"
+          style="width: 100%; padding: 8px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #ccc;">
+          <option value="">Chọn ngân hàng</option>
+          <option value="BIDV">BIDV - Ngân hàng Đầu tư và Phát triển Việt Nam</option>
+          <option value="Vietcombank">Vietcombank - Ngân hàng Ngoại thương Việt Nam</option>
+          <option value="VietinBank">VietinBank - Ngân hàng Công Thương Việt Nam</option>
+          <option value="Agribank">Agribank - Ngân hàng Nông nghiệp & Phát triển Nông thôn</option>
+
+          <option value="ACB">ACB - Ngân hàng Á Châu</option>
+          <option value="BAC A BANK">Bac A Bank - Ngân hàng Bắc Á</option>
+          <option value="BaoVietBank">BaoVietBank - Ngân hàng Bảo Việt</option>
+          <option value="Cake">Cake by VPBank - Ngân hàng số Cake</option>
+          <option value="DongA Bank">DongA Bank - Ngân hàng Đông Á</option>
+          <option value="Eximbank">Eximbank - Ngân hàng Xuất Nhập Khẩu Việt Nam</option>
+          <option value="HDBank">HDBank - Ngân hàng Phát triển TP.HCM</option>
+          <option value="Kienlongbank">Kienlongbank - Ngân hàng Kiên Long</option>
+          <option value="LPBank">LPBank - Ngân hàng Lộc Phát Việt Nam (LienVietPostBank)</option>
+          <option value="MB Bank">MB Bank - Ngân hàng Quân Đội</option>
+          <option value="MSB">MSB - Ngân hàng Hàng Hải Việt Nam</option>
+          <option value="Nam A Bank">Nam A Bank - Ngân hàng Nam Á</option>
+          <option value="NCB">NCB - Ngân hàng Quốc Dân</option>
+          <option value="OCB">OCB - Ngân hàng Phương Đông</option>
+          <option value="OceanBank">OceanBank - Ngân hàng Đại Dương</option>
+          <option value="PG Bank">PGBank - Ngân hàng Thịnh vượng và Phát triển</option>
+          <option value="PVcomBank">PVcomBank - Ngân hàng Đại Chúng Việt Nam</option>
+          <option value="Sacombank">Sacombank - Ngân hàng Sài Gòn Thương Tín</option>
+          <option value="Saigonbank">Saigonbank - Ngân hàng Sài Gòn Công Thương</option>
+          <option value="SCB">SCB - Ngân hàng Sài Gòn</option>
+          <option value="SHB">SHB - Ngân hàng Sài Gòn - Hà Nội</option>
+          <option value="SeABank">SeABank - Ngân hàng Đông Nam Á</option>
+          <option value="TPBank">TPBank - Ngân hàng Tiên Phong</option>
+          <option value="Techcombank">Techcombank - Ngân hàng Kỹ Thương Việt Nam</option>
+          <option value="VIB">VIB - Ngân hàng Quốc Tế</option>
+          <option value="VPBank">VPBank - Ngân hàng Việt Nam Thịnh Vượng</option>
+          <option value="VietBank">VietBank - Ngân hàng Việt Nam Thương Tín</option>
+          <option value="VietCapitalBank">BVBank - Ngân hàng Bản Việt</option>
         </select>
 
         <label style="font-size: 0.85rem; font-weight: 600;">Số tài khoản</label>
-        <input type="text" id="accountNumber" placeholder="Nhập số tài khoản" style="width: 100%; padding: 8px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #ccc;" required pattern="[a-zA-Z0-9]+" />
+        <input type="text" id="accountNumber" placeholder="Nhập số tài khoản"
+          style="width: 100%; padding: 8px; margin-bottom: 12px; border-radius: 6px; border: 1px solid #ccc;" required
+          pattern="[a-zA-Z0-9]+" />
 
         <label style="font-size: 0.85rem; font-weight: 600;">Tên chủ tài khoản</label>
-        <input type="text" id="accountHolder" placeholder="NHẬP TÊN CHỦ TÀI KHOẢN" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; text-transform: uppercase;" required />
+        <input type="text" id="accountHolder" placeholder="NHẬP TÊN CHỦ TÀI KHOẢN"
+          style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #ccc; text-transform: uppercase;"
+          required />
       </div>
 
       <div style="margin-top:16px;">
-        <label style="font-weight:600; font-size:0.9rem;">Lý do hủy đặt tour <span style="color:#ef4444">*</span></label>
-        <textarea rows="2" placeholder="Vui lòng cho chúng tôi biết lý do bạn hủy tour..." id="cancelReason" style="width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; margin-top: 6px;" required></textarea>
+        <label style="font-weight:600; font-size:0.9rem;">Lý do hủy đặt tour <span
+            style="color:#ef4444">*</span></label>
+        <textarea rows="2" placeholder="Vui lòng cho chúng tôi biết lý do bạn hủy tour..." id="cancelReason"
+          style="width: 100%; padding: 12px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; margin-top: 6px;"
+          required></textarea>
       </div>
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
@@ -132,11 +264,13 @@
   <div class="modal-overlay" id="reviewModal">
     <div class="modal-box">
       <h3 style="margin-top:0;">Viết Đánh Giá</h3>
-      <p style="font-size:0.9rem; color:var(--text-faint);">Chia sẻ trải nghiệm của bạn về mã tour <strong id="reviewCode"></strong>.</p>
-      
+      <p style="font-size:0.9rem; color:var(--text-faint);">Chia sẻ trải nghiệm của bạn về mã tour <strong
+          id="reviewCode"></strong>.</p>
+
       <div style="margin-top:12px;">
         <label style="font-weight:600; font-size:0.9rem;">Điểm hài lòng:</label>
-        <select id="reviewRating" style="width:100%; padding:8px; margin-top:4px; border-radius:6px; border:1px solid rgba(0,0,0,0.1);">
+        <select id="reviewRating"
+          style="width:100%; padding:8px; margin-top:4px; border-radius:6px; border:1px solid rgba(0,0,0,0.1);">
           <option value="5">⭐⭐⭐⭐⭐ Tuyệt vời</option>
           <option value="4">⭐⭐⭐⭐ Tốt</option>
           <option value="3">⭐⭐⭐ Bình thường</option>
@@ -144,7 +278,7 @@
           <option value="1">⭐ Rất tệ</option>
         </select>
       </div>
-      
+
       <textarea rows="4" id="reviewComment" placeholder="Viết cảm nhận của bạn..."></textarea>
 
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
@@ -258,9 +392,9 @@
 
     function getRefundRate(daysUntilTour) {
       if (daysUntilTour >= 15) return { rate: 1.0, label: 'Hoàn 100% vì hủy trước 15 ngày' };
-      if (daysUntilTour >= 7)  return { rate: 0.7, label: 'Hoàn 70% vì hủy từ 7–14 ngày trước' };
-      if (daysUntilTour >= 3)  return { rate: 0.5, label: 'Hoàn 50% vì hủy từ 3–6 ngày trước' };
-      if (daysUntilTour >= 1)  return { rate: 0.3, label: 'Hoàn 30% vì hủy trong vòng 1–2 ngày' };
+      if (daysUntilTour >= 7) return { rate: 0.7, label: 'Hoàn 70% vì hủy từ 7–14 ngày trước' };
+      if (daysUntilTour >= 3) return { rate: 0.5, label: 'Hoàn 50% vì hủy từ 3–6 ngày trước' };
+      if (daysUntilTour >= 1) return { rate: 0.3, label: 'Hoàn 30% vì hủy trong vòng 1–2 ngày' };
       return { rate: 0, label: 'Không hoàn tiền vì hủy trong hoặc sau ngày khởi hành' };
     }
 
@@ -283,16 +417,16 @@
           infoEl.style.borderColor = '#86efac';
           infoEl.style.color = '#166534';
         } else {
-          const startDateRaw = currentBooking.departureDate 
-                            || currentBooking.startDate 
-                            || currentBooking.scheduleStartDate 
-                            || currentBooking.tourStartDate
-                            || (currentBooking.schedule && currentBooking.schedule.startDate)
-                            || (currentBooking.tour && currentBooking.tour.startDate);
+          const startDateRaw = currentBooking.departureDate
+            || currentBooking.startDate
+            || currentBooking.scheduleStartDate
+            || currentBooking.tourStartDate
+            || (currentBooking.schedule && currentBooking.schedule.startDate)
+            || (currentBooking.tour && currentBooking.tour.startDate);
           let daysUntil = null;
           if (startDateRaw) {
-            const today = new Date(); today.setHours(0,0,0,0);
-            const startD = new Date(startDateRaw); startD.setHours(0,0,0,0);
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const startD = new Date(startDateRaw); startD.setHours(0, 0, 0, 0);
             daysUntil = Math.ceil((startD - today) / (1000 * 60 * 60 * 24));
           }
           console.log("Cancel Tour - startDateRaw:", startDateRaw, "daysUntil:", daysUntil, "currentBooking:", currentBooking);
@@ -326,11 +460,11 @@
     function closeModals() {
       $('cancelModal').style.display = 'none';
       $('reviewModal').style.display = 'none';
-      if($('bankName')) $('bankName').value = '';
-      if($('accountNumber')) $('accountNumber').value = '';
-      if($('accountHolder')) $('accountHolder').value = '';
-      if($('cancelReason')) $('cancelReason').value = '';
-      if($('reviewComment')) $('reviewComment').value = '';
+      if ($('bankName')) $('bankName').value = '';
+      if ($('accountNumber')) $('accountNumber').value = '';
+      if ($('accountHolder')) $('accountHolder').value = '';
+      if ($('cancelReason')) $('cancelReason').value = '';
+      if ($('reviewComment')) $('reviewComment').value = '';
       currentBooking = null;
     }
 
@@ -424,4 +558,5 @@
     });
   </script>
 </body>
+
 </html>

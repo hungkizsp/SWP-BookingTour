@@ -16,41 +16,83 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSchedules();
 });
 
+const PAGE_SIZE = 10;
 let currentScheduleId = null;
 let allSchedules = [];
+let currentPage = 0;
 
 async function loadSchedules() {
     const tbody = document.querySelector('#schedulesTable tbody');
     try {
         const res = await TB.apiFetch('/api/v1/staff/schedules'); 
-        let data = res.data || [];
+        let data = res.data?.content || res.data || [];
         
-        // Latest-first Pagination logic (10 items per page)
+        // Latest-first sort
         data.sort((a, b) => b.id - a.id);
-        allSchedules = data.slice(0, 10);
-        
-        tbody.innerHTML = '';
-        allSchedules.forEach(s => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>SD-${s.id}</td>
-                <td>${s.tourName || 'Basic Tour'}</td>
-                <td>${s.startDate} - ${s.endDate}</td>
-                <td>${s.guideId ? 'Guide #' + s.guideId : '<span style="color:#d97706">Unassigned</span>'}</td>
-                <td>${s.status}</td>
-                <td>
-                    ${s.status === 'COMPLETED'
-                        ? '<button class="action-btn" style="background: #cbd5e1; color: #64748b; cursor: not-allowed;" disabled title="Schedule completed - cannot re-assign guide">Assign</button>'
-                        : '<button class="action-btn" onclick="openAssignModal(' + s.id + ')">Assign</button>'}
-                    <button class="action-btn" style="background: #64748b" onclick="openDetailsModal(${s.id})">Details</button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
+        allSchedules = data;
+        renderSchedulesPage();
     } catch (e) {
         tbody.innerHTML = `<tr><td colspan="6" style="color:red">Error: ${e.message}</td></tr>`;
     }
 }
+
+function renderSchedulesPage() {
+    const tbody = document.querySelector('#schedulesTable tbody');
+    const container = document.getElementById('pagination');
+    
+    const totalPages = Math.ceil(allSchedules.length / PAGE_SIZE) || 1;
+    if (currentPage >= totalPages) currentPage = Math.max(0, totalPages - 1);
+    
+    const start = currentPage * PAGE_SIZE;
+    const pageItems = allSchedules.slice(start, start + PAGE_SIZE);
+    
+    tbody.innerHTML = '';
+    if (pageItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6">No schedules found.</td></tr>';
+        if(container) container.innerHTML = '';
+        return;
+    }
+
+    pageItems.forEach(s => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>SD-${s.id}</td>
+            <td>${s.tourName || 'Basic Tour'}</td>
+            <td>${s.startDate} - ${s.endDate}</td>
+            <td>${s.guideId ? 'Guide #' + s.guideId : '<span style="color:#d97706">Unassigned</span>'}</td>
+            <td>${s.status}</td>
+            <td>
+                ${s.status === 'COMPLETED'
+                    ? '<button class="action-btn" style="background: #cbd5e1; color: #64748b; cursor: not-allowed;" disabled title="Schedule completed - cannot re-assign guide">Assign</button>'
+                    : '<button class="action-btn" onclick="openAssignModal(' + s.id + ')">Assign</button>'}
+                <button class="action-btn" style="background: #64748b" onclick="openDetailsModal(${s.id})">Details</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+    const container = document.getElementById('pagination');
+    if (!container) return;
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    let html = `<button class="action-btn" style="background:#cbd5e1; color:#1e293b;" ${currentPage === 0 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">Prev</button>`;
+    html += `<span style="display:flex; align-items:center; font-weight:bold; margin: 0 10px;">Page ${currentPage + 1} of ${totalPages}</span>`;
+    html += `<button class="action-btn" style="background:#cbd5e1; color:#1e293b;" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next</button>`;
+    container.innerHTML = html;
+}
+
+window.goToPage = function(page) {
+    const totalPages = Math.ceil(allSchedules.length / PAGE_SIZE);
+    if (page < 0 || page >= totalPages) return;
+    currentPage = page;
+    renderSchedulesPage();
+};
 
 window.openDetailsModal = async function(scheduleId) {
     document.getElementById('detailsTitle').innerText = `Details for SD-${scheduleId}`;
