@@ -12,6 +12,7 @@ import java.nio.file.Path;
 @SpringBootApplication
 @EnableScheduling
 @EnableAsync
+@org.springframework.data.web.config.EnableSpringDataWebSupport(pageSerializationMode = org.springframework.data.web.config.EnableSpringDataWebSupport.PageSerializationMode.VIA_DTO)
 public class BookingApplication {
 
     public static void main(String[] args) {

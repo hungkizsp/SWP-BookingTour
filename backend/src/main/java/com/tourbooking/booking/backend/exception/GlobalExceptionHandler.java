@@ -50,6 +50,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceededException(org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        log.error("Max upload size exceeded", e);
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(HttpStatus.PAYLOAD_TOO_LARGE.value())
+                .message("File upload quá lớn. Vui lòng chọn file có kích thước nhỏ hơn (Tối đa 5MB).")
+                .build();
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException e) {
         log.error("Unhandled exception", e);
