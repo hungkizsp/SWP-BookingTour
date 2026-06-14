@@ -13,4 +13,8 @@ public class UserRequest {
     private String phoneNumber;
     private String address;
     private Boolean isActive;
+    private String bio;
+    private Integer experienceYears;
+    private java.time.LocalDate dateOfBirth;
+    private String gender;
 }

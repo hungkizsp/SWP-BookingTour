@@ -64,7 +64,23 @@ public class SecurityConfig {
                 ).permitAll()
                 // Cho phép các API Auth & Public
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                .requestMatchers("/api/v1/payments/**").permitAll()
+                // ─── Payment endpoints ─────────────────────────────────────────────────────
+                // Public: payment gateway callbacks, webhooks, and return confirmations only
+                .requestMatchers(
+                    "/api/v1/payments/payos/webhook",
+                    "/api/v1/payments/payos/confirm/**",
+                    "/api/v1/payments/vnpay/confirm",
+                    "/api/v1/payments/vnpay/callback"
+                ).permitAll()
+                // Authenticated: all payment creation and intent endpoints
+                .requestMatchers(
+                    "/api/v1/payments/payos/create",
+                    "/api/v1/payments/vnpay/create/**",
+                    "/api/v1/payments/cash/intent"
+                ).hasAnyAuthority("ROLE_CUSTOMER", "ROLE_ADMIN", "ROLE_STAFF")
+                .requestMatchers("/api/v1/payments/manual-confirm").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
+                // Any other /payments/** endpoints also require authentication
+                .requestMatchers("/api/v1/payments/**").authenticated()
                 
                 // --- ADMIN & STAFF FEATURES ---
                 .requestMatchers("/api/v1/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")

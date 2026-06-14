@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 @Data
 public class BookingResponse {
     private Long id;
+    private String bookingCode;
     private Long userId;
     private String userFullName;
     private String userEmail;
@@ -25,4 +26,13 @@ public class BookingResponse {
     private String refundReason;
     private String refundStatus;
     private BigDecimal refundAmount;
+    
+    // Additional fields for detail page
+    private java.time.LocalDate returnDate;
+    private String guideFullName;
+    private String guidePhone;
+    private String guideAvatar;
+    private String guideBio;
+    private Integer guideExperience;
+    private String tourItinerary;
 }

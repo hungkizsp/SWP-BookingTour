@@ -27,7 +27,7 @@ public class DemoController {
 
     @PostMapping("/uc47")
     public ApiResponse<Map<String, String>> triggerUC47() {
-        scheduledTaskService.autoCancelUnpaidBookings();
+        scheduledTaskService.autoExpireUnpaidBookings();
         return ApiResponse.<Map<String, String>>builder()
                 .code(HttpStatus.OK.value())
                 .message("UC47 - Auto Cancel Unpaid Bookings executed successfully")
@@ -35,15 +35,7 @@ public class DemoController {
                 .build();
     }
 
-    @PostMapping("/uc49")
-    public ApiResponse<Map<String, String>> triggerUC49() {
-        scheduledTaskService.autoUpdateLoyaltyPoints();
-        return ApiResponse.<Map<String, String>>builder()
-                .code(HttpStatus.OK.value())
-                .message("UC49 - Auto Update Loyalty Points executed successfully")
-                .data(Map.of("uc", "UC49", "name", "Auto Update Loyalty Points", "status", "DONE"))
-                .build();
-    }
+
 
     @PostMapping("/uc50")
     public ApiResponse<Map<String, String>> triggerUC50() {
@@ -58,8 +50,7 @@ public class DemoController {
     @PostMapping("/all")
     public ApiResponse<Map<String, String>> triggerAll() {
         scheduledTaskService.autoUpdateSlots();
-        scheduledTaskService.autoCancelUnpaidBookings();
-        scheduledTaskService.autoUpdateLoyaltyPoints();
+        scheduledTaskService.autoExpireUnpaidBookings();
         scheduledTaskService.generateMonthlyReport();
         return ApiResponse.<Map<String, String>>builder()
                 .code(HttpStatus.OK.value())

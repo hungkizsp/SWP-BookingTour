@@ -72,18 +72,24 @@ public class ReviewServiceImpl implements ReviewService {
         User user = userRepo.findById(request.getUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        Review savedReview = reviewRepo.findByUser_IdAndTour_Id(user.getId(), tour.getId())
-                .map(existing -> {
-                    ReviewMapper.updateEntityFromRequest(existing, request);
-                    existing.setReviewDate(LocalDateTime.now());
-                    return reviewRepo.save(existing);
-                })
-                .orElseGet(() -> {
-                    Review review = ReviewMapper.toEntity(request);
-                    review.setTour(tour);
-                    review.setUser(user);
-                    return reviewRepo.save(review);
-                });
+        // Validation: user must have a COMPLETED booking for this tour
+        boolean hasCompletedBooking = tour.getSchedules().stream()
+                .flatMap(schedule -> schedule.getBookings().stream())
+                .anyMatch(booking -> booking.getUser().getId().equals(user.getId()) 
+                                  && booking.getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.COMPLETED);
+
+        if (!hasCompletedBooking) {
+            throw new AppException(ErrorCode.INVALID_REQUEST); // Or a specific error
+        }
+
+        if (reviewRepo.findByUser_IdAndTour_Id(user.getId(), tour.getId()).isPresent()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST); // Prevent duplicate review
+        }
+        
+        Review review = ReviewMapper.toEntity(request);
+        review.setTour(tour);
+        review.setUser(user);
+        Review savedReview = reviewRepo.save(review);
 
         return ReviewMapper.toResponse(savedReview);
     }

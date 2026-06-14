@@ -3,8 +3,8 @@
  * ADULT = 100% | CHILD = 75% | INFANT = 10% (không chiếm chỗ)
  */
 (async () => {
-  const params     = new URLSearchParams(window.location.search);
-  const tourId     = params.get('tourId');
+  const params = new URLSearchParams(window.location.search);
+  const tourId = params.get('tourId');
   const scheduleId = params.get('scheduleId');
 
   if (params.get('cancel') === 'true') {
@@ -33,29 +33,30 @@
   }
 
   // ─── UI element refs ──────────────────────────────────────────────────────────
-  const loading             = document.getElementById('checkoutLoading');
-  const content             = document.getElementById('checkoutContent');
-  const adultInput          = document.getElementById('adultCount');
-  const childInput          = document.getElementById('childCount');
-  const infantInput         = document.getElementById('infantCount');
+  const loading = document.getElementById('checkoutLoading');
+  const content = document.getElementById('checkoutContent');
+  const adultInput = document.getElementById('adultCount');
+  const childInput = document.getElementById('childCount');
+  const infantInput = document.getElementById('infantCount');
   const passengersContainer = document.getElementById('passengersContainer');
-  const summaryTourName     = document.getElementById('summaryTourName');
-  const summaryDate         = document.getElementById('summaryDate');
-  const summaryUnitPrice    = document.getElementById('summaryUnitPrice');
-  const summaryAdults       = document.getElementById('summaryAdults');
-  const summaryChildren     = document.getElementById('summaryChildren');
-  const summaryInfants      = document.getElementById('summaryInfants');
-  const summaryAdultPrice   = document.getElementById('summaryAdultPrice');
-  const summaryChildPrice   = document.getElementById('summaryChildPrice');
-  const summaryInfantPrice  = document.getElementById('summaryInfantPrice');
-  const summaryChildPriceRow  = document.getElementById('summaryChildPriceRow');
+  const summaryTourName = document.getElementById('summaryTourName');
+  const summaryDate = document.getElementById('summaryDate');
+  const summaryUnitPrice = document.getElementById('summaryUnitPrice');
+  const summaryAdults = document.getElementById('summaryAdults');
+  const summaryChildren = document.getElementById('summaryChildren');
+  const summaryInfants = document.getElementById('summaryInfants');
+  const summaryAdultPrice = document.getElementById('summaryAdultPrice');
+  const summaryChildPrice = document.getElementById('summaryChildPrice');
+  const summaryInfantPrice = document.getElementById('summaryInfantPrice');
+  const summaryChildPriceRow = document.getElementById('summaryChildPriceRow');
   const summaryInfantPriceRow = document.getElementById('summaryInfantPriceRow');
-  const summaryTotalPrice   = document.getElementById('summaryTotalPrice');
-  const confirmBtn          = document.getElementById('confirmBtn');
+  const summaryTotalPrice = document.getElementById('summaryTotalPrice');
+  const confirmBtn = document.getElementById('confirmBtn');
 
   // ─── State ────────────────────────────────────────────────────────────────────
-  let currentPrice    = 0;
-  let tourStartDate   = null; // Date object (local midnight)
+  let currentPrice = 0;
+  let tourStartDate = null; // Date object (local midnight)
+  let scheduleData = null;
   let appliedDiscount = 0;
   let appliedVoucherCode = '';
   let childRate = 0.75;
@@ -63,9 +64,9 @@
 
   // Update meta visually later if needed, but keeping it simple for now or dynamic
   let PASSENGER_META = {
-    ADULT:  { icon: '🧑', label: 'Người lớn', badge: 'Người lớn · 100% giá', cardClass: '' },
-    CHILD:  { icon: '👦', label: 'Trẻ em',    badge: 'Trẻ em · Đang cập nhật giá',    cardClass: 'child-card' },
-    INFANT: { icon: '👶', label: 'Em bé',     badge: 'Em bé · Đang cập nhật giá',     cardClass: 'infant-card' },
+    ADULT: { icon: '🧑', label: 'Người lớn', badge: 'Người lớn · 100% giá', cardClass: '' },
+    CHILD: { icon: '👦', label: 'Trẻ em', badge: 'Trẻ em · Đang cập nhật giá', cardClass: 'child-card' },
+    INFANT: { icon: '👶', label: 'Em bé', badge: 'Em bé · Đang cập nhật giá', cardClass: 'infant-card' },
   };
 
   // ─── Date helpers ───────────────────────────────────────────────────────────────
@@ -99,13 +100,13 @@
         return { min: formatDateInput(addYears(start, -12)), max: formatDateInput(addYears(start, -2)) };
       case 'ADULT':
       default:
-        return { min: '', max: formatDateInput(addYears(start, -18)) };
+        return { min: '', max: formatDateInput(addYears(start, -12)) };
     }
   }
 
   // ─── Load user info ───────────────────────────────────────────────────────────
-  document.getElementById('custName').value  = user.fullName || '';
-  document.getElementById('custEmail').value = user.email    || '';
+  document.getElementById('custName').value = user.fullName || '';
+  document.getElementById('custEmail').value = user.email || '';
   const custPhone = document.getElementById('custPhone');
   if (custPhone) {
     custPhone.value = user.phoneNumber || user.phone || '';
@@ -119,15 +120,15 @@
       TB.apiFetch(`/api/v1/discount-policies`).catch(e => ({ data: [] }))
     ]);
 
-    const tourData     = tourRes.data;
-    const scheduleData = scheduleRes.data;
-    const policies     = discountRes.data || discountRes || [];
-    currentPrice       = tourData.price;
-    tourStartDate      = parseTourStartDate(scheduleData.startDate);
+    const tourData = tourRes.data;
+    scheduleData = scheduleRes.data;
+    const policies = discountRes.data || discountRes || [];
+    currentPrice = tourData.price;
+    tourStartDate = parseTourStartDate(scheduleData.startDate);
 
     policies.forEach(p => {
-        if (p.passengerType === 'CHILD' && p.isActive) childRate = p.rate;
-        if (p.passengerType === 'INFANT' && p.isActive) infantRate = p.rate;
+      if (p.passengerType === 'CHILD' && p.isActive) childRate = p.rate;
+      if (p.passengerType === 'INFANT' && p.isActive) infantRate = p.rate;
     });
 
     const childPct = Math.round(childRate * 100);
@@ -148,7 +149,7 @@
 
     summaryTourName.textContent = tourData.tourName;
     const sd = new Date(scheduleData.startDate);
-    summaryDate.textContent = `${sd.toLocaleDateString('vi-VN')} lúc ${String(sd.getHours()).padStart(2,'0')}:${String(sd.getMinutes()).padStart(2,'0')}`;
+    summaryDate.textContent = `${sd.toLocaleDateString('vi-VN')} lúc ${String(sd.getHours()).padStart(2, '0')}:${String(sd.getMinutes()).padStart(2, '0')}`;
     summaryUnitPrice.textContent = currentPrice.toLocaleString('vi-VN') + ' đ/người lớn';
 
     renderPassengerForms();
@@ -163,48 +164,48 @@
   }
 
   // ─── Passenger counts ─────────────────────────────────────────────────────────
-  function getAdultCount()  { return Math.max(1, parseInt(adultInput.value)  || 1); }
-  function getChildCount()  { return Math.max(0, parseInt(childInput.value)  || 0); }
+  function getAdultCount() { return Math.max(1, parseInt(adultInput.value) || 1); }
+  function getChildCount() { return Math.max(0, parseInt(childInput.value) || 0); }
   function getInfantCount() { return Math.max(0, parseInt(infantInput.value) || 0); }
   function getTotalPeople() { return getAdultCount() + getChildCount() + getInfantCount(); }
 
   function buildPassengerSlots() {
     const slots = [];
-    const adults   = getAdultCount();
+    const adults = getAdultCount();
     const children = getChildCount();
-    const infants  = getInfantCount();
+    const infants = getInfantCount();
 
-    for (let i = 0; i < adults; i++)   slots.push({ type: 'ADULT',  num: i + 1 });
-    for (let i = 0; i < children; i++) slots.push({ type: 'CHILD',  num: i + 1 });
+    for (let i = 0; i < adults; i++)   slots.push({ type: 'ADULT', num: i + 1 });
+    for (let i = 0; i < children; i++) slots.push({ type: 'CHILD', num: i + 1 });
     for (let i = 0; i < infants; i++)  slots.push({ type: 'INFANT', num: i + 1 });
     return slots;
   }
 
   // ─── Pricing ──────────────────────────────────────────────────────────────────
   function updateTotals() {
-    const adults   = getAdultCount();
+    const adults = getAdultCount();
     const children = getChildCount();
-    const infants  = getInfantCount();
+    const infants = getInfantCount();
 
-    summaryAdults.textContent   = adults   + ' người';
+    summaryAdults.textContent = adults + ' người';
     summaryChildren.textContent = children + ' trẻ em';
-    summaryInfants.textContent  = infants  + ' em bé';
+    summaryInfants.textContent = infants + ' em bé';
 
-    const adultTotal  = adults   * currentPrice;
-    const childTotal  = children * currentPrice * childRate;
-    const infantTotal = infants  * currentPrice * infantRate;
-    const baseTotal   = adultTotal + childTotal + infantTotal;
+    const adultTotal = adults * currentPrice;
+    const childTotal = children * currentPrice * childRate;
+    const infantTotal = infants * currentPrice * infantRate;
+    const baseTotal = adultTotal + childTotal + infantTotal;
 
     summaryAdultPrice.textContent = adultTotal.toLocaleString('vi-VN') + ' đ';
     summaryChildPrice.textContent = childTotal.toLocaleString('vi-VN') + ' đ';
     summaryInfantPrice.textContent = infantTotal.toLocaleString('vi-VN') + ' đ';
-    summaryChildPriceRow.style.display  = children > 0 ? 'flex' : 'none';
-    summaryInfantPriceRow.style.display = infants  > 0 ? 'flex' : 'none';
+    summaryChildPriceRow.style.display = children > 0 ? 'flex' : 'none';
+    summaryInfantPriceRow.style.display = infants > 0 ? 'flex' : 'none';
 
     if (appliedDiscount > 0) {
       document.getElementById('discountItem').style.display = 'flex';
       document.getElementById('summaryDiscountAmount').textContent = '-' + appliedDiscount.toLocaleString('vi-VN') + ' đ';
-      document.getElementById('summaryVoucherCode').textContent    = appliedVoucherCode;
+      document.getElementById('summaryVoucherCode').textContent = appliedVoucherCode;
     } else {
       document.getElementById('discountItem').style.display = 'none';
     }
@@ -266,9 +267,9 @@
     passengersContainer.innerHTML = '';
 
     slots.forEach((slot, i) => {
-      const meta  = PASSENGER_META[slot.type];
+      const meta = PASSENGER_META[slot.type];
       const label = `${meta.label} ${slot.num}`;
-      const old   = oldMap[`${slot.type}_${slot.num - 1}`] || {};
+      const old = oldMap[`${slot.type}_${slot.num - 1}`] || {};
       const bounds = getDobBounds(slot.type);
 
       const idPlaceholder = slot.type === 'ADULT'
@@ -286,7 +287,7 @@
         <div class="passenger-header">
           <span class="passenger-label">${meta.icon} ${label}</span>
           <span class="passenger-badge">${meta.badge}</span>
-          ${(slot.type === 'ADULT' && slot.num === 1) ? `<button type="button" id="ocr_btn_${i}" class="btn btn-secondary" style="margin-left:auto; padding: 6px 12px; font-size: 0.8rem; background: #e2e8f0; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;" onclick="window.importCCCD(${i})">Import CCCD</button>` : ''}
+          ${(slot.type === 'ADULT') ? `<button type="button" id="ocr_btn_${i}" class="btn btn-secondary" style="margin-left:auto; padding: 6px 12px; font-size: 0.8rem; background: #e2e8f0; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 6px; cursor: pointer;" onclick="window.importCCCD(${i})">Import CCCD</button>` : ''}
         </div>
         <div class="passenger-grid">
           <div class="form-group full-width">
@@ -336,15 +337,15 @@
 
   function collectPassengerData() {
     const slots = buildPassengerSlots();
-    const list  = [];
+    const list = [];
     for (let i = 0; i < slots.length; i++) {
       const nameEl = document.getElementById(`p_name_${i}`);
       if (!nameEl) break;
       list.push({
-        fullName:      nameEl?.value?.trim()                            || '',
-        dateOfBirth:   document.getElementById(`p_dob_${i}`)?.value   || '',
-        idNumber:      document.getElementById(`p_id_${i}`)?.value?.trim() || '',
-        passengerType: document.getElementById(`p_type_${i}`)?.value  || slots[i].type,
+        fullName: nameEl?.value?.trim() || '',
+        dateOfBirth: document.getElementById(`p_dob_${i}`)?.value || '',
+        idNumber: document.getElementById(`p_id_${i}`)?.value?.trim() || '',
+        passengerType: document.getElementById(`p_type_${i}`)?.value || slots[i].type,
       });
     }
     return list;
@@ -352,7 +353,7 @@
 
   function validatePassengers() {
     const slots = buildPassengerSlots();
-    const data  = collectPassengerData();
+    const data = collectPassengerData();
 
     for (let i = 0; i < data.length; i++) {
       const slot = slots[i];
@@ -380,11 +381,11 @@
       let age = today.getFullYear() - dob.getFullYear();
       const m = today.getMonth() - dob.getMonth();
       if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-          age--;
+        age--;
       }
-      
-      if (slot.type === 'ADULT' && age < 18) {
-        alert(`Ngày sinh không hợp lệ cho ${meta.label} ${slot.num}. Người lớn phải từ 18 tuổi trở lên.`);
+
+      if (slot.type === 'ADULT' && age < 12) {
+        alert(`Ngày sinh không hợp lệ cho ${meta.label} ${slot.num}. Người lớn (adult) phải từ 12 tuổi trở lên tính đến ngày khởi hành.`);
         document.getElementById(`p_dob_${i}`)?.focus();
         return null;
       }
@@ -417,28 +418,28 @@
 
   function resetVoucherUI() {
     document.getElementById('voucherMsg').textContent = '';
-    document.getElementById('voucherCode').value      = '';
+    document.getElementById('voucherCode').value = '';
   }
 
   // ─── Voucher ──────────────────────────────────────────────────────────────────
-  const voucherInput    = document.getElementById('voucherCode');
+  const voucherInput = document.getElementById('voucherCode');
   const applyVoucherBtn = document.getElementById('applyVoucherBtn');
-  const voucherMsg      = document.getElementById('voucherMsg');
+  const voucherMsg = document.getElementById('voucherMsg');
 
   applyVoucherBtn.onclick = async () => {
     const code = voucherInput.value.trim().toUpperCase();
     if (!code) return;
 
-    applyVoucherBtn.disabled    = true;
+    applyVoucherBtn.disabled = true;
     applyVoucherBtn.textContent = '...';
 
     try {
-      const adults   = getAdultCount();
+      const adults = getAdultCount();
       const children = getChildCount();
-      const infants  = getInfantCount();
+      const infants = getInfantCount();
       const baseTotal = adults * currentPrice
         + children * currentPrice * childRate
-        + infants  * currentPrice * infantRate;
+        + infants * currentPrice * infantRate;
 
       const res = await TB.apiFetch('/api/v1/bookings/apply-voucher', {
         method: 'POST',
@@ -446,12 +447,12 @@
       });
 
       if (res.data.isValid) {
-        appliedDiscount    = res.data.discountAmount;
+        appliedDiscount = res.data.discountAmount;
         appliedVoucherCode = code;
         voucherMsg.style.color = '#4caf50';
         voucherMsg.textContent = res.data.message;
       } else {
-        appliedDiscount    = 0;
+        appliedDiscount = 0;
         appliedVoucherCode = '';
         voucherMsg.style.color = '#f44336';
         voucherMsg.textContent = res.data.message;
@@ -462,7 +463,7 @@
       voucherMsg.style.color = '#f44336';
       voucherMsg.textContent = 'Lỗi hệ thống khi kiểm tra mã.';
     } finally {
-      applyVoucherBtn.disabled    = false;
+      applyVoucherBtn.disabled = false;
       applyVoucherBtn.textContent = 'Áp dụng';
     }
   };
@@ -483,50 +484,132 @@
   cccdInput.accept = 'image/*';
   cccdInput.style.display = 'none';
   document.body.appendChild(cccdInput);
-  
+
   let currentOCRIndex = 0;
-  window.importCCCD = function(index) {
+  window.importCCCD = function (index) {
     currentOCRIndex = index;
     cccdInput.click();
   };
-  
+
   cccdInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     const btn = document.getElementById(`ocr_btn_${currentOCRIndex}`);
     if (btn) btn.textContent = 'Đang quét...';
-    
+
     try {
       const { data: { text } } = await Tesseract.recognize(file, 'vie');
       console.log("OCR Result:", text);
-      
-      const idMatch = text.match(/\d{12}/);
-      if (idMatch) {
-        const idEl = document.getElementById(`p_id_${currentOCRIndex}`);
-        if(idEl) idEl.value = idMatch[0];
+
+      // Normalize OCR text
+      const normalizedText = text
+        .replace(/\r/g, "")
+        .replace(/[‘’'"]/g, "")       // remove quote characters
+        .replace(/[|]/g, "1")
+        .replace(/Q/g, "0")           // OCR thường nhận 0 -> Q
+        .replace(/O/g, "0")           // OCR thường nhận 0 -> O
+        .replace(/\s+/g, " ")
+        .trim();
+
+      // ─── 1. CCCD Number ─────────────────────────────
+      let idMatch = normalizedText.match(/\b\d{12}\b/);
+
+      // fallback: nếu OCR chèn khoảng trắng
+      if (!idMatch) {
+        const digits = normalizedText.replace(/\D/g, "");
+        if (digits.length >= 12) {
+          idMatch = [digits.substring(0, 12)];
+        }
       }
-      
-      const dobMatch = text.match(/(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/);
-      if (dobMatch) {
-         const yyyy = dobMatch[3];
-         const mm = dobMatch[2];
-         const dd = dobMatch[1];
-         const dobEl = document.getElementById(`p_dob_${currentOCRIndex}`);
-         if(dobEl) dobEl.value = `${yyyy}-${mm}-${dd}`;
+
+      const idEl = document.getElementById(`p_id_${currentOCRIndex}`);
+      if (idMatch && idEl) {
+        idEl.value = idMatch[0];
       }
-      
-      const lines = text.split('\n');
+
+      // ─── 2. Date of Birth ───────────────────────────
+      const dobText = text
+        .replace(/Q/g, "0")
+        .replace(/O/g, "0");
+
+      let dobMatch =
+        dobText.match(/(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/) ||
+        dobText.match(/Date.*?(\d{2})[\/\-\.]([0-9QO]{2})[\/\-\.](\d{4})/i);
+
+      const dobEl = document.getElementById(`p_dob_${currentOCRIndex}`);
+      if (dobMatch && dobEl) {
+        const day = dobMatch[1];
+        const month = dobMatch[2].replace(/[QO]/g, "0");
+        const year = dobMatch[3];
+        dobEl.value = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+      }
+
+      // ─── 3. Full Name ──────────────────────────────
+      let nameStr = "";
+      const lines = text
+        .split("\n")
+        .map(l => l.trim())
+        .filter(Boolean);
+
+      // Ưu tiên lấy dòng ngay sau "Full name"
       for (let i = 0; i < lines.length; i++) {
-         const line = lines[i].trim();
-         if (/^[A-Z\sÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪỬỮỰỲỴÝỶỸ]{5,}$/.test(line)) {
-            if (!line.includes("CỘNG HÒA") && !line.includes("ĐỘC LẬP")) {
-                const nameEl = document.getElementById(`p_name_${currentOCRIndex}`);
-                if(nameEl) nameEl.value = line;
-                break;
-            }
-         }
+        if (/full\s*name/i.test(lines[i])) {
+          const candidate = (lines[i + 1] || "")
+            .replace(/[‘’'".,]/g, "")
+            .trim();
+
+          if (candidate.length >= 5) {
+            nameStr = candidate;
+            break;
+          }
+        }
       }
+
+      // Fallback: tìm dòng in hoa
+      if (!nameStr) {
+        for (const rawLine of lines) {
+          const line = rawLine.replace(/[‘’'".,]/g, "").trim();
+
+          if (
+            /^[A-ZÀ-Ỹ\s]+$/i.test(line) &&
+            line.length >= 5 &&
+            !line.includes("CỘNG") &&
+            !line.includes("ĐỘC") &&
+            !line.includes("VIỆT NAM") &&
+            !line.includes("CĂN CƯỚC") &&
+            !line.includes("CITIZEN") &&
+            !line.includes("IDENTITY")
+          ) {
+            nameStr = line;
+            break;
+          }
+        }
+      }
+
+      const nameEl = document.getElementById(`p_name_${currentOCRIndex}`);
+      if (nameStr && nameEl) {
+        nameEl.value = nameStr;
+      }
+
+      // ─── Debug log (masking) ───────────────────────
+      console.log(
+        "OCR Extracted ID:",
+        idMatch ? "xxxx" + idMatch[0].substring(4) : "None"
+      );
+      console.log(
+        "OCR Extracted DOB:",
+        dobMatch
+          ? `${dobMatch[1]}/${dobMatch[2].replace(/[QO]/g, "0")}/${dobMatch[3]}`
+          : "None"
+      );
+      console.log(
+        "OCR Extracted Name:",
+        nameStr
+          ? nameStr.substring(0, 2) + "xxxx"
+          : "None"
+      );
+      // Masking in console for privacy
       alert('Đã nhận diện thông tin, vui lòng kiểm tra lại!');
     } catch (err) {
       console.error(err);
@@ -542,21 +625,29 @@
     const passengers = validatePassengers();
     if (!passengers) return;
 
-    confirmBtn.disabled    = true;
+    // TASK 5: Infant cap — max 2 infants per booking (must match backend rule)
+    const maxSlots = scheduleData.maxSlots || scheduleData.availableSlots || 20;
+    const MAX_INFANTS = Math.min(2, Math.floor(maxSlots * 0.1));
+    if (getInfantCount() > MAX_INFANTS) {
+      alert(`Mỗi booking chỉ được phép tối đa ${MAX_INFANTS} em bé (dưới 2 tuổi) để đảm bảo an toàn tour.`);
+      return;
+    }
+
+    confirmBtn.disabled = true;
     confirmBtn.textContent = 'ĐANG XỬ LÝ...';
 
     try {
       const bookingReq = {
-        userId:       user.id,
-        scheduleId:   parseInt(scheduleId),
-        adultCount:   getAdultCount(),
-        childCount:   getChildCount(),
-        infantCount:  getInfantCount(),
+        userId: user.id,
+        scheduleId: parseInt(scheduleId),
+        adultCount: getAdultCount(),
+        childCount: getChildCount(),
+        infantCount: getInfantCount(),
         discountCode: appliedVoucherCode || null,
-        passengers:   passengers.map(p => ({
-          fullName:      p.fullName,
-          dateOfBirth:   p.dateOfBirth,
-          idNumber:      p.idNumber || null,
+        passengers: passengers.map(p => ({
+          fullName: p.fullName,
+          dateOfBirth: p.dateOfBirth,
+          idNumber: p.idNumber || null,
           passengerType: p.passengerType
         }))
       };
@@ -578,7 +669,7 @@
           window.location.href = paymentRes.data.checkoutUrl;
         } else {
           alert('Không thể tạo liên kết thanh toán. Vui lòng liên hệ hỗ trợ.');
-          confirmBtn.disabled    = false;
+          confirmBtn.disabled = false;
           confirmBtn.textContent = 'XÁC NHẬN ĐẶT TOUR';
         }
       } else if (selectedMethod === 'VNPAY') {
@@ -590,17 +681,21 @@
           window.location.href = paymentRes.data.checkoutUrl;
         } else {
           alert('Không thể tạo liên kết VNPay. Vui lòng liên hệ hỗ trợ.');
-          confirmBtn.disabled    = false;
+          confirmBtn.disabled = false;
           confirmBtn.textContent = 'XÁC NHẬN ĐẶT TOUR';
         }
       } else {
+        await TB.apiFetch('/api/v1/payments/cash/intent', {
+          method: 'POST',
+          body: JSON.stringify({ bookingId })
+        });
         alert('Đặt tour thành công! Vui lòng đến văn phòng Danangbest để hoàn tất thanh toán.');
         window.location.href = './index.html';
       }
     } catch (err) {
       console.error(err);
       alert('Đã xảy ra lỗi: ' + err.message);
-      confirmBtn.disabled    = false;
+      confirmBtn.disabled = false;
       confirmBtn.textContent = 'XÁC NHẬN ĐẶT TOUR';
     }
   };

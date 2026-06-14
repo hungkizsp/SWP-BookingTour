@@ -66,7 +66,9 @@ public class TourMapper {
         }
 
         if (tour.getSchedules() != null) {
-            response.setSchedules(tour.getSchedules().stream().map(TourMapper::toScheduleSummary).toList());
+            response.setSchedules(tour.getSchedules().stream()
+                    .filter(s -> s.getStatus() == null || s.getStatus() != TourStatus.CANCELLED)
+                    .map(TourMapper::toScheduleSummary).toList());
         }
 
         response.setItinerary(tour.getItinerary());

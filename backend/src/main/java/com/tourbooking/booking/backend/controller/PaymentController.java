@@ -36,6 +36,15 @@ public class PaymentController {
                 .build();
     }
 
+    @PostMapping("/cash/intent")
+    public ApiResponse<PaymentResponse> createCashPaymentIntent(@RequestBody PaymentRequest request) {
+        return ApiResponse.<PaymentResponse>builder()
+                .code(200)
+                .message("Cash payment intent recorded")
+                .data(paymentService.createCashPaymentIntent(request))
+                .build();
+    }
+
     @PostMapping("/payos/webhook")
     public void handlePayOSWebhook(@RequestBody String payload,
                                    @RequestHeader(value = "x-api-validate-signature", required = false) String signature) {

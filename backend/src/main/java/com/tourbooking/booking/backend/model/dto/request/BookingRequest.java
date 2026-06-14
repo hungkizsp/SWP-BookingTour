@@ -39,7 +39,7 @@ public class BookingRequest {
                 + (infantCount != null ? infantCount : 0);
     }
 
-    /** Số chỗ chiếm trên schedule (ADULT + CHILD; INFANT không tính) */
+    /** Số chỗ chiếm trên schedule (Adult + Child ONLY) */
     public int getOccupiedSlots() {
         return (adultCount != null ? adultCount : 0)
                 + (childCount != null ? childCount : 0);

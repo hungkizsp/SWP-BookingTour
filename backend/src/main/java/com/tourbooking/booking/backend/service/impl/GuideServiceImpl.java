@@ -35,6 +35,7 @@ public class GuideServiceImpl implements GuideService {
     private final TourActivityImageRepository tourActivityImageRepository;
     private final TourProgressLogRepository tourProgressLogRepository;
     private final ProgressLogService progressLogService;
+    private final com.tourbooking.booking.backend.repository.BookingRepository bookingRepository;
 
     private static final String UPLOAD_DIR = "uploads";
 
@@ -83,6 +84,16 @@ public class GuideServiceImpl implements GuideService {
             schedule.setStatus(TourStatus.IN_PROGRESS);
         }
         tourScheduleRepository.save(schedule);
+
+        if (schedule.getStatus() == TourStatus.IN_PROGRESS) {
+            List<com.tourbooking.booking.backend.model.entity.Booking> bookings = bookingRepository.findByScheduleId(scheduleId);
+            for (com.tourbooking.booking.backend.model.entity.Booking b : bookings) {
+                if (b.getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED) {
+                    b.setStatus(com.tourbooking.booking.backend.model.entity.enums.BookingStatus.IN_PROGRESS);
+                }
+            }
+            bookingRepository.saveAll(bookings);
+        }
     }
 
     @Override
@@ -139,6 +150,14 @@ public class GuideServiceImpl implements GuideService {
         schedule.setReportSubmittedAt(LocalDateTime.now());
         schedule.setStatus(TourStatus.COMPLETED);
         tourScheduleRepository.save(schedule);
+
+        List<com.tourbooking.booking.backend.model.entity.Booking> bookings = bookingRepository.findByScheduleId(scheduleId);
+        for (com.tourbooking.booking.backend.model.entity.Booking b : bookings) {
+            if (b.getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.IN_PROGRESS || b.getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED) {
+                b.setStatus(com.tourbooking.booking.backend.model.entity.enums.BookingStatus.COMPLETED);
+            }
+        }
+        bookingRepository.saveAll(bookings);
     }
 
     private TourScheduleResponse mapToResponse(TourSchedule schedule, boolean includeFullDetails) {

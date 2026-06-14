@@ -20,6 +20,20 @@ public class InvoiceServiceImpl implements InvoiceService {
 
     @Override
     public Invoice getInvoice(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails) {
+            String email = ((org.springframework.security.core.userdetails.UserDetails) auth.getPrincipal()).getUsername();
+            boolean isStaffOrAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
+            if (!isStaffOrAdmin) {
+                if (!booking.getUser().getEmail().equals(email)) {
+                    throw new RuntimeException("Access denied");
+                }
+            }
+        }
 
         return invoiceRepository.findByBookingId(bookingId);
     }

@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 @Data
 public class TourScheduleRequest {
+    private Long id;
     private LocalDate startDate;
     private LocalDate endDate;
     private Integer availableSlots;

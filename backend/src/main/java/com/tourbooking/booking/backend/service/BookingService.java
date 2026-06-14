@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface BookingService {
     List<BookingResponse> getAllBookings();
+    org.springframework.data.domain.Page<BookingResponse> getAllBookingsPaginated(int page, int size);
     List<BookingResponse> getBookingsByUserId(Long userId);
     BookingResponse getBookingById(Long id);
     BookingResponse createBooking(BookingRequest request);

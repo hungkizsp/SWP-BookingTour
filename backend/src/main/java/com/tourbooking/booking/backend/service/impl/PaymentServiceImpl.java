@@ -76,7 +76,7 @@ public class PaymentServiceImpl implements PaymentService {
         } else {
             payment.setAmount(booking.getTotalPrice());
             payment.setStatus(PaymentStatus.SUCCESS);
-            if (booking.getStatus() == BookingStatus.PENDING) {
+            if (booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.PENDING_CASH) {
                 incrementDiscountUsage(booking);
             }
             booking.setStatus(BookingStatus.CONFIRMED);
@@ -130,6 +130,29 @@ public class PaymentServiceImpl implements PaymentService {
                 .checkoutUrl(checkoutUrl)
                 .orderCode(orderCode)
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public PaymentResponse createCashPaymentIntent(PaymentRequest request) {
+        Booking booking = bookingRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        Payment payment = new Payment();
+        payment.setBooking(booking);
+        payment.setAmount(booking.getTotalPrice());
+        payment.setPaymentMethod("CASH");
+        payment.setTransactionCode("CASH-" + System.currentTimeMillis());
+        payment.setStatus(PaymentStatus.PENDING);
+        payment.setPaymentDate(LocalDateTime.now());
+        Payment saved = paymentRepository.save(payment);
+        
+        booking.setStatus(BookingStatus.PENDING_CASH);
+        bookingRepository.save(booking);
+        
+        savePaymentLog(saved, "Cash payment intent created");
+
+        return toResponse(saved);
     }
 
     @Override
@@ -490,17 +513,26 @@ public class PaymentServiceImpl implements PaymentService {
                     return saved;
                 });
 
+        boolean isNewlyPaid = false;
         if (payment.getStatus() != PaymentStatus.SUCCESS) {
             payment.setStatus(PaymentStatus.SUCCESS);
             payment.setPaymentDate(LocalDateTime.now());
-            if (booking.getStatus() == BookingStatus.PENDING) {
-                incrementDiscountUsage(booking);
-            }
+            paymentRepository.save(payment);
+            isNewlyPaid = true;
+        }
+
+        if (booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.PENDING_CASH) {
+            incrementDiscountUsage(booking);
             booking.setStatus(BookingStatus.CONFIRMED);
             bookingRepository.save(booking);
-            paymentRepository.save(payment);
-            awardLoyaltyAndSendMail(booking, payment.getAmount());
-            savePaymentLog(payment, "Manual transfer confirmed by operator");
+            
+            if (isNewlyPaid) {
+                awardLoyaltyAndSendMail(booking, payment.getAmount());
+                savePaymentLog(payment, "Manual transfer confirmed by operator");
+            }
+        } else if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.IN_PROGRESS && booking.getStatus() != BookingStatus.COMPLETED) {
+            booking.setStatus(BookingStatus.CONFIRMED);
+            bookingRepository.save(booking);
         }
 
         return toResponse(payment);
@@ -526,11 +558,15 @@ public class PaymentServiceImpl implements PaymentService {
     private void awardLoyaltyAndSendMail(Booking booking, BigDecimal paidAmount) {
         if (booking.getUser() != null && paidAmount != null) {
             loyaltyService.addPoint(booking.getUser().getId(), paidAmount.intValue() / 100000);
-            mailService.sendPaymentSuccessEmail(
-                    booking.getUser().getEmail(),
-                    booking.getUser().getFullName(),
-                    booking.getId(),
-                    paidAmount);
+            try {
+                mailService.sendPaymentSuccessEmail(
+                        booking.getUser().getEmail(),
+                        booking.getUser().getFullName(),
+                        booking.getId(),
+                        paidAmount);
+            } catch (Exception e) {
+                log.error("Failed to send payment success email for booking {}: {}", booking.getId(), e.getMessage());
+            }
         }
     }
 
@@ -541,7 +577,7 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setPaymentDate(LocalDateTime.now());
         Booking booking = payment.getBooking();
-        if (booking.getStatus() == BookingStatus.PENDING) {
+        if (booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.PENDING_CASH) {
             incrementDiscountUsage(booking);
         }
         booking.setStatus(BookingStatus.CONFIRMED);

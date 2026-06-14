@@ -14,6 +14,8 @@ public interface PaymentService {
     PaymentResponse makePayment(PaymentRequest request);
 
     PaymentResponse createPayOSPayment(PaymentRequest request);
+    
+    PaymentResponse createCashPaymentIntent(PaymentRequest request);
 
     PaymentResponse createVNPayPayment(Long bookingId, HttpServletRequest request);
 

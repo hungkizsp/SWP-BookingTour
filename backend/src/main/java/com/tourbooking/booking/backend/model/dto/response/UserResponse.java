@@ -17,4 +17,8 @@ public class UserResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private boolean enabled;
+    private String bio;
+    private Integer experienceYears;
+    private java.time.LocalDate dateOfBirth;
+    private String gender;
 }

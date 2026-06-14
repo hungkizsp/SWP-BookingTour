@@ -18,6 +18,10 @@ public class UserMapper {
         response.setAddress(user.getAddress());
         response.setIsActive(user.getIsActive());
         response.setEnabled(Boolean.TRUE.equals(user.getIsActive()));
+        response.setBio(user.getBio());
+        response.setExperienceYears(user.getExperienceYears());
+        response.setDateOfBirth(user.getDateOfBirth());
+        response.setGender(user.getGender());
         return response;
     }
 
@@ -38,5 +42,9 @@ public class UserMapper {
         if (request.getPhoneNumber() != null) user.setPhoneNumber(request.getPhoneNumber());
         if (request.getAddress() != null) user.setAddress(request.getAddress());
         if (request.getIsActive() != null) user.setIsActive(request.getIsActive());
+        if (request.getBio() != null) user.setBio(request.getBio());
+        if (request.getExperienceYears() != null) user.setExperienceYears(request.getExperienceYears());
+        if (request.getDateOfBirth() != null) user.setDateOfBirth(request.getDateOfBirth());
+        if (request.getGender() != null) user.setGender(request.getGender());
     }
 }

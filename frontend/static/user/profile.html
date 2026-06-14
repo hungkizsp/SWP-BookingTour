@@ -87,6 +87,39 @@
                     <label>Địa chỉ</label>
                     <input type="text" id="profAddress" value="">
                   </div>
+                  <div class="form-group" style="grid-column: span 2;">
+                    <label>Avatar / Profile Image</label>
+                    <div style="display:flex; align-items:center; gap: 15px;">
+                      <img id="avatarPreview" src="../assets/images/default-avatar.png" alt="Avatar Preview" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
+                      <div style="flex:1;">
+                        <input type="file" id="profAvatarFile" accept="image/*" style="display: none;" onchange="handleAvatarSelect(event)">
+                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('profAvatarFile').click()">Chọn Ảnh</button>
+                        <p id="avatarUploadStatus" style="font-size: 0.85rem; color: #64748b; margin-top: 5px;"></p>
+                        <input type="hidden" id="profAvatar" value="">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="form-group" id="genderGroup">
+                    <label>Giới tính</label>
+                    <select id="profGender">
+                      <option value="">Chọn giới tính</option>
+                      <option value="MALE">Nam</option>
+                      <option value="FEMALE">Nữ</option>
+                      <option value="OTHER">Khác</option>
+                    </select>
+                  </div>
+                  <div class="form-group" id="dobGroup">
+                    <label>Ngày sinh</label>
+                    <input type="date" id="profDob" value="">
+                  </div>
+                  <div class="form-group" id="bioGroup" style="display:none; grid-column: span 2;">
+                    <label>Giới thiệu bản thân (Bio)</label>
+                    <textarea id="profBio" rows="3" style="width: 100%; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 1rem;"></textarea>
+                  </div>
+                  <div class="form-group" id="expGroup" style="display:none;">
+                    <label>Năm kinh nghiệm</label>
+                    <input type="number" id="profExp" min="0" value="0">
+                  </div>
                 </div>
                 <button type="submit" class="btn" style="margin-top:10px;">Lưu Thay Đổi</button>
               </form>
@@ -129,6 +162,17 @@
       $('profEmail').value = u.email || '';
       $('profPhone').value = u.phoneNumber || '';
       $('profAddress').value = u.address || '';
+      $('profAvatar').value = u.avatarUrl || '';
+      $('avatarPreview').src = u.avatarUrl || '../assets/images/default-avatar.png';
+      $('profGender').value = u.gender || '';
+      $('profDob').value = u.dateOfBirth || '';
+
+      if (u.role === 'GUIDE') {
+        $('bioGroup').style.display = 'block';
+        $('expGroup').style.display = 'block';
+        $('profBio').value = u.bio || '';
+        $('profExp').value = u.experienceYears || 0;
+      }
 
       $('loyaltyPoints').textContent = Number(points || 0).toLocaleString('vi-VN');
       $('tierLabel').textContent = `Hạng: ${calcTier(points)}`;
@@ -144,8 +188,16 @@
       const payload = {
         fullName: $('profName').value.trim(),
         phoneNumber: $('profPhone').value.trim(),
-        address: $('profAddress').value.trim()
+        address: $('profAddress').value.trim(),
+        avatarUrl: $('profAvatar').value.trim(),
+        gender: $('profGender').value,
+        dateOfBirth: $('profDob').value || null
       };
+      
+      if (user.role === 'GUIDE') {
+        payload.bio = $('profBio').value.trim();
+        payload.experienceYears = parseInt($('profExp').value) || 0;
+      }
 
       await TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}`, {
         method: 'PUT',
@@ -158,6 +210,37 @@
       sessionStorage.setItem('user', JSON.stringify(me));
 
       alert('Cập nhật thông tin cá nhân thành công.');
+    }
+
+    async function handleAvatarSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+      if (!user?.id) return;
+
+      $('avatarUploadStatus').textContent = 'Đang tải ảnh lên...';
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const res = await TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}/documents`, {
+          method: 'POST',
+          body: formData,
+          headers: {} // Let browser set Content-Type to multipart/form-data with boundary
+        });
+
+        if (res?.data) {
+           $('profAvatar').value = res.data;
+           $('avatarPreview').src = res.data;
+           $('avatarUploadStatus').textContent = 'Tải ảnh thành công!';
+           $('avatarUploadStatus').style.color = '#10b981';
+        }
+      } catch (err) {
+        $('avatarUploadStatus').textContent = 'Lỗi tải ảnh: ' + err.message;
+        $('avatarUploadStatus').style.color = '#ef4444';
+      }
     }
 
     loadProfile().catch(err => {

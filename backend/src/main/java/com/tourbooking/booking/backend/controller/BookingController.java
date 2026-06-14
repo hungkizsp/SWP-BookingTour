@@ -26,7 +26,16 @@ public class BookingController {
     }
 
     @GetMapping
-    public ApiResponse<List<BookingResponse>> getAllBookings() {
+    public ApiResponse<?> getAllBookings(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        if (page != null && size != null) {
+            return ApiResponse.<org.springframework.data.domain.Page<BookingResponse>>builder()
+                    .code(HttpStatus.OK.value())
+                    .message("Successfully retrieved paginated bookings")
+                    .data(bookingService.getAllBookingsPaginated(page, size))
+                    .build();
+        }
         return ApiResponse.<List<BookingResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Successfully retrieved all bookings")

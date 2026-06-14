@@ -20,7 +20,19 @@ public class StaffController {
 
     @GetMapping("/bookings")
     @PreAuthorize("hasAnyRole('STAFF', 'ADMIN')")
-    public ApiResponse<List<com.tourbooking.booking.backend.model.dto.response.BookingResponse>> listBookings(@RequestParam(required = false) String status) {
+    public ApiResponse<?> listBookings(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        
+        if (page != null && size != null) {
+            return ApiResponse.<org.springframework.data.domain.Page<com.tourbooking.booking.backend.model.dto.response.BookingResponse>>builder()
+                    .code(HttpStatus.OK.value())
+                    .message("Bookings paginated retrieved successfully")
+                    .data(staffService.listBookingsPaginated(status, page, size))
+                    .build();
+        }
+        
         return ApiResponse.<List<com.tourbooking.booking.backend.model.dto.response.BookingResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Bookings retrieved successfully")

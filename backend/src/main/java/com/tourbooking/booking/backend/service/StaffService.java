@@ -14,6 +14,7 @@ public interface StaffService {
     void processRefund(Long refundId, RefundStatus status, String staffNote);
     List<UserResponse> listGuides();
     List<BookingResponse> listBookings(String status);
+    org.springframework.data.domain.Page<BookingResponse> listBookingsPaginated(String status, int page, int size);
     List<TourScheduleResponse> listSchedules();
     TourScheduleResponse getScheduleDetails(Long id);
 }

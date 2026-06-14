@@ -21,6 +21,7 @@ public class BookingScheduler {
 
     private final BookingRepository bookingRepository;
     private final TourScheduleRepository tourScheduleRepository;
+    private final com.tourbooking.booking.backend.service.MailService mailService;
 
     @Scheduled(fixedRate = 60000) // Runs every 1 minute
     @Transactional
@@ -28,18 +29,18 @@ public class BookingScheduler {
         LocalDateTime cutoff = LocalDateTime.now().minusMinutes(15);
         log.debug("Running BookingScheduler to release PENDING online bookings created before {}", cutoff);
 
-        List<Booking> expiredBookings = bookingRepository.findPendingPayosBookingsBefore(cutoff);
+        List<Booking> expiredBookings = bookingRepository.findPendingOnlineUnpaidBefore(cutoff);
 
         if (expiredBookings.isEmpty()) {
             return;
         }
 
-        log.info("Found {} expired PENDING online bookings to cancel", expiredBookings.size());
+        log.info("Found {} expired PENDING online bookings to expire", expiredBookings.size());
 
         for (Booking booking : expiredBookings) {
             try {
-                // Change status to CANCELLED
-                booking.setStatus(BookingStatus.CANCELLED);
+                // Change status to EXPIRED
+                booking.setStatus(BookingStatus.EXPIRED);
                 bookingRepository.save(booking);
 
                 // Return slots back to schedule
@@ -57,6 +58,10 @@ public class BookingScheduler {
                         });
                     }
                 }
+                
+                try {
+                    mailService.sendBookingCancelledEmail(booking.getUser().getEmail(), booking.getUser().getFullName(), booking.getId(), booking.getTotalPrice());
+                } catch (Exception e) {}
             } catch (Exception e) {
                 log.error("Error releasing slots for booking #{}", booking.getId(), e);
             }

@@ -42,6 +42,18 @@ public class User extends Base {
     @Column(name = "CurrentSessionID", length = 64)
     private String currentSessionId;
 
+    @Column(name = "Bio", columnDefinition = "NVARCHAR(MAX)")
+    private String bio;
+
+    @Column(name = "ExperienceYears")
+    private Integer experienceYears;
+
+    @Column(name = "DateOfBirth")
+    private java.time.LocalDate dateOfBirth;
+
+    @Column(name = "Gender", length = 20)
+    private String gender;
+
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Booking> bookings;
 

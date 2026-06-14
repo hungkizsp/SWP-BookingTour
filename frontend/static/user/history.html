@@ -300,11 +300,38 @@
       return n.toLocaleString('vi-VN') + ' ₫';
     }
 
+    function renderItinerary(itineraryStr) {
+      if (!itineraryStr) return '';
+      try {
+        const items = JSON.parse(itineraryStr);
+        if (Array.isArray(items)) {
+          const listHtml = items.map(item => `
+            <div style="margin-bottom:12px;">
+              <strong style="color:var(--primary); font-size:0.95rem;">${item.title || ''}</strong>
+              <div style="margin-top:4px; padding-left:10px; border-left:3px solid #cbd5e1; color:#334155;">${item.content || ''}</div>
+            </div>
+          `).join('');
+          return `<div style="margin-top:16px; font-size:0.9rem; color:#475569; max-height:250px; overflow-y:auto; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+                    <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình chi tiết:</strong>
+                    ${listHtml}
+                  </div>`;
+        }
+      } catch (e) {
+        return `<div style="margin-top:16px; font-size:0.9rem; color:#475569; max-height:150px; overflow-y:auto; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+                  <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình:</strong>
+                  ${itineraryStr.replace(/\\n/g, '<br>')}
+                </div>`;
+      }
+      return '';
+    }
+
     function statusBadge(status) {
       const s = String(status || '').toUpperCase();
       if (s === 'CANCELLED') return { cls: 'cancelled', label: 'Đã hủy' };
+      if (s === 'EXPIRED') return { cls: 'cancelled', label: 'Hết hạn thanh toán' };
       if (s === 'COMPLETED' || s === 'SUCCESS') return { cls: 'success', label: 'Đã hoàn thành' };
       if (s === 'CONFIRMED') return { cls: 'pending', label: 'Đã xác nhận' };
+      if (s === 'IN_PROGRESS') return { cls: 'pending', label: 'Đang diễn ra' };
       if (s === 'REFUND_REQUESTED') return { cls: 'pending', label: 'Đang chờ hoàn tiền' };
       return { cls: 'pending', label: 'Đang chờ' };
     }
@@ -319,14 +346,14 @@
       root.innerHTML = list.map(b => {
         const badge = statusBadge(b.status);
         const canCancel = String(b.status || '').toUpperCase() === 'PENDING' || String(b.status || '').toUpperCase() === 'CONFIRMED';
-        const canReview = String(b.status || '').toUpperCase() === 'COMPLETED' || String(b.status || '').toUpperCase() === 'SUCCESS';
+        const canReview = String(b.status || '').toUpperCase() === 'COMPLETED';
 
         return `
           <div class="booking-card">
             <div class="booking-header">
               <div>
                 <h3 style="margin:0; font-size:1.1rem;">${(b.tourName || 'Tour').toString()}</h3>
-                <small style="color:var(--text-faint);">Mã đặt tour: #${b.id}</small>
+                <small style="color:var(--text-faint); display: flex; align-items: center; gap: 5px;">Mã đặt tour: <strong>${b.bookingCode || '#' + b.id}</strong> <button onclick="navigator.clipboard.writeText('${b.bookingCode || '#' + b.id}'); alert('Đã copy mã đặt tour!')" style="background:none;border:none;cursor:pointer;color:var(--primary);" title="Copy mã đặt tour">📋</button></small>
               </div>
               <span class="status-badge ${badge.cls}">${badge.label}</span>
             </div>
@@ -335,6 +362,26 @@
               <div><strong style="color:var(--text-faint);">Số khách:</strong> ${b.numberOfPeople ?? 0}</div>
               <div><strong style="color:var(--text-faint);">Tổng tiền:</strong> ${formatCurrency(b.totalPrice)}</div>
               <div><strong style="color:var(--text-faint);">Giảm giá:</strong> ${formatCurrency(b.discountAmount)}</div>
+            </div>
+            <div style="margin-top:12px; padding-top:12px; border-top: 1px dashed rgba(0,0,0,0.1);">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.95rem;">
+                    <div><strong style="color:var(--text-faint);">Khởi hành:</strong> ${b.departureDate || 'Chưa rõ'}</div>
+                    <div><strong style="color:var(--text-faint);">Trở về:</strong> ${b.returnDate || 'Chưa rõ'}</div>
+                    <div style="grid-column: 1 / -1; margin-top: 8px;">
+                        <strong style="color:var(--text-faint);">Tour Guide:</strong> 
+                        ${b.guideFullName ? `
+                            <div style="display:flex; align-items:center; gap: 12px; margin-top:8px; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+                                <img src="${b.guideAvatar || 'https://via.placeholder.com/50'}" alt="Avatar" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">
+                                <div>
+                                    <div style="font-weight:600; color:#0f172a;">${b.guideFullName}</div>
+                                    <div style="font-size:0.85rem; color:#64748b;">📞 ${b.guidePhone || 'N/A'} ${b.guideExperience ? `• 🌟 ${b.guideExperience} năm kinh nghiệm` : ''}</div>
+                                    ${b.guideBio ? `<div style="font-size:0.85rem; color:#475569; margin-top:4px;"><i>"${b.guideBio}"</i></div>` : ''}
+                                </div>
+                            </div>
+                        ` : '<span style="color:#ef4444; font-style:italic; margin-left: 8px;">Tour guide information has not been assigned yet and will be updated before the departure date.</span>'}
+                    </div>
+                </div>
+                ${renderItinerary(b.tourItinerary)}
             </div>
             <div class="booking-actions">
               <button class="btn btn-secondary" onclick="downloadInvoice(${b.id})">Tải Hóa Đơn PDF</button>
@@ -349,7 +396,7 @@
     function applyFilter(kind) {
       const k = String(kind || 'all');
       if (k === 'pending') {
-        render(allBookings.filter(b => ['PENDING', 'CONFIRMED', 'REFUND_REQUESTED'].includes(String(b.status || '').toUpperCase())));
+        render(allBookings.filter(b => ['PENDING', 'CONFIRMED', 'REFUND_REQUESTED', 'IN_PROGRESS'].includes(String(b.status || '').toUpperCase())));
         return;
       }
       if (k === 'done') {
@@ -357,7 +404,7 @@
         return;
       }
       if (k === 'cancelled') {
-        render(allBookings.filter(b => String(b.status || '').toUpperCase() === 'CANCELLED'));
+        render(allBookings.filter(b => ['CANCELLED', 'EXPIRED'].includes(String(b.status || '').toUpperCase())));
         return;
       }
       render(allBookings);

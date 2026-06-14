@@ -164,11 +164,35 @@ public class TourServiceImpl implements TourService {
 
         // Update Schedules
         if (request.getSchedules() != null) {
-            existingTour.getSchedules().clear();
+            java.util.Set<Long> incomingIds = request.getSchedules().stream()
+                    .map(com.tourbooking.booking.backend.model.dto.request.TourScheduleRequest::getId)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toSet());
+                    
+            for (TourSchedule existingSchedule : existingTour.getSchedules()) {
+                if (!incomingIds.contains(existingSchedule.getId())) {
+                    existingSchedule.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED);
+                }
+            }
+            
             request.getSchedules().forEach(sReq -> {
-                TourSchedule schedule = TourMapper.toScheduleEntity(sReq);
-                schedule.setTour(existingTour);
-                existingTour.getSchedules().add(schedule);
+                if (sReq.getId() != null) {
+                    existingTour.getSchedules().stream()
+                        .filter(s -> s.getId().equals(sReq.getId()))
+                        .findFirst()
+                        .ifPresent(existing -> {
+                            existing.setStartDate(sReq.getStartDate());
+                            existing.setEndDate(sReq.getEndDate());
+                            existing.setMaxSlots(sReq.getMaxSlots());
+                            if (sReq.getAvailableSlots() != null) existing.setAvailableSlots(sReq.getAvailableSlots());
+                            // status can be updated if sent
+                            existing.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN);
+                        });
+                } else {
+                    TourSchedule schedule = TourMapper.toScheduleEntity(sReq);
+                    schedule.setTour(existingTour);
+                    existingTour.getSchedules().add(schedule);
+                }
             });
         }
 

@@ -14,7 +14,9 @@ import java.util.List;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByUserId(Long userId);
+    List<Booking> findByScheduleId(Long scheduleId);
     List<Booking> findByStatus(BookingStatus status);
+    org.springframework.data.domain.Page<Booking> findByStatus(BookingStatus status, org.springframework.data.domain.Pageable pageable);
     List<Booking> findByBookingDateBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
     List<Booking> findByCreatedAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
     long countByStatus(BookingStatus status);
@@ -22,7 +24,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     // UC47: Tìm booking PENDING chưa có payment thành công, đã quá hạn (tạo trước cutoff)
     @Query("SELECT b FROM Booking b WHERE b.status = 'PENDING' AND b.createdAt < :cutoff " +
            "AND (b.payment IS NULL OR b.payment.status <> 'SUCCESS')")
-    List<Booking> findPendingUnpaidBefore(@Param("cutoff") LocalDateTime cutoff);
+    List<Booking> findPendingOnlineUnpaidBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    @Query("SELECT b FROM Booking b WHERE b.status = 'PENDING_CASH' AND b.createdAt < :cutoff " +
+           "AND (b.payment IS NULL OR b.payment.status <> 'SUCCESS')")
+    List<Booking> findPendingCashUnpaidBefore(@Param("cutoff") LocalDateTime cutoff);
 
     @Query("SELECT b FROM Booking b WHERE b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PENDING " +
            "AND b.createdAt < :cutoff AND b.payment.paymentMethod = 'PAYOS'")

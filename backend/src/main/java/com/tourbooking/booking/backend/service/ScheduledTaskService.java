@@ -10,6 +10,7 @@ import com.tourbooking.booking.backend.repository.BookingRepository;
 import com.tourbooking.booking.backend.repository.TourScheduleRepository;
 import com.tourbooking.booking.backend.repository.TourRepository;
 import com.tourbooking.booking.backend.repository.UserRepository;
+import com.tourbooking.booking.backend.service.TourScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -38,6 +39,7 @@ public class ScheduledTaskService {
 
     private final BookingRepository bookingRepository;
     private final TourScheduleRepository tourScheduleRepository;
+    private final TourScheduleService tourScheduleService;  // Task 4: for releaseAvailableSlots
     private final UserRepository userRepository;
     private final MailService mailService;
     private final TourRepository tourRepository;
@@ -46,7 +48,7 @@ public class ScheduledTaskService {
     // UC46: Tự động cập nhật chỗ trống (AvailableSlots) cho TourSchedule
     // Chạy mỗi 5 phút
     // ================================================================
-    // @Scheduled(fixedRate = 300_000)
+    @Scheduled(fixedRate = 300_000)
     @Transactional
     public void autoUpdateSlots() {
         List<TourSchedule> openSchedules = tourScheduleRepository.findAllOpen();
@@ -60,7 +62,7 @@ public class ScheduledTaskService {
             if (schedule.getBookings() != null) {
                 confirmedCount = schedule.getBookings().stream()
                         .filter(b -> b.getStatus() == BookingStatus.CONFIRMED)
-                        .mapToLong(b -> b.getNumberOfPeople() != null ? b.getNumberOfPeople() : 0)
+                        .mapToLong(b -> b.getOccupiedSlots() != null ? b.getOccupiedSlots() : (b.getNumberOfPeople() != null ? b.getNumberOfPeople() : 0))
                         .sum();
             }
 
@@ -80,86 +82,108 @@ public class ScheduledTaskService {
     }
 
     // ================================================================
-    // UC47: Tự động hủy Booking PENDING chưa thanh toán quá 24 giờ
-    // UC48: Gửi email thông báo cho khách hàng khi booking bị hủy
-    // Chạy mỗi 1 giờ
+    // UC: Booking Lifecycle (CONFIRMED -> IN_PROGRESS -> COMPLETED)
+    // Chạy mỗi 5 phút
     // ================================================================
-    // @Scheduled(fixedRate = 3_600_000)
+    @Scheduled(fixedRate = 300_000)
     @Transactional
-    public void autoCancelUnpaidBookings() {
-        LocalDateTime cutoff = LocalDateTime.now().minusHours(24);
-        List<Booking> unpaidBookings = bookingRepository.findPendingUnpaidBefore(cutoff);
+    public void autoUpdateBookingLifecycle() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Booking> allBookings = bookingRepository.findAll();
+        
+        for (Booking booking : allBookings) {
+            TourSchedule schedule = booking.getSchedule();
+            if (schedule == null) continue;
+            
+            TourStatus scheduleStatus = schedule.getStatus();
+            if (scheduleStatus == null) continue;
+            
+            // CONFIRMED -> IN_PROGRESS
+            if (booking.getStatus() == BookingStatus.CONFIRMED && scheduleStatus == TourStatus.IN_PROGRESS) {
+                booking.setStatus(BookingStatus.IN_PROGRESS);
+                bookingRepository.save(booking);
+                log.info("Booking #{} changed to IN_PROGRESS via Schedule Sync", booking.getId());
+            }
+            
+            // IN_PROGRESS -> COMPLETED
+            if (booking.getStatus() == BookingStatus.IN_PROGRESS && scheduleStatus == TourStatus.COMPLETED) {
+                booking.setStatus(BookingStatus.COMPLETED);
+                bookingRepository.save(booking);
+                log.info("Booking #{} changed to COMPLETED via Schedule Sync", booking.getId());
+            }
+        }
+    }
 
-        if (unpaidBookings.isEmpty())
-            return;
+    // ================================================================
+    // TASK 4: Seat Hold Timeout — auto-expire PENDING bookings older than 15 min
+    // Runs every 10 minutes. Releases occupied slots back to TourSchedule.
+    // Also handles CASH payments that were never confirmed.
+    // ================================================================
+    @Scheduled(fixedRate = 600_000) // every 10 minutes
+    @Transactional
+    public void autoExpireUnpaidBookings() {
+        // Online cutoff = 15 minutes ago
+        LocalDateTime onlineCutoff = LocalDateTime.now().minusMinutes(15);
+        List<Booking> unpaidOnlineBookings = bookingRepository.findPendingOnlineUnpaidBefore(onlineCutoff);
+
+        // Cash cutoff = 12 hours ago
+        LocalDateTime cashCutoff = LocalDateTime.now().minusHours(12);
+        List<Booking> unpaidCashBookings = bookingRepository.findPendingCashUnpaidBefore(cashCutoff);
+
+        List<Booking> unpaidBookings = new java.util.ArrayList<>();
+        unpaidBookings.addAll(unpaidOnlineBookings);
+        unpaidBookings.addAll(unpaidCashBookings);
+
+        if (unpaidBookings.isEmpty()) return;
 
         for (Booking booking : unpaidBookings) {
-            // Hủy booking
-            booking.setStatus(BookingStatus.CANCELLED);
+            // Mark as EXPIRED (not CANCELLED — keeps the audit trail distinct)
+            booking.setStatus(BookingStatus.EXPIRED);
             bookingRepository.save(booking);
 
-            // Trả lại slot cho TourSchedule
+            // Release occupied slots (ADULT + CHILD only; infants were never counted)
             TourSchedule schedule = booking.getSchedule();
             if (schedule != null) {
                 int slotsToRelease = booking.getOccupiedSlots() != null
                         ? booking.getOccupiedSlots()
-                        : (booking.getNumberOfPeople() != null ? booking.getNumberOfPeople() : 0);
-                if (slotsToRelease <= 0) {
-                    continue;
+                        : 0;
+                if (slotsToRelease > 0) {
+                    try {
+                        tourScheduleService.releaseAvailableSlots(schedule.getId(), slotsToRelease);
+                        log.info("[SEAT-HOLD] Released {} slots for schedule #{} (booking #{} expired)",
+                                slotsToRelease, schedule.getId(), booking.getId());
+                    } catch (Exception e) {
+                        log.error("[SEAT-HOLD] Failed to release slots for booking #{}: {}",
+                                booking.getId(), e.getMessage());
+                    }
                 }
-                int currentSlots = schedule.getAvailableSlots() != null ? schedule.getAvailableSlots() : 0;
-                schedule.setAvailableSlots(currentSlots + slotsToRelease);
-                // Nếu đang FULL và giờ có slot → mở lại
-                if (schedule.getStatus() == TourStatus.FULL && schedule.getAvailableSlots() > 0) {
-                    schedule.setStatus(TourStatus.OPEN);
-                }
-                tourScheduleRepository.save(schedule);
             }
 
-            // UC48: Gửi email thông báo cho khách hàng
+            // Notify customer via email
             User customer = booking.getUser();
             if (customer != null && customer.getEmail() != null) {
-                mailService.sendBookingCancelledEmail(
-                        customer.getEmail(),
-                        customer.getFullName() != null ? customer.getFullName() : "Quý khách",
-                        booking.getId(),
-                        booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO);
+                try {
+                    mailService.sendBookingCancelledEmail(
+                            customer.getEmail(),
+                            customer.getFullName() != null ? customer.getFullName() : "Quý khách",
+                            booking.getId(),
+                            booking.getTotalPrice() != null ? booking.getTotalPrice() : BigDecimal.ZERO);
+                } catch (Exception e) {
+                    log.warn("[SEAT-HOLD] Could not send expiry email for booking #{}: {}",
+                            booking.getId(), e.getMessage());
+                }
             }
         }
 
-        log.info("[UC47] Đã hủy {} booking PENDING quá hạn (> 24h chưa thanh toán).", unpaidBookings.size());
-    }
-
-    // ================================================================
-    // UC49: Tự động cộng điểm loyalty cho booking COMPLETED
-    // Chạy mỗi ngày lúc 02:00 AM
-    // Lưu ý: Hiện tại schema chưa có bảng LoyaltyPoints, nên chỉ log
-    // Khi có bảng, implement logic cộng điểm thực tế tại đây
-    // ================================================================
-    // @Scheduled(cron = "0 0 2 * * *")
-    @Transactional
-    public void autoUpdateLoyaltyPoints() {
-        log.info("[UC49] Bắt đầu cộng điểm loyalty cho booking COMPLETED...");
-
-        List<Booking> allBookings = bookingRepository.findAll();
-        long completedCount = allBookings.stream()
-                .filter(b -> b.getStatus() == BookingStatus.COMPLETED)
-                .count();
-
-        // TODO: Khi schema có bảng LoyaltyPoints, implement logic sau:
-        // - Mỗi booking COMPLETED → cộng (totalPrice / 10_000) điểm cho user
-        // - Lưu vào bảng LoyaltyPoints
-        // - Đánh dấu booking đã được cộng điểm (thêm cột PointsAwarded)
-
-        log.info("[UC49] Hiện có {} booking COMPLETED. Sẵn sàng cộng điểm khi bảng LoyaltyPoints được tạo.",
-                completedCount);
+        log.info("[SEAT-HOLD] Auto-expired {} bookings (PENDING > 15 min, slots released).",
+                unpaidBookings.size());
     }
 
     // ================================================================
     // UC50: Tạo báo cáo tháng và gửi cho tất cả ADMIN
     // Chạy vào 8:00 AM ngày đầu tiên của mỗi tháng
     // ================================================================
-    // @Scheduled(cron = "0 0 8 1 * *")
+    @Scheduled(cron = "0 0 8 1 * *")
     @Transactional
     public void generateMonthlyReport() {
         LocalDateTime now = LocalDateTime.now();

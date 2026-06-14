@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guide Profile - TourBooking</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        body { background: #fbf6ee; margin: 0; padding-bottom: 70px; }
+        .guide-header { background: #115e59; color: white; padding: 20px; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 15px; }
+        .guide-header h1 { margin: 0; font-size: 1.5rem; font-family: 'Fraunces'; }
+        
+        .profile-container { padding: 20px; }
+        .profile-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 4px 16px rgba(15,23,42,0.06); border: 1px solid rgba(0,0,0,0.05); }
+        
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; color: #1e293b; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 1rem; }
+        
+        .bottom-nav { 
+            position: fixed; 
+            bottom: 20px; 
+            left: 50%; 
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.75); 
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1); 
+            display: flex; 
+            justify-content: space-around; 
+            padding: 12px 0; 
+            border-radius: 20px; 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            z-index: 1000; 
+        }
+        .nav-link { 
+            color: #ef4444; 
+            text-decoration: none; 
+            font-size: 0.95rem; 
+            font-weight: 700; 
+            display: flex; 
+            align-items: center; 
+            gap: 10px;
+            padding: 8px 24px;
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+        .nav-link.active { color: #0f766e; background: rgba(15, 118, 110, 0.1); }
+        .nav-link:active { background: rgba(239, 68, 68, 0.1); }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <header class="guide-header">
+        <a href="dashboard.html" style="color:white; text-decoration:none;"><i class="fas fa-arrow-left"></i></a>
+        <h1>My Profile</h1>
+    </header>
+
+    <div class="profile-container">
+        <div class="profile-card">
+            <form onsubmit="event.preventDefault(); updateGuideProfile();">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="gName" required>
+                </div>
+                <div class="form-group">
+                    <label>Email (Read-only)</label>
+                    <input type="email" id="gEmail" disabled style="background:#f1f5f9; color:#64748b;">
+                </div>
+                <div class="form-group">
+                    <label>Phone Number</label>
+                    <input type="tel" id="gPhone" required>
+                </div>
+                <div class="form-group">
+                    <label>Gender</label>
+                    <select id="gGender">
+                        <option value="MALE">Male</option>
+                        <option value="FEMALE">Female</option>
+                        <option value="OTHER">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Date of Birth</label>
+                    <input type="date" id="gDob">
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <input type="text" id="gAddress">
+                </div>
+                <div class="form-group">
+                    <label>Years of Experience</label>
+                    <input type="number" id="gExp" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Short Introduction / Bio</label>
+                    <textarea id="gBio" rows="4"></textarea>
+                </div>
+                <button type="submit" class="btn" style="width:100%; background:#0f766e; color:white; padding:12px; border-radius:8px; border:none; font-weight:bold; cursor:pointer;">Update Profile</button>
+            </form>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <a href="dashboard.html" class="nav-link" style="color:#0f766e;"><i class="fas fa-list"></i> <span>Tours</span></a>
+        <a href="profile.html" class="nav-link active"><i class="fas fa-user-circle"></i> <span>Profile</span></a>
+        <a href="#" class="nav-link" onclick="TB.logout()"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a>
+    </nav>
+
+    <script src="/assets/js/api.js"></script>
+    <script>
+        const $ = id => document.getElementById(id);
+        
+        async function loadProfile() {
+            const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+            if (!user?.id || user.role !== 'GUIDE') {
+                TB.goToLogin('Vui lòng đăng nhập với tài khoản Guide.');
+                return;
+            }
+            try {
+                const res = await TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}`);
+                const u = res.data;
+                $('gName').value = u.fullName || '';
+                $('gEmail').value = u.email || '';
+                $('gPhone').value = u.phoneNumber || '';
+                $('gGender').value = u.gender || 'MALE';
+                $('gDob').value = u.dateOfBirth || '';
+                $('gAddress').value = u.address || '';
+                $('gExp').value = u.experienceYears || '';
+                $('gBio').value = u.bio || '';
+            } catch(e) {
+                alert("Cannot load profile");
+            }
+        }
+
+        async function updateGuideProfile() {
+            const user = JSON.parse(sessionStorage.getItem('user') || 'null');
+            const payload = {
+                fullName: $('gName').value.trim(),
+                phoneNumber: $('gPhone').value.trim(),
+                gender: $('gGender').value,
+                dateOfBirth: $('gDob').value || null,
+                address: $('gAddress').value.trim(),
+                experienceYears: parseInt($('gExp').value) || null,
+                bio: $('gBio').value.trim()
+            };
+            try {
+                const res = await TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+                
+                // Update local storage
+                user.fullName = payload.fullName;
+                sessionStorage.setItem('user', JSON.stringify(user));
+                
+                alert('Profile updated successfully!');
+            } catch(e) {
+                alert('Update failed: ' + e.message);
+            }
+        }
+
+        loadProfile();
+    </script>
+</body>
+</html>

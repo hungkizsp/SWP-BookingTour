@@ -11,6 +11,10 @@ public class BookingMapper {
             return null;
         BookingResponse response = new BookingResponse();
         response.setId(booking.getId());
+        if (booking.getId() != null) {
+            java.time.LocalDateTime dateToUse = booking.getBookingDate() != null ? booking.getBookingDate() : java.time.LocalDateTime.now();
+            response.setBookingCode(String.format("TOUR-%d-%06d", dateToUse.getYear(), booking.getId()));
+        }
         if (booking.getUser() != null) {
             response.setUserId(booking.getUser().getId());
             response.setUserFullName(booking.getUser().getFullName());
@@ -19,9 +23,18 @@ public class BookingMapper {
         if (booking.getSchedule() != null) {
             response.setScheduleId(booking.getSchedule().getId());
             response.setDepartureDate(booking.getSchedule().getStartDate());
+            response.setReturnDate(booking.getSchedule().getEndDate());
             if (booking.getSchedule().getTour() != null) {
                 response.setTourId(booking.getSchedule().getTour().getId());
                 response.setTourName(booking.getSchedule().getTour().getTourName());
+                response.setTourItinerary(booking.getSchedule().getTour().getItinerary());
+            }
+            if (booking.getSchedule().getGuide() != null) {
+                response.setGuideFullName(booking.getSchedule().getGuide().getFullName());
+                response.setGuidePhone(booking.getSchedule().getGuide().getPhoneNumber());
+                response.setGuideAvatar(booking.getSchedule().getGuide().getAvatarUrl());
+                response.setGuideBio(booking.getSchedule().getGuide().getBio());
+                response.setGuideExperience(booking.getSchedule().getGuide().getExperienceYears());
             }
         }
         response.setBookingDate(booking.getBookingDate());

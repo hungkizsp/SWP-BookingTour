@@ -58,7 +58,7 @@ public class MailService {
             message.setText(
                 "Xin chào " + customerName + ",\n\n" +
                 "Booking #" + bookingId + " của bạn (tổng tiền: " + amount + " VND) " +
-                "đã bị hủy tự động vì không có thanh toán trong vòng 24 giờ.\n\n" +
+                "đã bị hủy tự động vì không có thanh toán trong vòng 15 phút.\n\n" +
                 "Nếu bạn vẫn muốn đặt tour, vui lòng truy cập lại website.\n\n" +
                 "Trân trọng,\nĐội ngũ TourBooking"
             );
@@ -119,6 +119,39 @@ public class MailService {
         } catch (Exception e) {
             log.error("Failed to send booking confirmation email for booking {}: {}", bookingId, e.getMessage(), e);
         }
+    }
+
+    public void sendBookingCreatedEmail(String toEmail, String customerName, Long bookingId, java.math.BigDecimal amount) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(resolveFromAddress());
+            message.setTo(toEmail);
+            message.setSubject("[TourBooking] Đặt tour thành công - #" + bookingId);
+            message.setText("Xin chào " + customerName + ",\n\nBạn đã đặt tour thành công.\nMã đặt tour: #" + bookingId + "\nTổng tiền: " + amount + " VND\n\nVui lòng hoàn tất thanh toán để giữ chỗ.\n\nTrân trọng,\nĐội ngũ TourBooking");
+            mailSender.send(message);
+        } catch (Exception e) {}
+    }
+
+    public void sendGuideAssignedEmail(String toEmail, String customerName, String tourName, String guideName) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(resolveFromAddress());
+            message.setTo(toEmail);
+            message.setSubject("[TourBooking] Cập nhật hướng dẫn viên cho tour " + tourName);
+            message.setText("Xin chào " + customerName + ",\n\nTour của bạn đã được phân công hướng dẫn viên: " + guideName + ".\n\nTrân trọng,\nĐội ngũ TourBooking");
+            mailSender.send(message);
+        } catch (Exception e) {}
+    }
+    
+    public void sendRefundProcessedEmail(String toEmail, String customerName, Long bookingId, String status) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(resolveFromAddress());
+            message.setTo(toEmail);
+            message.setSubject("[TourBooking] Kết quả yêu cầu hoàn tiền cho booking #" + bookingId);
+            message.setText("Xin chào " + customerName + ",\n\nYêu cầu hoàn tiền của bạn đã được: " + status + ".\n\nTrân trọng,\nĐội ngũ TourBooking");
+            mailSender.send(message);
+        } catch (Exception e) {}
     }
 
     private String resolveFromAddress() {

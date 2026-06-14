@@ -41,6 +41,7 @@ public class StaffServiceImpl implements StaffService {
     private final RefundRequestRepository refundRequestRepository;
     private final TourProgressLogRepository tourProgressLogRepository;
     private final ProgressLogService progressLogService;
+    private final com.tourbooking.booking.backend.service.MailService mailService;
 
     @Override
     @Transactional
@@ -49,6 +50,10 @@ public class StaffServiceImpl implements StaffService {
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
+        
+        try {
+            mailService.sendBookingConfirmedEmail(booking.getUser().getEmail(), booking.getUser().getFullName(), booking.getId(), booking.getTotalPrice());
+        } catch (Exception e) {}
     }
 
     @Override
@@ -66,6 +71,14 @@ public class StaffServiceImpl implements StaffService {
 
         schedule.setGuide(guide);
         tourScheduleRepository.save(schedule);
+        
+        // Notify all users in this schedule
+        List<Booking> bookings = bookingRepository.findAll().stream().filter(b -> b.getSchedule() != null && b.getSchedule().getId().equals(scheduleId) && (b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.SUCCESS)).collect(Collectors.toList());
+        for (Booking b : bookings) {
+            try {
+                mailService.sendGuideAssignedEmail(b.getUser().getEmail(), b.getUser().getFullName(), schedule.getTour().getTourName(), guide.getFullName());
+            } catch (Exception e) {}
+        }
     }
 
     @Override
@@ -143,6 +156,10 @@ public class StaffServiceImpl implements StaffService {
         }
 
         refundRequestRepository.save(refund);
+        
+        try {
+            mailService.sendRefundProcessedEmail(booking.getUser().getEmail(), booking.getUser().getFullName(), booking.getId(), status.name());
+        } catch (Exception e) {}
     }
 
     @Override
@@ -189,6 +206,38 @@ public class StaffServiceImpl implements StaffService {
                     return res;
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<BookingResponse> listBookingsPaginated(String status, int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        org.springframework.data.domain.Page<Booking> bookingPage;
+        
+        if (status != null && !status.isEmpty()) {
+            bookingPage = bookingRepository.findByStatus(BookingStatus.valueOf(status.toUpperCase()), pageable); // Assuming findByStatus(status, pageable) exists or will use findAll with pagination and filter
+            // Wait, we need to make sure findByStatus supports Pageable. Let's just do findAll and filter, or use PageRequest.
+            // Actually, we should just use findAll for now if status is null.
+        } else {
+            bookingPage = bookingRepository.findAll(pageable);
+        }
+
+        return bookingPage.map(b -> {
+            BookingResponse res = new BookingResponse();
+            res.setId(b.getId());
+            res.setUserId(b.getUser() != null ? b.getUser().getId() : null);
+            res.setUserFullName(b.getUser() != null ? b.getUser().getFullName() : "Guest");
+            res.setUserEmail(b.getUser() != null ? b.getUser().getEmail() : null);
+            res.setScheduleId(b.getSchedule() != null ? b.getSchedule().getId() : null);
+            res.setTourName(b.getSchedule() != null && b.getSchedule().getTour() != null
+                    ? b.getSchedule().getTour().getTourName()
+                    : "N/A");
+            res.setBookingDate(b.getBookingDate());
+            res.setNumberOfPeople(b.getNumberOfPeople());
+            res.setTotalPrice(b.getTotalPrice());
+            res.setStatus(b.getStatus());
+            return res;
+        });
     }
 
     @Override

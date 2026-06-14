@@ -51,15 +51,15 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">Pending Bookings</div>
-                    <div class="stat-value">12</div>
+                    <div class="stat-value" id="stat-pending-bookings">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Unassigned Schedules</div>
-                    <div class="stat-value">4</div>
+                    <div class="stat-value" id="stat-unassigned-schedules">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Open Refunds</div>
-                    <div class="stat-value">2</div>
+                    <div class="stat-value" id="stat-open-refunds">0</div>
                 </div>
             </div>
         </main>
@@ -84,7 +84,34 @@
                 return;
             }
             document.getElementById('userInfo').innerText = user.fullName || user.email || 'Staff';
+            
+            loadDashboardStats();
         });
+
+        async function loadDashboardStats() {
+            try {
+                // Fetch bookings
+                const bookingsRes = await TB.apiFetch('/api/v1/staff/bookings');
+                const bookings = bookingsRes.data?.content || bookingsRes.data || [];
+                const pendingCount = bookings.filter(b => b.status === 'PENDING').length;
+                
+                // Fetch schedules
+                const schedulesRes = await TB.apiFetch('/api/v1/staff/schedules');
+                const schedules = schedulesRes.data?.content || schedulesRes.data || [];
+                const unassignedCount = schedules.filter(s => !s.guideId).length;
+                
+                // Fetch refunds
+                const refundsRes = await TB.apiFetch('/api/v1/staff/refunds');
+                const refunds = refundsRes.data?.content || refundsRes.data || [];
+                const openRefundsCount = refunds.filter(r => r.status === 'PENDING').length;
+                
+                document.getElementById('stat-pending-bookings').innerText = pendingCount;
+                document.getElementById('stat-unassigned-schedules').innerText = unassignedCount;
+                document.getElementById('stat-open-refunds').innerText = openRefundsCount;
+            } catch (err) {
+                console.error('Error fetching dashboard stats:', err);
+            }
+        }
     </script>
 </body>
 </html>

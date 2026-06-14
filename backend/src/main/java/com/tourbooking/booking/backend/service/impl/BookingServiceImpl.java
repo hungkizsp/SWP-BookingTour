@@ -72,6 +72,7 @@ public class BookingServiceImpl implements BookingService {
     private final TourScheduleService tourScheduleService;
     private final PaymentService paymentService;
     private final Environment environment;
+    private final com.tourbooking.booking.backend.service.MailService mailService;
 
     private final com.tourbooking.booking.backend.repository.DiscountPolicyRepository discountPolicyRepository;
 
@@ -92,6 +93,22 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<BookingResponse> getAllBookingsPaginated(int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        org.springframework.data.domain.Page<Booking> bookingPage = bookingRepository.findAll(pageable);
+        List<Booking> bookings = bookingPage.getContent();
+        Map<Long, com.tourbooking.booking.backend.model.entity.RefundRequest> refundMap = loadLatestRefundsByBookingId(
+                bookings.stream().map(Booking::getId).toList());
+        
+        return bookingPage.map(booking -> {
+            BookingResponse response = BookingMapper.toResponse(booking);
+            enrichRefundInfo(response, booking.getId(), refundMap);
+            return response;
+        });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByUserId(Long userId) {
         return bookingRepository.findByUserId(userId).stream()
                 .map(BookingMapper::toResponse)
@@ -103,6 +120,21 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponse getBookingById(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails) {
+            String email = ((org.springframework.security.core.userdetails.UserDetails) auth.getPrincipal()).getUsername();
+            boolean isStaffOrAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
+            if (!isStaffOrAdmin) {
+                User currentUser = userRepository.findByEmail(email)
+                        .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                if (!booking.getUser().getId().equals(currentUser.getId())) {
+                    throw new AppException(ErrorCode.FORBIDDEN);
+                }
+            }
+        }
+
         BookingResponse response = BookingMapper.toResponse(booking);
         enrichRefundInfo(response, id, null);
         return response;
@@ -127,7 +159,8 @@ public class BookingServiceImpl implements BookingService {
                 tourStartDate,
                 declaredAdultCount,
                 declaredChildCount,
-                declaredInfantCount);
+                declaredInfantCount,
+                schedule.getMaxSlots());
 
         int slotsToDeduct = classification.getSlotsToDeduct();
         BigDecimal tourPrice = schedule.getTour().getPrice();
@@ -164,6 +197,13 @@ public class BookingServiceImpl implements BookingService {
         applyDiscountIfPresent(saved, request.getDiscountCode());
 
         Booking savedBooking = bookingRepository.save(saved);
+        
+        try {
+            mailService.sendBookingCreatedEmail(user.getEmail(), user.getFullName(), savedBooking.getId(), savedBooking.getTotalPrice());
+        } catch (Exception e) {
+            log.warn("Could not send booking creation email: " + e.getMessage());
+        }
+        
         return BookingMapper.toResponse(savedBooking);
     }
 
@@ -257,41 +297,51 @@ public class BookingServiceImpl implements BookingService {
             TourSchedule newSchedule = tourScheduleRepository.findByIdWithLock(request.getScheduleId())
                     .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
 
-            int people = existingBooking.getNumberOfPeople();
+            int occupied = resolveOccupiedSlots(existingBooking);
 
             // check slot schedule mới
-            if (newSchedule.getAvailableSlots() < people) {
+            if (newSchedule.getAvailableSlots() < occupied) {
                 throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
             }
 
             // trả slot schedule cũ
-            oldSchedule.setAvailableSlots(oldSchedule.getAvailableSlots() + people);
+            oldSchedule.setAvailableSlots(oldSchedule.getAvailableSlots() + occupied);
 
             // trừ slot schedule mới
-            newSchedule.setAvailableSlots(newSchedule.getAvailableSlots() - people);
+            newSchedule.setAvailableSlots(newSchedule.getAvailableSlots() - occupied);
 
             tourScheduleRepository.save(oldSchedule);
             tourScheduleRepository.save(newSchedule);
 
             existingBooking.setSchedule(newSchedule);
         }
-        // handle change occupied slots (ADULT + CHILD; INFANT không chiếm chỗ)
-        if (request.getAdultCount() != null) {
+        // handle change occupied slots (Adults + Children ONLY, exclude Infants)
+        if (request.getAdultCount() != null || request.getChildCount() != null || request.getOccupiedSlots() > 0) {
             int oldSlots = resolveOccupiedSlots(existingBooking);
-            int newSlots = request.getOccupiedSlots();
+            int newSlots = oldSlots;
+
+            if (request.getAdultCount() != null || request.getChildCount() != null) {
+                int a = request.getAdultCount() != null ? request.getAdultCount() : 0;
+                int c = request.getChildCount() != null ? request.getChildCount() : 0;
+                newSlots = a + c;
+            } else if (request.getOccupiedSlots() > 0) {
+                newSlots = request.getOccupiedSlots();
+            }
 
             int slotDiff = newSlots - oldSlots;
 
-            TourSchedule schedule = tourScheduleRepository.findByIdWithLock(existingBooking.getSchedule().getId())
-                    .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
+            if (slotDiff != 0) {
+                TourSchedule schedule = tourScheduleRepository.findByIdWithLock(existingBooking.getSchedule().getId())
+                        .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
 
-            if (slotDiff > 0 && schedule.getAvailableSlots() < slotDiff) {
-                throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
+                if (slotDiff > 0 && schedule.getAvailableSlots() < slotDiff) {
+                    throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
+                }
+
+                schedule.setAvailableSlots(schedule.getAvailableSlots() - slotDiff);
+                tourScheduleRepository.save(schedule);
+                existingBooking.setOccupiedSlots(newSlots);
             }
-
-            schedule.setAvailableSlots(schedule.getAvailableSlots() - slotDiff);
-            tourScheduleRepository.save(schedule);
-            existingBooking.setOccupiedSlots(newSlots);
         }
         BookingMapper.updateEntityFromRequest(existingBooking, request);
 

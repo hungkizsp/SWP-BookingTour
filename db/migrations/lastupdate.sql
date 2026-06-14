@@ -43,6 +43,10 @@ BEGIN
         AvatarURL NVARCHAR(255) NULL,
         PhoneNumber NVARCHAR(20) NULL,
         Address NVARCHAR(255) NULL,
+        Gender NVARCHAR(20) NULL,
+        DateOfBirth DATE NULL,
+        Bio NVARCHAR(MAX) NULL,
+        ExperienceYears INT NULL,
         IsActive BIT NOT NULL DEFAULT 1,
         CurrentSessionID NVARCHAR(64) NULL,
         CreatedAt DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
@@ -536,3 +540,5 @@ BEGIN
 END
 GO
 
+- -   N o   D B   s c h e m a   m o d i f i c a t i o n s   r e q u i r e d   f o r   T A S K   5   ( D y n a m i c   I n f a n t   L i m i t )   a s   M a x S l o t s   a l r e a d y   e x i s t s   i n   T o u r S c h e d u l e s .  
+ 
