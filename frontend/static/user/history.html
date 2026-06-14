@@ -167,6 +167,18 @@
     </div>
   </div>
 
+  <!-- Modal Xem Chi Tiết -->
+  <div class="modal-overlay" id="detailsModal">
+    <div class="modal-box" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+      <h3 style="margin-top:0; color:var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 10px;">Chi
+        Tiết Đặt Tour</h3>
+      <div id="detailsContent">Đang tải dữ liệu...</div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeModals()">Đóng</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal Hủy Tour -->
   <div class="modal-overlay" id="cancelModal">
     <div class="modal-box">
@@ -368,23 +380,15 @@
                     <div><strong style="color:var(--text-faint);">Khởi hành:</strong> ${b.departureDate || 'Chưa rõ'}</div>
                     <div><strong style="color:var(--text-faint);">Trở về:</strong> ${b.returnDate || 'Chưa rõ'}</div>
                     <div style="grid-column: 1 / -1; margin-top: 8px;">
-                        <strong style="color:var(--text-faint);">Tour Guide:</strong> 
-                        ${b.guideFullName ? `
-                            <div style="display:flex; align-items:center; gap: 12px; margin-top:8px; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
-                                <img src="${b.guideAvatar || 'https://via.placeholder.com/50'}" alt="Avatar" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">
-                                <div>
-                                    <div style="font-weight:600; color:#0f172a;">${b.guideFullName}</div>
-                                    <div style="font-size:0.85rem; color:#64748b;">📞 ${b.guidePhone || 'N/A'} ${b.guideExperience ? `• 🌟 ${b.guideExperience} năm kinh nghiệm` : ''}</div>
-                                    ${b.guideBio ? `<div style="font-size:0.85rem; color:#475569; margin-top:4px;"><i>"${b.guideBio}"</i></div>` : ''}
-                                </div>
-                            </div>
-                        ` : '<span style="color:#ef4444; font-style:italic; margin-left: 8px;">Tour guide information has not been assigned yet and will be updated before the departure date.</span>'}
+                        <strong style="color:var(--text-faint);">Tour Guide:</strong>
+                        ${renderGuideCard(b, false)}
                     </div>
                 </div>
                 ${renderItinerary(b.tourItinerary)}
             </div>
             <div class="booking-actions">
               <button class="btn btn-secondary" onclick="downloadInvoice(${b.id})">Tải Hóa Đơn PDF</button>
+              <button class="btn" style="background:#059669; color:white; border:none;" onclick="openDetailsModal(${b.id})">Xem Chi Tiết</button>
               ${canCancel ? `<button class="btn btn-secondary" style="color:#ef4444; border-color:#fee2e2; background:#fef2f2;" onclick="openCancelModal(${b.id})">Hủy Đặt Tour</button>` : ''}
               ${canReview ? `<button class="btn" style="background:#0284c7; color:white;" onclick="openReviewModal(${b.id})">Đánh Giá Chuyến Đi</button>` : ''}
             </div>
@@ -504,9 +508,104 @@
       $('reviewModal').style.display = 'flex';
     }
 
+    function calculateAge(dobStr) {
+      if (!dobStr) return null;
+      const dob = new Date(dobStr);
+      if (isNaN(dob.getTime())) return null;
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+      return age;
+    }
+
+    function genderLabel(g) {
+      const v = String(g || '').trim().toLowerCase();
+      if (['male', 'm', 'nam'].includes(v)) return 'Nam';
+      if (['female', 'f', 'nữ', 'nu'].includes(v)) return 'Nữ';
+      if (!v) return '';
+      return 'Khác';
+    }
+
+    function renderGuideCard(b, detailed = false) {
+      if (!b.guideFullName) {
+        return `<span style="color:#ef4444; font-style:italic; margin-left: 8px;">
+      Tour guide information has not been assigned yet and will be updated before the departure date.
+    </span>`;
+      }
+
+      const age = calculateAge(b.guideDateOfBirth);
+      const gender = genderLabel(b.guideGender);
+
+      const subInfo = [
+        b.guideExperience ? `🌟 ${b.guideExperience} năm kinh nghiệm` : null,
+        gender ? `⚧ ${gender}` : null,
+        age !== null ? `🎂 ${age} tuổi` : null
+      ].filter(Boolean).join(' • ');
+
+      const avatarSize = detailed ? 60 : 50;
+
+      return `
+    <div style="display:flex; align-items:center; gap: 12px; margin-top:8px; padding:12px; background:#f0fdf4; border-radius:8px; border:1px solid #bbf7d0;">
+      <img src="${b.guideAvatar || 'https://via.placeholder.com/' + avatarSize}" alt="Avatar"
+        style="width:${avatarSize}px; height:${avatarSize}px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+      <div>
+        <div style="font-weight:600; color:#0f172a; font-size:${detailed ? '1.05rem' : '1rem'};">${b.guideFullName}</div>
+        <div style="font-size:0.85rem; color:#166534; margin-top:2px;">📞 ${b.guidePhone || 'N/A'}</div>
+        ${subInfo ? `<div style="font-size:0.85rem; color:#64748b; margin-top:2px;">${subInfo}</div>` : ''}
+        ${b.guideBio ? `<div style="font-size:0.85rem; color:#475569; margin-top:4px;"><i>"${b.guideBio}"</i></div>` : ''}
+      </div>
+    </div>
+  `;
+    }
+
+    async function openDetailsModal(bookingId) {
+      $('detailsModal').style.display = 'flex';
+      $('detailsContent').innerHTML = '<div style="text-align:center; padding: 20px;">Đang tải dữ liệu...</div>';
+      try {
+        const res = await TB.apiFetch(`/api/v1/bookings/${bookingId}`);
+        const b = res.data;
+        if (!b) throw new Error("Không tìm thấy thông tin");
+
+        let itHtml = '';
+        try {
+          const items = JSON.parse(b.tourItinerary || '[]');
+          if (Array.isArray(items)) {
+            itHtml = items.map(item => `<div style="margin-bottom:8px;"><strong>${item.title || ''}</strong><br><span style="color:#555;">${item.content || ''}</span></div>`).join('');
+          }
+        } catch (e) {
+          itHtml = b.tourItinerary ? b.tourItinerary.replace(/\n/g, '<br>') : '';
+        }
+
+        const detailsHtml = `
+          <div style="margin-bottom: 15px;">
+            <h4 style="margin: 0 0 10px 0; color: #333;">Thông Tin Tour</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9rem;">
+                <div><strong>Tên Tour:</strong> ${b.tourName || 'N/A'}</div>
+                <div><strong>Ngày Đi:</strong> ${b.departureDate || 'N/A'}</div>
+                <div><strong>Ngày Về:</strong> ${b.returnDate || 'N/A'}</div>
+                <div><strong>Phương tiện:</strong> ${b.transport || 'Đang cập nhật'}</div>
+            </div>
+            <div style="margin-top: 10px;">
+                <strong>Lịch trình:</strong>
+                <div style="background: #f8fafc; padding: 10px; border-radius: 8px; margin-top: 5px; max-height: 150px; overflow-y: auto; font-size: 0.85rem;">${itHtml}</div>
+            </div>
+          </div>
+          <div style="border-top: 1px dashed #ccc; padding-top: 15px;">
+            <h4 style="margin: 0 0 10px 0; color: #333;">Hướng Dẫn Viên</h4>
+            ${renderGuideCard(b, true)}
+          </div>
+        `;
+        $('detailsContent').innerHTML = detailsHtml;
+      } catch (err) {
+        $('detailsContent').innerHTML = `<div style="color:red; text-align:center;">Lỗi tải dữ liệu: ${err.message}</div>`;
+      }
+    }
+
     function closeModals() {
       $('cancelModal').style.display = 'none';
       $('reviewModal').style.display = 'none';
+      if ($('detailsModal')) $('detailsModal').style.display = 'none';
       if ($('bankName')) $('bankName').value = '';
       if ($('accountNumber')) $('accountNumber').value = '';
       if ($('accountHolder')) $('accountHolder').value = '';

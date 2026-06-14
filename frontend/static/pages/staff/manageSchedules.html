@@ -51,6 +51,12 @@
                 <span id="userInfo" style="font-weight: 600;"></span>
             </header>
 
+            <div style="margin-bottom: 1.5rem; display: flex; gap: 10px; align-items: center;">
+                <input type="number" id="scheduleSearchId" placeholder="Tìm kiếm theo ID Lịch Trình" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc; width: 250px;">
+                <button class="action-btn" onclick="searchSchedule()">Tìm kiếm</button>
+                <button class="action-btn" style="background:#64748b;" onclick="resetScheduleSearch()">Làm mới</button>
+            </div>
+
             <table class="data-table" id="schedulesTable">
                 <thead>
                     <tr>

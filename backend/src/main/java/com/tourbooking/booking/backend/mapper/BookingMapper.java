@@ -12,7 +12,8 @@ public class BookingMapper {
         BookingResponse response = new BookingResponse();
         response.setId(booking.getId());
         if (booking.getId() != null) {
-            java.time.LocalDateTime dateToUse = booking.getBookingDate() != null ? booking.getBookingDate() : java.time.LocalDateTime.now();
+            java.time.LocalDateTime dateToUse = booking.getBookingDate() != null ? booking.getBookingDate()
+                    : java.time.LocalDateTime.now();
             response.setBookingCode(String.format("TOUR-%d-%06d", dateToUse.getYear(), booking.getId()));
         }
         if (booking.getUser() != null) {
@@ -35,6 +36,8 @@ public class BookingMapper {
                 response.setGuideAvatar(booking.getSchedule().getGuide().getAvatarUrl());
                 response.setGuideBio(booking.getSchedule().getGuide().getBio());
                 response.setGuideExperience(booking.getSchedule().getGuide().getExperienceYears());
+                response.setGuideGender(booking.getSchedule().getGuide().getGender());
+                response.setGuideDateOfBirth(booking.getSchedule().getGuide().getDateOfBirth());
             }
         }
         response.setBookingDate(booking.getBookingDate());
@@ -43,20 +46,21 @@ public class BookingMapper {
         response.setDiscountAmount(booking.getDiscountAmount());
         response.setDiscountCode(booking.getDiscountCode());
         response.setStatus(booking.getStatus());
-        
+
         if (booking.getPassengers() != null) {
-            java.util.List<com.tourbooking.booking.backend.model.dto.response.PassengerResponse> passengerResponses = booking.getPassengers().stream().map(p -> {
-                com.tourbooking.booking.backend.model.dto.response.PassengerResponse pr = new com.tourbooking.booking.backend.model.dto.response.PassengerResponse();
-                pr.setId(p.getId());
-                pr.setFullName(p.getFullName());
-                pr.setDateOfBirth(p.getDateOfBirth());
-                pr.setIdNumber(p.getIdNumber());
-                pr.setPassengerType(p.getPassengerType());
-                return pr;
-            }).collect(java.util.stream.Collectors.toList());
+            java.util.List<com.tourbooking.booking.backend.model.dto.response.PassengerResponse> passengerResponses = booking
+                    .getPassengers().stream().map(p -> {
+                        com.tourbooking.booking.backend.model.dto.response.PassengerResponse pr = new com.tourbooking.booking.backend.model.dto.response.PassengerResponse();
+                        pr.setId(p.getId());
+                        pr.setFullName(p.getFullName());
+                        pr.setDateOfBirth(p.getDateOfBirth());
+                        pr.setIdNumber(p.getIdNumber());
+                        pr.setPassengerType(p.getPassengerType());
+                        return pr;
+                    }).collect(java.util.stream.Collectors.toList());
             response.setPassengers(passengerResponses);
         }
-        
+
         return response;
     }
 

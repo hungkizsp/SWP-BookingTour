@@ -201,3 +201,30 @@ window.submitAssignment = async function() {
         closeModal();
     }
 };
+
+window.searchSchedule = async function() {
+    const inputId = document.getElementById('scheduleSearchId').value.trim();
+    if (!inputId) {
+        return loadSchedules();
+    }
+    
+    const tbody = document.querySelector('#schedulesTable tbody');
+    try {
+        const res = await TB.apiFetch(`/api/v1/staff/schedules/${inputId}`);
+        const schedule = res.data;
+        if (!schedule) throw new Error('Not found');
+        allSchedules = [schedule];
+        currentPage = 0;
+        renderSchedulesPage();
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Không tìm thấy lịch trình với ID này.</td></tr>`;
+        const container = document.getElementById('pagination');
+        if(container) container.innerHTML = '';
+    }
+};
+
+window.resetScheduleSearch = function() {
+    document.getElementById('scheduleSearchId').value = '';
+    currentPage = 0;
+    loadSchedules();
+};

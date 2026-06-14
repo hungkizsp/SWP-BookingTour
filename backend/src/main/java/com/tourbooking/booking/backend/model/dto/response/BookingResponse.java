@@ -26,7 +26,7 @@ public class BookingResponse {
     private String refundReason;
     private String refundStatus;
     private BigDecimal refundAmount;
-    
+
     // Additional fields for detail page
     private java.time.LocalDate returnDate;
     private String guideFullName;
@@ -34,5 +34,7 @@ public class BookingResponse {
     private String guideAvatar;
     private String guideBio;
     private Integer guideExperience;
+    private String guideGender;
+    private java.time.LocalDate guideDateOfBirth;
     private String tourItinerary;
 }
