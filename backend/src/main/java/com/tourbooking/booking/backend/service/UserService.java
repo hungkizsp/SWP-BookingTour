@@ -8,6 +8,7 @@ import java.util.List;
 
 public interface UserService {
     List<UserResponse> getAllUsers();
+
     PagedResponse<UserResponse> getAllUsersPaged(Pageable pageable);
 
     UserResponse getUserById(Long id);
@@ -38,9 +39,7 @@ public interface UserService {
 
     long countOnlineUsers();
 
-    // UC24
     String uploadDocument(Long userId, org.springframework.web.multipart.MultipartFile file);
 
-    // UC26
     Integer getLoyaltyPoints(Long userId);
 }

@@ -1,35 +1,117 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Hồ Sơ Của Tôi - TourBooking</title>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
   <style>
-    .layout { display:grid; grid-template-columns: 240px 1fr; gap: 24px; align-items:start; margin-top: 20px; }
-    .sidebar-menu { display: flex; flex-direction: column; gap: 8px; }
-    .sidebar-menu a { padding: 12px 16px; border-radius: 8px; text-decoration: none; color: var(--text-base); font-weight: 600; }
-    .sidebar-menu a:hover { background: rgba(0,0,0,0.05); }
-    .sidebar-menu a.active { background: var(--primary); color: white; }
-    
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; color: var(--text-base); }
-    .form-group input { width: 100%; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 1rem; }
-    
-    .loyalty-card { margin-bottom: 24px; background: linear-gradient(135deg, #1e3a8a, #3b82f6); color: white; padding: 24px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; }
-    .loyalty-points { font-size: 2.5rem; font-weight: 800; font-family: 'Fraunces', serif; }
-    
-    .upload-zone { border: 2px dashed rgba(0,0,0,0.2); padding: 30px; text-align: center; border-radius: 12px; cursor: pointer; transition: 0.2s; }
-    .upload-zone:hover { background: rgba(0,0,0,0.02); border-color: var(--primary); }
-    
+    .layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 24px;
+      align-items: start;
+      margin-top: 20px;
+    }
+
+    .sidebar-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-menu a {
+      padding: 12px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text-base);
+      font-weight: 600;
+    }
+
+    .sidebar-menu a:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .sidebar-menu a.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-base);
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+
+    .loyalty-card {
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .loyalty-points {
+      font-size: 2.5rem;
+      font-weight: 800;
+      font-family: 'Fraunces', serif;
+    }
+
+    .upload-zone {
+      border: 2px dashed rgba(0, 0, 0, 0.2);
+      padding: 30px;
+      text-align: center;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .upload-zone:hover {
+      background: rgba(0, 0, 0, 0.02);
+      border-color: var(--primary);
+    }
+
     @media (max-width: 768px) {
-      .layout { grid-template-columns: 1fr; }
-      .sidebar-menu { flex-direction: row; overflow-x: auto; }
-      .loyalty-card { flex-direction: column; text-align: center; gap: 16px; }
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar-menu {
+        flex-direction: row;
+        overflow-x: auto;
+      }
+
+      .loyalty-card {
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="page-shell">
@@ -58,7 +140,8 @@
             <!-- View Loyalty Points -->
             <div class="loyalty-card">
               <div>
-                <h2 style="margin:0; font-size:1.2rem; font-family:'Manrope',sans-serif; font-weight:600;">Hội Viên TourBooking</h2>
+                <h2 style="margin:0; font-size:1.2rem; font-family:'Manrope',sans-serif; font-weight:600;">Hội Viên
+                  TourBooking</h2>
                 <p style="margin:4px 0 0; color:rgba(255,255,255,0.8);" id="tierLabel">Hạng: -</p>
               </div>
               <div>
@@ -90,10 +173,15 @@
                   <div class="form-group" style="grid-column: span 2;">
                     <label>Avatar / Profile Image</label>
                     <div style="display:flex; align-items:center; gap: 15px;">
-                      <img id="avatarPreview" src="../assets/images/default-avatar.png" alt="Avatar Preview" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
+                      <img id="avatarPreview"
+                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='38' r='18' fill='%2394a3b8'/%3E%3Cpath d='M50 60c-22 0-35 13-35 30h70c0-17-13-30-35-30z' fill='%2394a3b8'/%3E%3C/svg%3E"
+                        alt="Avatar Preview"
+                        style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
                       <div style="flex:1;">
-                        <input type="file" id="profAvatarFile" accept="image/*" style="display: none;" onchange="handleAvatarSelect(event)">
-                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('profAvatarFile').click()">Chọn Ảnh</button>
+                        <input type="file" id="profAvatarFile" accept="image/*" style="display: none;"
+                          onchange="handleAvatarSelect(event)">
+                        <button type="button" class="btn btn-secondary"
+                          onclick="document.getElementById('profAvatarFile').click()">Chọn Ảnh</button>
                         <p id="avatarUploadStatus" style="font-size: 0.85rem; color: #64748b; margin-top: 5px;"></p>
                         <input type="hidden" id="profAvatar" value="">
                       </div>
@@ -114,7 +202,8 @@
                   </div>
                   <div class="form-group" id="bioGroup" style="display:none; grid-column: span 2;">
                     <label>Giới thiệu bản thân (Bio)</label>
-                    <textarea id="profBio" rows="3" style="width: 100%; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 1rem;"></textarea>
+                    <textarea id="profBio" rows="3"
+                      style="width: 100%; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 1rem;"></textarea>
                   </div>
                   <div class="form-group" id="expGroup" style="display:none;">
                     <label>Năm kinh nghiệm</label>
@@ -144,6 +233,7 @@
     }
 
     async function loadProfile() {
+      const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='38' r='18' fill='%2394a3b8'/%3E%3Cpath d='M50 60c-22 0-35 13-35 30h70c0-17-13-30-35-30z' fill='%2394a3b8'/%3E%3C/svg%3E";
       const user = JSON.parse(sessionStorage.getItem('user') || 'null');
       if (!user?.id) {
         TB.goToLogin('Vui lòng đăng nhập để xem hồ sơ.');
@@ -163,7 +253,7 @@
       $('profPhone').value = u.phoneNumber || '';
       $('profAddress').value = u.address || '';
       $('profAvatar').value = u.avatarUrl || '';
-      $('avatarPreview').src = u.avatarUrl || '../assets/images/default-avatar.png';
+      $('avatarPreview').src = u.avatarUrl ? TB.normalizeImageUrl(u.avatarUrl) : DEFAULT_AVATAR;
       $('profGender').value = u.gender || '';
       $('profDob').value = u.dateOfBirth || '';
 
@@ -193,7 +283,7 @@
         gender: $('profGender').value,
         dateOfBirth: $('profDob').value || null
       };
-      
+
       if (user.role === 'GUIDE') {
         payload.bio = $('profBio').value.trim();
         payload.experienceYears = parseInt($('profExp').value) || 0;
@@ -224,7 +314,7 @@
       try {
         const formData = new FormData();
         formData.append('file', file);
-        
+
         const res = await TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}/documents`, {
           method: 'POST',
           body: formData,
@@ -232,10 +322,10 @@
         });
 
         if (res?.data) {
-           $('profAvatar').value = res.data;
-           $('avatarPreview').src = res.data;
-           $('avatarUploadStatus').textContent = 'Tải ảnh thành công!';
-           $('avatarUploadStatus').style.color = '#10b981';
+          $('profAvatar').value = res.data; // giữ path tương đối để lưu DB
+          $('avatarPreview').src = TB.normalizeImageUrl(res.data); // hiển thị thì normalize
+          $('avatarUploadStatus').textContent = 'Tải ảnh thành công!';
+          $('avatarUploadStatus').style.color = '#10b981';
         }
       } catch (err) {
         $('avatarUploadStatus').textContent = 'Lỗi tải ảnh: ' + err.message;
@@ -249,4 +339,5 @@
     });
   </script>
 </body>
+
 </html>
