@@ -23,8 +23,7 @@
         .data-table th, .data-table td { padding: 1rem; text-align: left; border-bottom: 1px solid #e2e8f0; }
         .data-table th { background: #f8fafc; font-weight: 600; color: #475569; }
         
-        .action-btn { background: #0f766e; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
-        .action-btn:hover { background: #115e59; }
+        /* Action buttons are replaced with Tailwind utility classes in markup/JS. */
 
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 100; }
         .modal.active { display: flex; }
@@ -54,10 +53,10 @@
                 <span id="userInfo" style="font-weight: 600;"></span>
             </header>
 
-            <div style="margin-bottom: 1.5rem; display: flex; gap: 10px; align-items: center;">
-                <input type="number" id="scheduleSearchId" placeholder="Tìm kiếm theo ID Lịch Trình" style="padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc; width: 250px;">
-                <button class="action-btn" onclick="searchSchedule()">Tìm kiếm</button>
-                <button class="action-btn" style="background:#64748b;" onclick="resetScheduleSearch()">Làm mới</button>
+            <div class="flex gap-3 items-center mb-6">
+                <input type="number" id="scheduleSearchId" placeholder="Tìm kiếm theo ID Lịch Trình" class="px-3 py-2 rounded-md border border-gray-300 w-64">
+                <button onclick="searchSchedule()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-semibold">Tìm kiếm</button>
+                <button onclick="resetScheduleSearch()" class="px-3 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-md font-semibold">Làm mới</button>
             </div>
 
             <table class="data-table" id="schedulesTable">
@@ -77,11 +76,11 @@
         </main>
     </div>
 
-    <div class="modal" id="assignModal">
+            <div class="modal" id="assignModal">
         <div class="modal-content p-6">
             <div class="flex items-start justify-between mb-4">
                 <h2 class="text-lg font-semibold">Assign Tour Guide</h2>
-                <button aria-label="close" onclick="closeModal()" class="text-gray-500 hover:text-gray-700">×</button>
+                <button aria-label="close" onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
             </div>
 
             <div class="mb-3 text-sm text-gray-600">Schedule: <span id="targetScheduleId" class="font-medium text-gray-800"></span></div>
@@ -90,33 +89,37 @@
             <select id="guideSelect" class="w-full p-2 border rounded-md mb-4"></select>
 
             <div class="flex justify-end gap-3">
-                <button class="px-4 py-2 bg-gray-400 text-white rounded-md" onclick="closeModal()">Close</button>
-                <button class="px-4 py-2 bg-teal-600 text-white rounded-md" onclick="submitAssignment()">Assign</button>
+                <button class="px-4 py-2 bg-gray-400 hover:bg-gray-500 text-white rounded-md font-semibold" onclick="closeModal()">Close</button>
+                <button class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-md font-semibold" onclick="submitAssignment()">Assign</button>
             </div>
         </div>
     </div>
 
     <!-- Progress & Photos Details Modal -->
-    <div class="modal" id="detailsModal">
-        <div class="modal-content" style="width: 650px; max-width: 95%; max-height: 85vh; overflow-y: auto;">
-            <h2 id="detailsTitle">Tour Progress Details</h2>
-            <div style="margin-bottom: 1.5rem;">
-                <h4 style="color: #64748b; margin-bottom: 0.5rem; font-size: 0.9rem;">CURRENT PROGRESS</h4>
-                <div id="detailsProgress" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border-left: 4px solid #0f766e; min-height: 50px; max-height: 300px; overflow-y: auto;"></div>
-            </div>
-            
-            <div style="margin-bottom: 1.5rem;">
-                <h4 style="color: #64748b; margin-bottom: 0.5rem; font-size: 0.9rem;">FINAL REPORT</h4>
-                <div id="detailsReport" style="background: #f8fafc; padding: 1rem; border-radius: 8px; border-left: 4px solid #64748b; min-height: 50px; max-height: 120px; overflow-y: auto; font-size: 0.95rem; line-height: 1.5;"></div>
+            <div class="modal" id="detailsModal">
+        <div class="modal-content w-[650px] max-w-[95%] max-h-[85vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-4">
+                <h2 id="detailsTitle" class="text-lg font-semibold">Tour Progress Details</h2>
+                <button aria-label="close" onclick="closeDetailsModal()" class="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
             </div>
 
-            <div style="margin-bottom: 1.5rem;">
-                <h4 style="color: #64748b; margin-bottom: 0.5rem; font-size: 0.9rem;">ACTIVITY PHOTOS</h4>
-                <div id="detailsPhotos" style="display: flex; gap: 12px; overflow-x: auto; padding: 10px 5px; scrollbar-width: thin; -webkit-overflow-scrolling: touch; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;"></div>
+            <div class="mb-6">
+                <h4 class="text-sm text-slate-500 mb-2">CURRENT PROGRESS</h4>
+                <div id="detailsProgress" class="bg-slate-50 p-4 rounded-md border-l-4 border-emerald-600 min-h-[50px] max-h-[300px] overflow-y-auto"></div>
             </div>
 
-            <div class="modal-actions">
-                <button class="action-btn" style="background:#64748b;" onclick="closeDetailsModal()">Close</button>
+            <div class="mb-6">
+                <h4 class="text-sm text-slate-500 mb-2">FINAL REPORT</h4>
+                <div id="detailsReport" class="bg-slate-50 p-4 rounded-md border-l-4 border-slate-500 min-h-[50px] max-h-[120px] overflow-y-auto text-sm leading-relaxed"></div>
+            </div>
+
+            <div class="mb-6">
+                <h4 class="text-sm text-slate-500 mb-2">ACTIVITY PHOTOS</h4>
+                <div id="detailsPhotos" class="flex gap-3 overflow-x-auto px-1 pb-4 border-b border-slate-100"></div>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="closeDetailsModal()" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-md font-semibold">Close</button>
             </div>
         </div>
     </div>
