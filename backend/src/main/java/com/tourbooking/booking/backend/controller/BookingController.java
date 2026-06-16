@@ -127,6 +127,49 @@ public class BookingController {
                 .data(bookingService.getBookingById(id))
                 .build();
     }
+    
+    /**
+     * UC19: Get detailed booking information
+     */
+    @GetMapping("/{id}/detail")
+    @io.swagger.v3.oas.annotations.Operation(
+        summary = "Get booking detail",
+        description = "Retrieve complete booking details including tour info, customer info, payment info, and status history"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved booking detail"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden - Cannot access other customer's booking"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Booking not found")
+    })
+    public ApiResponse<com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse> getBookingDetail(@PathVariable Long id) {
+        // Extract authenticated customer ID
+        org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() || 
+            !(authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails)) {
+            return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse>builder()
+                    .code(HttpStatus.UNAUTHORIZED.value())
+                    .message("Unauthorized")
+                    .build();
+        }
+        
+        String email = ((org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal()).getUsername();
+        com.tourbooking.booking.backend.model.entity.User currentUser = 
+                userRepository.findByEmail(email)
+                        .orElseThrow(() -> new com.tourbooking.booking.backend.exception.AppException(
+                                com.tourbooking.booking.backend.exception.ErrorCode.USER_NOT_FOUND));
+        
+        com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse detail = 
+                bookingService.getBookingDetail(id, currentUser.getId());
+        
+        return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Successfully retrieved booking detail")
+                .data(detail)
+                .build();
+    }
 
     @PostMapping
     public ApiResponse<BookingResponse> createBooking(@Valid @RequestBody BookingRequest request) {
