@@ -609,6 +609,90 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.save(booking);
         return BookingMapper.toResponse(booking);
     }
+    
+    /**
+     * UC20: Cancel booking with reason and business rule validation
+     */
+    @Override
+    @Transactional
+    public com.tourbooking.booking.backend.model.dto.response.CancelBookingResponse cancelBookingWithReason(
+            Long bookingId, Long customerId, String reason, String additionalDetails) {
+        
+        log.info("[UC20] Cancelling booking {} for customer {} with reason: {}", bookingId, customerId, reason);
+        
+        // Fetch and authorize
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        
+        if (!booking.getUser().getId().equals(customerId)) {
+            log.warn("[UC20] Authorization failed: Customer {} cannot cancel booking {} owned by {}", 
+                     customerId, bookingId, booking.getUser().getId());
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
+        // Business rule: Cannot cancel if already cancelled or completed
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Booking is already cancelled");
+        }
+        if (booking.getStatus() == BookingStatus.COMPLETED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Cannot cancel a completed booking");
+        }
+        
+        // Business rule: Cannot cancel if tour has already started
+        TourSchedule schedule = booking.getSchedule();
+        if (schedule != null && schedule.getStartDate() != null) {
+            java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+            if (today.isAfter(schedule.getStartDate()) || today.isEqual(schedule.getStartDate())) {
+                throw new AppException(ErrorCode.INVALID_REQUEST, 
+                        "Cannot cancel booking - tour has already started or starting today");
+            }
+        }
+        
+        // Update booking status
+        booking.setStatus(BookingStatus.CANCELLED);
+        
+        // Release slots back to schedule
+        if (schedule != null) {
+            int slotsToRelease = resolveOccupiedSlots(booking);
+            tourScheduleService.releaseAvailableSlots(schedule.getId(), slotsToRelease);
+            log.info("[UC20] Released {} slots back to schedule {}", slotsToRelease, schedule.getId());
+        }
+        
+        // Save booking
+        LocalDateTime cancelledAt = LocalDateTime.now();
+        bookingRepository.save(booking);
+        
+        // Determine refund eligibility
+        boolean refundEligible = false;
+        String refundMessage = "This booking is not eligible for refund";
+        
+        if (schedule != null && schedule.getStartDate() != null) {
+            java.time.LocalDate startDate = schedule.getStartDate();
+            java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+            long daysUntilDeparture = java.time.temporal.ChronoUnit.DAYS.between(today, startDate);
+            
+            if (daysUntilDeparture > 7) {
+                refundEligible = true;
+                refundMessage = "You can request a full refund (100%) - more than 7 days before departure";
+            } else if (daysUntilDeparture >= 3) {
+                refundEligible = true;
+                refundMessage = "You can request a partial refund (50%) - 3-7 days before departure";
+            } else if (daysUntilDeparture >= 0) {
+                refundMessage = "No refund available - less than 3 days before departure";
+            }
+        }
+        
+        log.info("[UC20] Booking {} cancelled successfully. Refund eligible: {}", bookingId, refundEligible);
+        
+        return com.tourbooking.booking.backend.model.dto.response.CancelBookingResponse.builder()
+                .success(true)
+                .message("Booking cancelled successfully")
+                .bookingReference("BK-" + bookingId)
+                .cancellationTimestamp(cancelledAt)
+                .refundEligible(refundEligible)
+                .refundMessage(refundMessage)
+                .build();
+    }
 
     /**
      * 2.1 — Khách hàng gửi yêu cầu hoàn tiền.

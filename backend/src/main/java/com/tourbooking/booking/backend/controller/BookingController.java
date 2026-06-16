@@ -103,11 +103,46 @@ public class BookingController {
 
     // UC20
     @PostMapping("/{id}/cancel")
-    public ApiResponse<BookingResponse> cancelBooking(@PathVariable Long id) {
-        return ApiResponse.<BookingResponse>builder()
+    @io.swagger.v3.oas.annotations.Operation(
+        summary = "Cancel booking",
+        description = "Cancel a booking with validation of business rules (not started, not already cancelled/completed)"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Booking cancelled successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Bad Request - Invalid state or tour already started"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Booking not found")
+    })
+    public ApiResponse<com.tourbooking.booking.backend.model.dto.response.CancelBookingResponse> cancelBooking(
+            @PathVariable Long id,
+            @RequestBody @jakarta.validation.Valid com.tourbooking.booking.backend.model.dto.request.CancelBookingRequest request) {
+        
+        // Extract authenticated customer ID
+        org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() || 
+            !(authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails)) {
+            return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.CancelBookingResponse>builder()
+                    .code(HttpStatus.UNAUTHORIZED.value())
+                    .message("Unauthorized")
+                    .build();
+        }
+        
+        String email = ((org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal()).getUsername();
+        com.tourbooking.booking.backend.model.entity.User currentUser = 
+                userRepository.findByEmail(email)
+                        .orElseThrow(() -> new com.tourbooking.booking.backend.exception.AppException(
+                                com.tourbooking.booking.backend.exception.ErrorCode.USER_NOT_FOUND));
+        
+        com.tourbooking.booking.backend.model.dto.response.CancelBookingResponse response = 
+                bookingService.cancelBookingWithReason(id, currentUser.getId(), request.getReason(), request.getAdditionalDetails());
+        
+        return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.CancelBookingResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Booking cancelled successfully")
-                .data(bookingService.cancelBooking(id))
+                .data(response)
                 .build();
     }
 
