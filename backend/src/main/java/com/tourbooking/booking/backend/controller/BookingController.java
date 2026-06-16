@@ -113,14 +113,47 @@ public class BookingController {
 
     // UC21
     @PostMapping("/{id}/refund")
-    public ApiResponse<BookingResponse> requestRefund(
+    @io.swagger.v3.oas.annotations.Operation(
+        summary = "Request refund",
+        description = "Request a refund for a cancelled booking with bank account information"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "Refund request created successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Bad Request - Not cancelled, duplicate request, or missing bank info"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Booking not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Conflict - Refund already exists")
+    })
+    public ApiResponse<com.tourbooking.booking.backend.model.dto.response.RefundRequestResponse> requestRefund(
             @PathVariable Long id,
-            @RequestBody RefundRequest request
-    ) {
-        return ApiResponse.<BookingResponse>builder()
-                .code(HttpStatus.OK.value())
-                .message("Refund requested successfully")
-                .data(bookingService.requestRefund(id, request))
+            @RequestBody @jakarta.validation.Valid com.tourbooking.booking.backend.model.dto.request.RefundRequest request) {
+        
+        // Extract authenticated customer ID
+        org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() || 
+            !(authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails)) {
+            return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.RefundRequestResponse>builder()
+                    .code(HttpStatus.UNAUTHORIZED.value())
+                    .message("Unauthorized")
+                    .build();
+        }
+        
+        String email = ((org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal()).getUsername();
+        com.tourbooking.booking.backend.model.entity.User currentUser = 
+                userRepository.findByEmail(email)
+                        .orElseThrow(() -> new com.tourbooking.booking.backend.exception.AppException(
+                                com.tourbooking.booking.backend.exception.ErrorCode.USER_NOT_FOUND));
+        
+        com.tourbooking.booking.backend.model.dto.response.RefundRequestResponse response = 
+                bookingService.requestRefundEnhanced(id, currentUser.getId(), request);
+        
+        return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.RefundRequestResponse>builder()
+                .code(HttpStatus.CREATED.value())
+                .message("Refund request submitted successfully")
+                .data(response)
                 .build();
     }
 
