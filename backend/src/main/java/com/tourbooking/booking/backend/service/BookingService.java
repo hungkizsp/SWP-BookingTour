@@ -48,6 +48,8 @@ public interface BookingService {
     
     // UC21
     BookingResponse requestRefund(Long id, com.tourbooking.booking.backend.model.dto.request.RefundRequest request);
+    com.tourbooking.booking.backend.model.dto.response.RefundRequestResponse requestRefundEnhanced(
+            Long bookingId, Long customerId, com.tourbooking.booking.backend.model.dto.request.RefundRequest request);
     
     // UC22
     byte[] downloadInvoice(Long id);

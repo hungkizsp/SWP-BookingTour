@@ -960,6 +960,83 @@ public class BookingServiceImpl implements BookingService {
                 id, refundAmount, originalStatus, fullReason);
         return BookingMapper.toResponse(booking);
     }
+    
+    /**
+     * UC21: Request refund with enhanced validation and response
+     */
+    @Override
+    @Transactional
+    public com.tourbooking.booking.backend.model.dto.response.RefundRequestResponse requestRefundEnhanced(
+            Long bookingId, Long customerId, RefundRequest request) {
+        
+        log.info("[UC21] Processing refund request for booking {} by customer {}", bookingId, customerId);
+        
+        // Fetch and authorize
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        
+        if (!booking.getUser().getId().equals(customerId)) {
+            log.warn("[UC21] Authorization failed: Customer {} cannot request refund for booking {} owned by {}", 
+                     customerId, bookingId, booking.getUser().getId());
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
+        // Business rule: Can only request refund for CANCELLED bookings
+        if (booking.getStatus() != BookingStatus.CANCELLED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, 
+                    "Refund can only be requested for cancelled bookings. Please cancel the booking first.");
+        }
+        
+        // Check if refund already exists (prevent duplicate)
+        boolean refundExists = refundRequestRepository.findTopByBooking_IdOrderByCreatedAtDesc(bookingId).isPresent();
+        if (refundExists) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Refund request already exists for this booking");
+        }
+        
+        // Validate bank account information
+        if (request.getBankName() == null || request.getBankName().trim().isEmpty() ||
+            request.getAccountNumber() == null || request.getAccountNumber().trim().isEmpty() ||
+            request.getAccountHolderName() == null || request.getAccountHolderName().trim().isEmpty()) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Complete bank account information is required");
+        }
+        
+        // Calculate refund amount
+        BigDecimal refundAmount = calculateRefundAmount(booking);
+        
+        // Create refund request entity
+        String bankInfo = String.format("Bank: %s | Account: %s | Holder: %s",
+                request.getBankName(), request.getAccountNumber(), request.getAccountHolderName());
+        String fullReason = bankInfo + " | Reason: " + (request.getReason() != null ? request.getReason() : "No reason provided");
+        
+        com.tourbooking.booking.backend.model.entity.RefundRequest refundEntity = 
+                new com.tourbooking.booking.backend.model.entity.RefundRequest();
+        refundEntity.setBooking(booking);
+        refundEntity.setAmount(refundAmount);
+        refundEntity.setReason(fullReason);
+        refundEntity.setStatus(com.tourbooking.booking.backend.model.entity.enums.RefundStatus.PENDING);
+        refundEntity.setOriginalBookingStatus(booking.getStatus());
+        
+        com.tourbooking.booking.backend.model.entity.RefundRequest saved = refundRequestRepository.save(refundEntity);
+        
+        // Update booking status
+        booking.setStatus(BookingStatus.REFUND_REQUESTED);
+        bookingRepository.save(booking);
+        
+        LocalDateTime requestedAt = saved.getCreatedAt();
+        String refundReference = "REF-" + saved.getId();
+        
+        log.info("[UC21] Refund request created: {} | Amount: {} | Status: PENDING", refundReference, refundAmount);
+        
+        return com.tourbooking.booking.backend.model.dto.response.RefundRequestResponse.builder()
+                .success(true)
+                .message("Refund request submitted successfully")
+                .refundReference(refundReference)
+                .refundAmount(refundAmount)
+                .refundStatus("PENDING")
+                .expectedProcessingDays(7) // 5-7 business days
+                .requestedAt(requestedAt)
+                .build();
+    }
 
     /**
      * 2.2 — Tính số tiền hoàn trả theo chính sách:
