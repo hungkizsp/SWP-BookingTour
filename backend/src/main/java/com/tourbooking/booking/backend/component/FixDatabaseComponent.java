@@ -6,8 +6,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +20,7 @@ import java.util.Map;
 public class FixDatabaseComponent implements CommandLineRunner {
 
     private final JdbcTemplate jdbcTemplate;
+    private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -31,8 +35,8 @@ public class FixDatabaseComponent implements CommandLineRunner {
             seedCategories();
             seedCities();
 
-            // 2. Seed Admin User
-            seedAdminUser();
+            // 2. Seed default users for all roles
+            seedDefaultUsers();
 
             // 3. Seed sample Tours (only if empty)
             seedSampleTours();
@@ -65,6 +69,8 @@ public class FixDatabaseComponent implements CommandLineRunner {
     private void migrateSchemaIfNeeded() {
         try {
             log.info("Checking and migrating database schema...");
+
+            applyProjectMigrationScript();
             
             // 1. Check and add AssignedStaffID to ChatSessions
             try {
@@ -92,8 +98,68 @@ public class FixDatabaseComponent implements CommandLineRunner {
             } catch (Exception e) {
                 log.warn("Failed to check/add OriginalBookingStatus to RefundRequests: {}", e.getMessage());
             }
+
+            // 3. Check and add profile/session columns to Users for older databases
+            try {
+                jdbcTemplate.execute(
+                    "IF COL_LENGTH('dbo.Users', 'AvatarURL') IS NULL ALTER TABLE dbo.Users ADD AvatarURL NVARCHAR(255) NULL; " +
+                    "IF COL_LENGTH('dbo.Users', 'PhoneNumber') IS NULL ALTER TABLE dbo.Users ADD PhoneNumber NVARCHAR(20) NULL; " +
+                    "IF COL_LENGTH('dbo.Users', 'Address') IS NULL ALTER TABLE dbo.Users ADD Address NVARCHAR(255) NULL; " +
+                    "IF COL_LENGTH('dbo.Users', 'CurrentSessionID') IS NULL ALTER TABLE dbo.Users ADD CurrentSessionID NVARCHAR(64) NULL; " +
+                    "IF COL_LENGTH('dbo.Users', 'Bio') IS NULL ALTER TABLE dbo.Users ADD Bio NVARCHAR(MAX) NULL; " +
+                    "IF COL_LENGTH('dbo.Users', 'ExperienceYears') IS NULL ALTER TABLE dbo.Users ADD ExperienceYears INT NULL; " +
+                    "IF COL_LENGTH('dbo.Users', 'DateOfBirth') IS NULL ALTER TABLE dbo.Users ADD DateOfBirth DATE NULL; " +
+                    "IF COL_LENGTH('dbo.Users', 'Gender') IS NULL ALTER TABLE dbo.Users ADD Gender NVARCHAR(20) NULL; "
+                );
+                log.info("Schema migration: profile/session columns checked/added to Users.");
+            } catch (Exception e) {
+                log.warn("Failed to check/add profile/session columns to Users: {}", e.getMessage());
+            }
+
+            // 4. Check and add booking columns for older databases
+            try {
+                jdbcTemplate.execute(
+                    "IF COL_LENGTH('dbo.Bookings', 'OccupiedSlots') IS NULL ALTER TABLE dbo.Bookings ADD OccupiedSlots INT NULL; " +
+                    "IF COL_LENGTH('dbo.Bookings', 'DiscountAmount') IS NULL ALTER TABLE dbo.Bookings ADD DiscountAmount DECIMAL(10,2) NULL CONSTRAINT DF_Bookings_DiscountAmount DEFAULT 0; " +
+                    "IF COL_LENGTH('dbo.Bookings', 'DiscountCode') IS NULL ALTER TABLE dbo.Bookings ADD DiscountCode NVARCHAR(50) NULL; "
+                );
+                jdbcTemplate.execute(
+                    "UPDATE dbo.Bookings SET OccupiedSlots = NumberOfPeople WHERE OccupiedSlots IS NULL AND NumberOfPeople IS NOT NULL; " +
+                    "UPDATE dbo.Bookings SET DiscountAmount = 0 WHERE DiscountAmount IS NULL; "
+                );
+                log.info("Schema migration: booking columns checked/added to Bookings.");
+            } catch (Exception e) {
+                log.warn("Failed to check/add booking columns to Bookings: {}", e.getMessage());
+            }
         } catch (Exception e) {
             log.error("Schema migration error: {}", e.getMessage());
+        }
+    }
+
+    private void applyProjectMigrationScript() {
+        Path migrationPath = Path.of("..", "db", "migrations", "lastupdate.sql").normalize();
+        if (!Files.exists(migrationPath)) {
+            log.warn("Project migration script not found at {}", migrationPath.toAbsolutePath());
+            return;
+        }
+
+        try {
+            String script = Files.readString(migrationPath).replace("\u0000", "");
+            String[] batches = script.split("(?im)^\\s*GO\\s*$");
+            int executed = 0;
+
+            for (String batch : batches) {
+                String sql = batch.trim();
+                if (sql.isEmpty()) {
+                    continue;
+                }
+                jdbcTemplate.execute(sql);
+                executed++;
+            }
+
+            log.info("Schema migration: executed {} batches from {}.", executed, migrationPath);
+        } catch (Exception e) {
+            log.warn("Failed to apply project migration script {}: {}", migrationPath, e.getMessage());
         }
     }
 
@@ -645,28 +711,39 @@ public class FixDatabaseComponent implements CommandLineRunner {
 
 
 
-    private void seedAdminUser() {
+    private void seedDefaultUsers() {
         try {
-            String[] adminEmails = {"admin@dana.com", "admin@gmail.com"};
-            // BCrypt hash cho "123456"
-            String passwordHash = "$2a$10$7vj26Aptw/yE0uT/8f6BGe.1e.W0U9WfNn0/2fV9rUfB5W1N8yD9w";
-            
-            for (String email : adminEmails) {
+            String passwordHash = passwordEncoder.encode("123456");
+            String[][] usersToSeed = {
+                {"admin@dana.com", "Admin Account", "ADMIN"},
+                {"admin@gmail.com", "Admin Account", "ADMIN"},
+                {"customer@gmail.com", "Customer Account", "CUSTOMER"},
+                {"staff@gmail.com", "Staff Account", "STAFF"},
+                {"guide@gmail.com", "Guide Account", "GUIDE"}
+            };
+
+            for (String[] userData : usersToSeed) {
+                String email = userData[0];
+                String fullName = userData[1];
+                String role = userData[2];
                 List<Map<String, Object>> users = jdbcTemplate.queryForList("SELECT UserID FROM Users WHERE Email = ?", email);
-                
+
                 if (users.isEmpty()) {
                     jdbcTemplate.update(
                         "INSERT INTO Users (Email, FullName, PasswordHash, Role, IsActive, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-                        email, "Admin Account", passwordHash, "ADMIN"
+                        email, fullName, passwordHash, role
                     );
-                    log.info("Seed: Created admin user {}", email);
+                    log.info("Seed: Created {} user {}", role, email);
                 } else {
-                    jdbcTemplate.update("UPDATE Users SET Role = 'ADMIN', IsActive = 1 WHERE Email = ?", email);
-                    log.info("Seed: Updated admin user {} to ADMIN role", email);
+                    jdbcTemplate.update(
+                        "UPDATE Users SET FullName = ?, Role = ?, IsActive = 1, PasswordHash = ?, UpdatedAt = CURRENT_TIMESTAMP WHERE Email = ?",
+                        fullName, role, passwordHash, email
+                    );
+                    log.info("Seed: Updated user {} to {} role", email, role);
                 }
             }
         } catch (Exception e) {
-            log.error("Admin seeding error: {}", e.getMessage());
+            log.error("Default user seeding error: {}", e.getMessage());
         }
     }
 }
