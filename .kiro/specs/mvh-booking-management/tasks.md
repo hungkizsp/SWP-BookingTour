@@ -52,49 +52,49 @@ This implementation plan converts the MVH Booking Management system design into 
 
 ### UC18: View Booking History (feature/mvh-booking-history)
 
-- [ ] 1. Setup UC18 branch and prepare backend foundation
+- [x] 1. Setup UC18 branch and prepare backend foundation
   - Create branch: `git checkout -b feature/mvh-booking-history`
   - Create BookingController with @RestController and @RequestMapping("/api/bookings")
   - Add Swagger annotations (@Tag, @SecurityRequirement)
   - Create placeholder GET /api/bookings endpoint
   - _Requirements: 9.1, 10.1_
 
-- [ ] 2. Implement backend data layer for booking history
-  - [ ] 2.1 Create/update Booking entity with indexes
+- [x] 2. Implement backend data layer for booking history
+  - [x] 2.1 Create/update Booking entity with indexes
     - Add @Entity annotations and @Table with indexes (customer_id, status, departure_date)
     - Define relationships: @ManyToOne customer, @ManyToOne tour, @OneToOne payment
     - Add version field for optimistic locking
     - _Requirements: 1.1, 13.2, 7.4_
 
-  - [ ] 2.2 Create BookingRepository interface
+  - [x] 2.2 Create BookingRepository interface
     - Extend JpaRepository<Booking, Long>
     - Add custom query methods with @Query for filtering and search
     - Add method with JOIN FETCH to prevent N+1 queries
     - _Requirements: 1.1, 1.3, 1.4_
 
-  - [ ] 2.3 Create DTOs for booking history
+  - [x] 2.3 Create DTOs for booking history
     - Create BookingHistoryDTO with tour name, destination, status, amount, dates
     - Create BookingHistoryResponse with content, pagination, and statistics
     - Create BookingStatistics with totalBookings, totalSpent, status counts
     - _Requirements: 1.1, 1.5_
 
-- [ ] 3. Implement booking history service layer
-  - [ ] 3.1 Create BookingService with business logic
+- [x] 3. Implement booking history service layer
+  - [x] 3.1 Create BookingService with business logic
     - Implement getBookingHistory() with pagination, search, and filters
     - Add authorization check: verify customer ID from JWT matches booking owner
     - Implement search across tour name, booking reference, destination
     - Implement filters: status array, date range, price range
     - _Requirements: 1.1, 1.3, 1.4, 6.2, 6.3_
 
-  - [ ] 3.2 Implement statistics calculation
+  - [x] 3.2 Implement statistics calculation
     - Create calculateStatistics() method
     - Aggregate totalBookings, totalSpent, counts by status
     - Ensure accurate calculations matching actual data
     - _Requirements: 1.5_
 
 
-- [ ] 4. Implement booking history REST API endpoint
-  - [ ] 4.1 Complete GET /api/bookings controller method
+- [x] 4. Implement booking history REST API endpoint
+  - [x] 4.1 Complete GET /api/bookings controller method
     - Add @GetMapping with @Operation Swagger annotation
     - Extract authenticated customer ID from SecurityContext/JWT
     - Add query parameters: page, size, search, status[], dateFrom, dateTo, priceMin, priceMax
@@ -102,7 +102,7 @@ This implementation plan converts the MVH Booking Management system design into 
     - Return ResponseEntity with BookingHistoryResponse
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 6.1_
 
-  - [ ] 4.2 Add Swagger documentation for booking history endpoint
+  - [x] 4.2 Add Swagger documentation for booking history endpoint
     - Document all query parameters with @Parameter
     - Add example request and response with @ApiResponse
     - Document 200 OK, 401 Unauthorized, 500 Internal Server Error responses

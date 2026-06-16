@@ -14,6 +14,19 @@ public interface BookingService {
     BookingResponse createBooking(BookingRequest request);
     BookingResponse updateBooking(Long id, BookingRequest request);
     void deleteBooking(Long id);
+    
+    // UC18: View Booking History
+    com.tourbooking.booking.backend.model.dto.response.BookingHistoryResponse getBookingHistory(
+        Long customerId,
+        String search,
+        List<String> statusStrings,
+        java.time.LocalDate dateFrom,
+        java.time.LocalDate dateTo,
+        java.math.BigDecimal priceMin,
+        java.math.BigDecimal priceMax,
+        int page,
+        int size
+    );
 
     List<FinancialReportResponse> getFinancialReport(String start, String end, String type, String status, boolean includeTest);
 

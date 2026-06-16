@@ -17,12 +17,79 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/bookings")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Booking Management", description = "APIs for managing tour bookings")
 public class BookingController {
 
     private final BookingService bookingService;
+    private final com.tourbooking.booking.backend.repository.UserRepository userRepository;
 
-    public BookingController(BookingService bookingService) {
+    public BookingController(BookingService bookingService, 
+                           com.tourbooking.booking.backend.repository.UserRepository userRepository) {
         this.bookingService = bookingService;
+        this.userRepository = userRepository;
+    }
+    
+    /**
+     * UC18: Get booking history for authenticated customer with filters and search
+     */
+    @GetMapping("/history")
+    @io.swagger.v3.oas.annotations.Operation(
+        summary = "Get booking history",
+        description = "Retrieve paginated booking history for the authenticated customer with optional filters and search"
+    )
+    @io.swagger.v3.oas.annotations.Parameter(name = "search", description = "Search term for tour name, booking reference, or destination")
+    @io.swagger.v3.oas.annotations.Parameter(name = "status", description = "Filter by booking status (can be multiple)")
+    @io.swagger.v3.oas.annotations.Parameter(name = "dateFrom", description = "Filter by departure date from (yyyy-MM-dd)")
+    @io.swagger.v3.oas.annotations.Parameter(name = "dateTo", description = "Filter by departure date to (yyyy-MM-dd)")
+    @io.swagger.v3.oas.annotations.Parameter(name = "priceMin", description = "Filter by minimum price")
+    @io.swagger.v3.oas.annotations.Parameter(name = "priceMax", description = "Filter by maximum price")
+    @io.swagger.v3.oas.annotations.Parameter(name = "page", description = "Page number (0-indexed)")
+    @io.swagger.v3.oas.annotations.Parameter(name = "size", description = "Page size")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Successfully retrieved booking history"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing JWT token"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ApiResponse<com.tourbooking.booking.backend.model.dto.response.BookingHistoryResponse> getBookingHistory(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) List<String> status,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dateFrom,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate dateTo,
+            @RequestParam(required = false) java.math.BigDecimal priceMin,
+            @RequestParam(required = false) java.math.BigDecimal priceMax,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        
+        // Extract authenticated customer ID from SecurityContext
+        org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() || 
+            !(authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails)) {
+            return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.BookingHistoryResponse>builder()
+                    .code(HttpStatus.UNAUTHORIZED.value())
+                    .message("Unauthorized - Please login to view booking history")
+                    .build();
+        }
+        
+        String email = ((org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal()).getUsername();
+        
+        // Get customer ID from email
+        com.tourbooking.booking.backend.model.entity.User currentUser = 
+                userRepository.findByEmail(email)
+                        .orElseThrow(() -> new com.tourbooking.booking.backend.exception.AppException(
+                                com.tourbooking.booking.backend.exception.ErrorCode.USER_NOT_FOUND));
+        
+        Long customerId = currentUser.getId();
+        
+        com.tourbooking.booking.backend.model.dto.response.BookingHistoryResponse response = 
+                bookingService.getBookingHistory(customerId, search, status, dateFrom, dateTo, priceMin, priceMax, page, size);
+        
+        return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.BookingHistoryResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Successfully retrieved booking history")
+                .data(response)
+                .build();
     }
 
     @GetMapping

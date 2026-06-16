@@ -114,6 +114,90 @@ public class BookingServiceImpl implements BookingService {
                 .map(BookingMapper::toResponse)
                 .toList();
     }
+    
+    /**
+     * UC18: Get booking history with filters, search, and statistics
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public com.tourbooking.booking.backend.model.dto.response.BookingHistoryResponse getBookingHistory(
+            Long customerId,
+            String search,
+            List<String> statusStrings,
+            java.time.LocalDate dateFrom,
+            java.time.LocalDate dateTo,
+            java.math.BigDecimal priceMin,
+            java.math.BigDecimal priceMax,
+            int page,
+            int size) {
+        
+        log.info("[UC18] Fetching booking history for customer: {}, search: {}, page: {}, size: {}", 
+                 customerId, search, page, size);
+        
+        // Convert status strings to enums
+        List<BookingStatus> statuses = null;
+        if (statusStrings != null && !statusStrings.isEmpty()) {
+            statuses = statusStrings.stream()
+                    .map(s -> {
+                        try {
+                            return BookingStatus.valueOf(s.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                            log.warn("Invalid booking status: {}", s);
+                            return null;
+                        }
+                    })
+                    .filter(s -> s != null)
+                    .toList();
+        }
+        
+        // Create pageable with sorting by booking date descending (most recent first)
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                page, size, 
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "bookingDate")
+        );
+        
+        // Fetch bookings with filters
+        org.springframework.data.domain.Page<Booking> bookingPage = bookingRepository.findBookingHistoryWithFilters(
+                customerId, search, statuses, dateFrom, dateTo, priceMin, priceMax, pageable
+        );
+        
+        // Convert to DTOs
+        org.springframework.data.domain.Page<com.tourbooking.booking.backend.model.dto.response.BookingResponse> responsePage = 
+                bookingPage.map(BookingMapper::toResponse);
+        
+        // Calculate statistics
+        com.tourbooking.booking.backend.model.dto.response.BookingStatistics statistics = calculateStatistics(customerId);
+        
+        log.info("[UC18] Found {} bookings for customer {}", bookingPage.getTotalElements(), customerId);
+        
+        return com.tourbooking.booking.backend.model.dto.response.BookingHistoryResponse.from(responsePage, statistics);
+    }
+    
+    /**
+     * Calculate booking statistics for a customer
+     */
+    private com.tourbooking.booking.backend.model.dto.response.BookingStatistics calculateStatistics(Long customerId) {
+        long totalBookings = bookingRepository.countByUserId(customerId).size();
+        long confirmedBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.CONFIRMED);
+        long pendingBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.PENDING);
+        long cancelledBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.CANCELLED);
+        long completedBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.COMPLETED);
+        
+        // Calculate total spent (confirmed + completed bookings only)
+        BigDecimal totalSpent = bookingRepository.sumTotalPriceByUserIdAndStatusIn(
+                customerId, 
+                List.of(BookingStatus.CONFIRMED, BookingStatus.COMPLETED)
+        );
+        
+        return com.tourbooking.booking.backend.model.dto.response.BookingStatistics.builder()
+                .totalBookings(totalBookings)
+                .confirmedBookings(confirmedBookings)
+                .pendingBookings(pendingBookings)
+                .cancelledBookings(cancelledBookings)
+                .completedBookings(completedBookings)
+                .totalSpent(totalSpent != null ? totalSpent : BigDecimal.ZERO)
+                .build();
+    }
 
     @Override
     @Transactional(readOnly = true)
