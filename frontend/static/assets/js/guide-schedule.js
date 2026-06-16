@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!userStr || JSON.parse(userStr).role !== 'GUIDE') {
         window.location.href = '/pages/auth/login.html';
     }
-    
+
     const urlParams = new URLSearchParams(window.location.search);
     const scheduleId = urlParams.get('id');
     if (!scheduleId) {
@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/pages/guide/dashboard.html';
         return;
     }
-    
+
     loadScheduleDetails(scheduleId);
 });
 
@@ -20,10 +20,10 @@ async function loadScheduleDetails(sid) {
         const ts = new Date().getTime();
         const res = await TB.apiFetch(`/api/v1/guides/tours/${sid}?t=${ts}`, { cache: 'no-store' });
         if (res.code !== 200) throw new Error(res.message || 'Failed to fetch');
-        
+
         const s = res.data;
         if (!s) return;
-        
+
         document.getElementById('tourTitle').innerText = s.tourName || ('Schedule SD-' + sid);
         renderProgressHistory(s.progressLogs || []);
         renderUploadedGallery(s.imageUrls || []);
@@ -36,14 +36,14 @@ async function loadScheduleDetails(sid) {
 function renderUploadedGallery(urls) {
     const cont = document.getElementById('uploadedGallery');
     if (!cont) return;
-    
+
     if (urls.length === 0) {
         cont.innerHTML = '<div style="width:100%; font-size:0.85rem; color:#94a3b8; padding:10px; border:1px dashed #e2e8f0; border-radius:8px; text-align:center;">No photos uploaded yet.</div>';
         return;
     }
 
     cont.innerHTML = '<div style="width:100%; font-size:0.8rem; font-weight:700; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Activity Photos</div>';
-    
+
     urls.forEach(url => {
         const fullUrl = TB.normalizeImageUrl(url);
         const img = document.createElement('img');
@@ -60,7 +60,7 @@ function renderUploadedGallery(urls) {
 function renderProgressHistory(logs) {
     const cont = document.getElementById('progressHistory');
     if (!cont) return;
-    
+
     if (logs.length === 0) {
         cont.innerHTML = ''; // Hide if no history
         return;
@@ -83,10 +83,10 @@ function getScheduleId() {
 }
 
 // UC28
-window.updateProgress = async function() {
+window.updateProgress = async function () {
     const progress = document.getElementById('progressInput').value.trim();
     if (!progress) return;
-    
+
     const sid = getScheduleId();
     try {
         await TB.apiFetch(`/api/v1/guides/tours/${sid}/progress?progress=${encodeURIComponent(progress)}`, { method: 'PATCH' });
@@ -113,16 +113,16 @@ photosInput.addEventListener('change', () => {
 });
 
 // UC29 (Multipart Form)
-window.uploadPhotos = async function() {
+window.uploadPhotos = async function () {
     const files = photosInput.files;
     if (files.length === 0) return alert('Select photos first.');
     const sid = getScheduleId();
-    
+
     const formData = new FormData();
     for (let i = 0; i < files.length; i++) {
         formData.append('photos', files[i]);
     }
-    
+
     const token = TB.getToken();
     try {
         const res = await fetch(`http://localhost:8080/api/v1/guides/tours/${sid}/photos`, {
@@ -143,12 +143,12 @@ window.uploadPhotos = async function() {
 };
 
 // UC30
-window.submitReport = async function() {
+window.submitReport = async function () {
     const content = document.getElementById('reportInput').value.trim();
     if (!content) return alert('Report content required.');
-    
+
     if (!confirm('Are you sure you want to finalize this tour and save report?')) return;
-    
+
     const sid = getScheduleId();
     try {
         await TB.apiFetch(`/api/v1/guides/tours/${sid}/report?content=${encodeURIComponent(content)}`, { method: 'POST' });

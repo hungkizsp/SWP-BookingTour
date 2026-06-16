@@ -7,6 +7,10 @@
     <title>Chi tiết Tour &middot; Hướng dẫn viên</title>
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/assets/css/style.css">
+    <!-- Tailwind CDN (utilities) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background: #fbf6ee; margin: 0; padding-bottom: 70px; }
         .guide-header { background: #115e59; color: white; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 10; display:flex; align-items:center; gap:12px; }
@@ -56,16 +60,27 @@
         <!-- UC29: Upload Images -->
         <div class="section-card">
             <h2 class="section-title">Tải ảnh hoạt động tour</h2>
-            <div class="form-group">
-                <input type="file" id="photosInput" class="file-input" multiple accept="image/*">
-                <label for="photosInput" class="file-label">
-                    <span style="font-size: 1.5rem; margin-bottom: 4px;">&#128247;</span>
-                    Nhấn để chọn ảnh
+            <div class="mt-4">
+                <input type="file" id="photosInput" class="sr-only" multiple accept="image/*" style="display:none;">
+
+                <!-- dashed drop area -->
+                <label for="photosInput" class="block border-2 border-dashed border-gray-300 rounded-lg h-24 flex items-center justify-center text-gray-500 cursor-pointer hover:border-teal-600 transition" style="background:#fbf8f6;">
+                    <div class="text-center">
+                        <i class="fas fa-camera text-xl"></i>
+                        <div class="text-sm mt-2">Nhấn để chọn ảnh</div>
+                    </div>
                 </label>
-                <div id="previewImages"></div>
+
+                <!-- preview of selected files -->
+                <div id="previewImages" class="flex gap-3 overflow-x-auto mt-3"></div>
+
+                <!-- upload button styled as in screenshot -->
+                <button id="uploadBtn" onclick="uploadPhotos()" class="w-full mt-4 py-2 border border-teal-700 text-teal-700 rounded-md hover:bg-teal-700 hover:text-white transition" style="background:white;">Tải lên ảnh</button>
+
+                <!-- uploaded gallery label + images -->
+                <div class="mt-4 text-xs font-semibold uppercase text-gray-500">Activity Photos</div>
+                <div id="uploadedGallery" class="mt-3 flex gap-2 flex-wrap"></div>
             </div>
-            <button class="btn-action btn-outline" id="uploadBtn" onclick="uploadPhotos()">Tải lên ảnh</button>
-            <div id="uploadedGallery" style="margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap;"></div>
         </div>
 
         <!-- UC30: Submit Report -->

@@ -60,7 +60,9 @@ public class SecurityConfig {
                     "/css/**", "/js/**", "/images/**", "/assets/**",
                     "/pages/**",
                     "/user/**", "/admin/**", "/staff/**",
-                    "/static/**", "/webjars/**", "/uploads/**"
+                    "/static/**", "/webjars/**", "/uploads/**",
+                    "/swagger-ui.html", "/swagger-ui/**",
+                    "/v3/api-docs/**"
                 ).permitAll()
                 // Cho phép các API Auth & Public
                 .requestMatchers("/api/v1/auth/**").permitAll()
