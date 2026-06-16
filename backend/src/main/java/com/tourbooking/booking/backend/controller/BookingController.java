@@ -126,13 +126,40 @@ public class BookingController {
 
     // UC22
     @GetMapping(value = "/{id}/invoice", produces = MediaType.APPLICATION_PDF_VALUE)
+    @io.swagger.v3.oas.annotations.Operation(
+        summary = "Download invoice PDF",
+        description = "Generate and download invoice PDF for confirmed or completed bookings"
+    )
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "PDF generated successfully"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Bad Request - Booking not confirmed or completed"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Booking not found"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "PDF generation failed")
+    })
     public ResponseEntity<byte[]> downloadInvoice(@PathVariable Long id) {
-        byte[] pdfBytes = bookingService.downloadInvoice(id);
+        // Extract authenticated customer ID
+        org.springframework.security.core.Authentication authentication = 
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated() || 
+            !(authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
+        String email = ((org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal()).getUsername();
+        com.tourbooking.booking.backend.model.entity.User currentUser = 
+                userRepository.findByEmail(email)
+                        .orElseThrow(() -> new com.tourbooking.booking.backend.exception.AppException(
+                                com.tourbooking.booking.backend.exception.ErrorCode.USER_NOT_FOUND));
+        
+        byte[] pdfBytes = bookingService.generateInvoice(id, currentUser.getId());
+        
         return ResponseEntity.ok()
-                .header(
-                        org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=invoice_" + id + ".pdf"
-                )
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=invoice-BK-" + id + ".pdf")
+                .header(org.springframework.http.HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE)
                 .body(pdfBytes);
     }
 

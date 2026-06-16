@@ -33,6 +33,7 @@ public interface BookingService {
     
     // UC22
     byte[] downloadInvoice(Long id);
+    byte[] generateInvoice(Long bookingId, Long customerId);
 
     // Admin action
     BookingResponse updateBookingStatus(Long id, String status);
