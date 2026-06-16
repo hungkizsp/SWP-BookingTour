@@ -25,6 +25,9 @@ public interface BookingService {
     // UC15
     com.tourbooking.booking.backend.model.dto.response.VoucherResponse applyVoucher(com.tourbooking.booking.backend.model.dto.request.VoucherRequest request);
     
+    // UC19: View Booking Detail
+    com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse getBookingDetail(Long bookingId, Long customerId);
+    
     // UC20
     BookingResponse cancelBooking(Long id);
     

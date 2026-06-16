@@ -139,6 +139,139 @@ public class BookingServiceImpl implements BookingService {
         enrichRefundInfo(response, id, null);
         return response;
     }
+    
+    /**
+     * UC19: Get detailed booking information with all related data
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse getBookingDetail(Long bookingId, Long customerId) {
+        // Fetch booking with all relationships
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        
+        // Authorization check: verify customer owns this booking
+        if (!booking.getUser().getId().equals(customerId)) {
+            log.warn("[UC19] Authorization failed: Customer {} tried to access booking {} owned by customer {}", 
+                     customerId, bookingId, booking.getUser().getId());
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
+        log.info("[UC19] Fetching booking detail for booking: {}, customer: {}", bookingId, customerId);
+        
+        // Build tour info
+        TourSchedule schedule = booking.getSchedule();
+        com.tourbooking.booking.backend.model.entity.Tour tour = schedule != null ? schedule.getTour() : null;
+        
+        com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.TourInfo tourInfo = null;
+        if (tour != null) {
+            tourInfo = com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.TourInfo.builder()
+                    .tourId(tour.getId())
+                    .tourName(tour.getName())
+                    .destination(tour.getDestination())
+                    .description(tour.getDescription())
+                    .departureDate(schedule.getStartDate())
+                    .returnDate(schedule.getEndDate())
+                    .duration(tour.getDuration())
+                    .numberOfParticipants(booking.getNumberOfPeople())
+                    .includedServices(List.of()) // TODO: implement if tour has services
+                    .imageUrl(tour.getImageUrl())
+                    .build();
+        }
+        
+        // Build customer info
+        User user = booking.getUser();
+        List<Passenger> passengers = passengerRepository.findByBookingId(bookingId);
+        List<com.tourbooking.booking.backend.model.dto.response.PassengerResponse> passengerResponses = 
+                passengers.stream()
+                        .map(p -> {
+                            com.tourbooking.booking.backend.model.dto.response.PassengerResponse pr = 
+                                    new com.tourbooking.booking.backend.model.dto.response.PassengerResponse();
+                            pr.setFullName(p.getFullName());
+                            pr.setDateOfBirth(p.getDateOfBirth());
+                            pr.setIdNumber(p.getIdNumber());
+                            pr.setPassengerType(p.getPassengerType());
+                            return pr;
+                        })
+                        .toList();
+        
+        com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.CustomerInfo customerInfo = 
+                com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.CustomerInfo.builder()
+                        .customerId(user.getId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .phone(user.getPhone())
+                        .numberOfParticipants(booking.getNumberOfPeople())
+                        .passengers(passengerResponses)
+                        .build();
+        
+        // Build payment info
+        Payment payment = booking.getPayment();
+        com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.PaymentInfo paymentInfo = null;
+        if (payment != null) {
+            BigDecimal subtotal = booking.getTotalPrice().add(booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO);
+            paymentInfo = com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.PaymentInfo.builder()
+                    .paymentStatus(payment.getStatus() != null ? payment.getStatus().name() : "PENDING")
+                    .transactionReference(payment.getTransactionCode())
+                    .paymentMethod(payment.getPaymentMethod())
+                    .paymentDate(payment.getPaymentDate())
+                    .subtotal(subtotal)
+                    .serviceFee(BigDecimal.ZERO) // TODO: implement if service fee exists
+                    .tax(BigDecimal.ZERO) // TODO: implement if tax exists
+                    .discount(booking.getDiscountAmount())
+                    .totalAmount(booking.getTotalPrice())
+                    .build();
+        }
+        
+        // Build status history (simplified - just current status for now)
+        List<com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.StatusHistoryItem> statusHistory = 
+                List.of(
+                    com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.StatusHistoryItem.builder()
+                            .status(booking.getStatus())
+                            .description(getStatusDescription(booking.getStatus()))
+                            .timestamp(booking.getUpdatedAt() != null ? booking.getUpdatedAt() : booking.getCreatedAt())
+                            .isCurrent(true)
+                            .build()
+                );
+        
+        // Build refund info if exists
+        com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.RefundInfo refundInfo = null;
+        com.tourbooking.booking.backend.model.entity.RefundRequest refund = 
+                refundRequestRepository.findTopByBooking_IdOrderByCreatedAtDesc(bookingId).orElse(null);
+        if (refund != null) {
+            refundInfo = com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.RefundInfo.builder()
+                    .refundStatus(refund.getStatus() != null ? refund.getStatus().name() : "PENDING")
+                    .refundAmount(refund.getAmount())
+                    .reason(refund.getReason())
+                    .requestedAt(refund.getCreatedAt())
+                    .build();
+        }
+        
+        return com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.builder()
+                .bookingId(booking.getId())
+                .bookingReference("BK-" + booking.getId())
+                .status(booking.getStatus())
+                .createdAt(booking.getCreatedAt())
+                .bookingDate(booking.getBookingDate())
+                .tourInfo(tourInfo)
+                .customerInfo(customerInfo)
+                .paymentInfo(paymentInfo)
+                .statusHistory(statusHistory)
+                .cancellationReason(null) // TODO: implement if cancellation reason stored
+                .cancelledAt(booking.getStatus() == BookingStatus.CANCELLED ? booking.getUpdatedAt() : null)
+                .refundInfo(refundInfo)
+                .build();
+    }
+    
+    private String getStatusDescription(BookingStatus status) {
+        return switch (status) {
+            case PENDING -> "Booking is pending payment confirmation";
+            case CONFIRMED -> "Booking has been confirmed";
+            case COMPLETED -> "Tour has been completed";
+            case CANCELLED -> "Booking has been cancelled";
+            default -> "Status: " + status;
+        };
+    }
 
     @Override
     @Transactional
