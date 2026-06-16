@@ -137,7 +137,56 @@
     try {
       const res = await TB.apiFetch(`/api/v1/reviews/tour/${encodeURIComponent(id)}`, { method: 'GET' });
       const reviews = res.data || [];
+      const statsEl = el('reviewStats');
+      if (statsEl) {
+        const avg = reviews.length ? reviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / reviews.length : 0;
+        statsEl.innerHTML = reviews.length
+          ? `<span style="color:#f59e0b;">${'&#9733;'.repeat(Math.round(avg))}</span> ${avg.toFixed(1)}/5 - ${reviews.length} danh gia`
+          : 'Chua co danh gia nao cho tour nay.';
+      }
       const listEl = el('reviewList');
+      if (listEl) {
+        const avg = reviews.length ? reviews.reduce((sum, r) => sum + Number(r.rating || 0), 0) / reviews.length : 0;
+        const statsEl = el('reviewStats');
+        if (statsEl) {
+          statsEl.innerHTML = reviews.length
+            ? `<div style="font-size:1.15rem;">${avg.toFixed(1)}/5</div><div style="color:#fbbf24;letter-spacing:.03em;">${'&#9733;'.repeat(Math.round(avg))}</div><div style="font-size:.78rem;color:rgba(255,255,255,.78);">${reviews.length} danh gia</div>`
+            : '<div style="font-size:.95rem;">Chua co danh gia</div>';
+        }
+
+        if (reviews.length === 0) {
+          listEl.innerHTML = '<div style="border:1px dashed var(--border);border-radius:14px;background:#fcfdfc;padding:36px 20px;text-align:center;color:var(--text-soft);font-weight:700;">Chua co danh gia nao. Hay la nguoi dau tien danh gia!</div>';
+        } else {
+          listEl.innerHTML = reviews.map(r => `
+            <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:0 10px 24px rgba(15,23,42,.04);">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px;">
+                <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+                  <div style="width:42px;height:42px;border-radius:999px;background:#ecfdf5;color:#047857;display:grid;place-items:center;font-weight:900;flex:0 0 auto;">${escapeHtml(String(r.userName || 'K').charAt(0).toUpperCase())}</div>
+                  <div style="min-width:0;">
+                    <strong style="display:block;color:var(--primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(r.userName || 'Khach hang')}</strong>
+                    <div style="font-size:.78rem;color:var(--text-faint);">${r.createdAt ? new Date(r.createdAt).toLocaleString('vi-VN') : ''}</div>
+                  </div>
+                </div>
+                <span style="color:#f59e0b;white-space:nowrap;font-weight:900;">${'★'.repeat(r.rating || 0)}</span>
+              </div>
+              <p style="color:var(--text-soft);line-height:1.65;font-size:.95rem;margin:0;">${escapeHtml(r.comment || '')}</p>
+            </div>
+          `).join('');
+        }
+
+        const currentUser = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
+        if (currentUser) {
+          const uid = currentUser.id || currentUser.userId;
+          const mine = reviews.find(r => Number(r.userId) === Number(uid));
+          if (mine) {
+            if (el('reviewRating')) el('reviewRating').value = String(mine.rating ?? 5);
+            if (el('reviewComment')) el('reviewComment').value = mine.comment || '';
+            const submitBtn = el('submitReviewBtn');
+            if (submitBtn) submitBtn.textContent = 'Cap nhat danh gia';
+          }
+        }
+        return;
+      }
       if (reviews.length === 0) {
         listEl.innerHTML = '<p style="color: var(--text-soft); text-align: center; padding: 20px;">Chưa có đánh giá nào. Hãy là người đầu tiên đánh giá!</p>';
         return;
@@ -246,18 +295,37 @@
       submitBtn.onclick = async () => {
         const rating = el('reviewRating').value;
         const comment = el('reviewComment').value;
+        let errorEl = el('reviewCommentError');
+        if (!errorEl) {
+          errorEl = document.createElement('p');
+          errorEl.id = 'reviewCommentError';
+          errorEl.style.cssText = 'margin:6px 0 0;color:#dc2626;font-size:.88rem;';
+          el('reviewComment').insertAdjacentElement('afterend', errorEl);
+        }
+        errorEl.textContent = '';
+        if (!rating) {
+          errorEl.textContent = 'Vui long chon so sao.';
+          return;
+        }
+        if (!comment.trim()) {
+          errorEl.textContent = 'Noi dung danh gia khong duoc de trong.';
+          return;
+        }
+        if (comment.trim().length < 5) {
+          errorEl.textContent = 'Noi dung danh gia toi thieu 5 ky tu.';
+          return;
+        }
         if (!comment.trim()) {
           alert('Vui lòng nhập nhận xét!');
           return;
         }
         try {
           submitBtn.disabled = true;
-          submitBtn.textContent = 'Đang gửi...';
-          await TB.apiFetch('/api/v1/reviews', {
+          submitBtn.textContent = 'Dang gui...';
+          await TB.apiFetch('/api/reviews', {
             method: 'POST',
             body: JSON.stringify({
               tourId: Number(id),
-              userId: user.id || user.userId || user.id, // Fallback check
               rating: Number(rating),
               comment: comment.trim()
             })

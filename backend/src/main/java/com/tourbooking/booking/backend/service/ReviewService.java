@@ -19,6 +19,8 @@ public interface ReviewService {
 
     ReviewResponse createReview(ReviewRequest request);
 
+    ReviewResponse createReview(ReviewRequest request, String customerEmail);
+
     ReviewResponse updateReview(Long id, ReviewRequest request);
 
     void deleteReview(Long id);

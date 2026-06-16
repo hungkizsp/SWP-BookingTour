@@ -17,8 +17,10 @@
     maxPrice: '',
     categoryId: params.get('cat') || '',
     sortBy: 'price',
-    selected: new Set(JSON.parse(localStorage.getItem('compareIds') || '[]'))
+    selected: new Set(JSON.parse(localStorage.getItem('compareIds') || '[]')),
+    wishlist: new Set()
   };
+  const currentUser = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
 
   const pRange = params.get('price');
   if (pRange && pRange !== 'all') {
@@ -68,6 +70,17 @@
     }
   }
 
+  async function fetchWishlist() {
+    if (!currentUser || String(currentUser.role || '').toUpperCase() !== 'CUSTOMER') return;
+    try {
+      const res = await TB.apiFetch('/api/wishlist?page=0&size=200', { method: 'GET' });
+      const items = res?.content || res?.data?.content || [];
+      state.wishlist = new Set(items.map(t => String(t.id)));
+    } catch (err) {
+      console.warn('Failed to load wishlist', err);
+    }
+  }
+
   function renderTours(pageRes) {
     grid.innerHTML = '';
     const content = pageRes?.data?.content || [];
@@ -89,6 +102,10 @@
         <div class="tour-card-img-wrapper">
           <img src="${TB.normalizeImageUrl(t.imageUrl || (t.imageUrls && t.imageUrls[0]) || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg')}" class="tour-card-img" alt="${t.tourName}">
           <div class="tour-card-badge">✨ ${t.categoryName || 'Sản phẩm nổi bật'}</div>
+          <button class="wishlist-btn" data-id="${t.id}" title="Luu tour yeu thich" aria-label="Luu tour yeu thich"
+            style="position:absolute;top:14px;right:14px;z-index:4;width:46px;height:46px;border-radius:999px;border:1px solid rgba(255,255,255,.9);background:rgba(255,255,255,.96);box-shadow:0 14px 30px rgba(15,23,42,.2);font-size:1.45rem;line-height:1;color:${state.wishlist.has(String(t.id)) ? '#dc2626' : '#64748b'};cursor:pointer;display:grid;place-items:center;transition:transform .18s ease, background .18s ease, color .18s ease;">
+            ${state.wishlist.has(String(t.id)) ? '&#9829;' : '&#9825;'}
+          </button>
         </div>
         <div class="tour-card-body">
           <h3 class="tour-card-title">${t.tourName}</h3>
@@ -122,6 +139,7 @@
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
     attachCompareListeners();
+    attachWishlistListeners();
   }
 
   function updatePagination(data) {
@@ -152,6 +170,43 @@
           btn.style.background = 'var(--accent-soft)';
         }
         updateCompareBadge();
+      };
+    });
+  }
+
+  function attachWishlistListeners() {
+    document.querySelectorAll('.wishlist-btn').forEach(btn => {
+      btn.onclick = async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!currentUser) {
+          sessionStorage.setItem('authNotice', 'Vui long dang nhap de luu tour yeu thich.');
+          window.location.href = './auth/login.html';
+          return;
+        }
+
+        const id = String(btn.dataset.id);
+        const saved = state.wishlist.has(id);
+        btn.disabled = true;
+        try {
+          await TB.apiFetch(`/api/wishlist/${encodeURIComponent(id)}`, { method: saved ? 'DELETE' : 'POST' });
+          if (saved) {
+            state.wishlist.delete(id);
+            btn.innerHTML = '&#9825;';
+            btn.style.color = '#64748b';
+            alert('Da xoa tour khoi wishlist.');
+          } else {
+            state.wishlist.add(id);
+            btn.innerHTML = '&#9829;';
+            btn.style.color = '#dc2626';
+            alert('Da them tour vao wishlist.');
+          }
+        } catch (err) {
+          alert(err.message || 'Khong the cap nhat wishlist.');
+        } finally {
+          btn.disabled = false;
+        }
       };
     });
   }
@@ -202,5 +257,5 @@
 
   updateCompareBadge();
   fetchCategories();
-  fetchTours();
+  fetchWishlist().finally(fetchTours);
 })();

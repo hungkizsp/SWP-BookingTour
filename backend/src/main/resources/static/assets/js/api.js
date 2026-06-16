@@ -86,7 +86,8 @@
 
   async function apiFetch(path, options = {}) {
     const BACKEND_URL = 'http://localhost:8080';
-    const isDev = window.location.port === '3000' || window.location.port === '5500';
+    const isDev = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
+      && window.location.port !== '8080';
     const fullPath = (isDev && path.startsWith('/')) ? BACKEND_URL + path : path;
 
     const headers = new Headers(options.headers || {});
@@ -115,7 +116,8 @@
 
   async function apiFetchBlob(path, options = {}) {
     const BACKEND_URL = 'http://localhost:8080';
-    const isDev = window.location.port === '3000' || window.location.port === '5500';
+    const isDev = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
+      && window.location.port !== '8080';
     const fullPath = (isDev && path.startsWith('/')) ? BACKEND_URL + path : path;
 
     const headers = new Headers(options.headers || {});

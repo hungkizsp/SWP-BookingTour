@@ -16,6 +16,7 @@ import com.tourbooking.booking.backend.model.dto.response.ReviewResponse;
 import com.tourbooking.booking.backend.model.entity.Review;
 import com.tourbooking.booking.backend.model.entity.Tour;
 import com.tourbooking.booking.backend.model.entity.User;
+import com.tourbooking.booking.backend.model.entity.enums.UserRole;
 import com.tourbooking.booking.backend.repository.ReviewRepository;
 import com.tourbooking.booking.backend.repository.TourRepository;
 import com.tourbooking.booking.backend.repository.UserRepository;
@@ -71,22 +72,27 @@ public class ReviewServiceImpl implements ReviewService {
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
         User user = userRepo.findById(request.getUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        return saveCustomerReview(request, tour, user);
+    }
 
-        // Validation: user must have a COMPLETED booking for this tour
-        boolean hasCompletedBooking = tour.getSchedules().stream()
-                .flatMap(schedule -> schedule.getBookings().stream())
-                .anyMatch(booking -> booking.getUser().getId().equals(user.getId()) 
-                                  && booking.getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.COMPLETED);
+    @Override
+    @Transactional
+    public ReviewResponse createReview(ReviewRequest request, String customerEmail) {
+        User user = userRepo.findByEmail(customerEmail)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        Tour tour = tourRepo.findById(request.getTourId())
+                .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
+        return saveCustomerReview(request, tour, user);
+    }
 
-        if (!hasCompletedBooking) {
-            throw new AppException(ErrorCode.INVALID_REQUEST); // Or a specific error
+    private ReviewResponse saveCustomerReview(ReviewRequest request, Tour tour, User user) {
+        if (user.getRole() != UserRole.CUSTOMER) {
+            throw new AppException(ErrorCode.FORBIDDEN);
         }
 
-        if (reviewRepo.findByUser_IdAndTour_Id(user.getId(), tour.getId()).isPresent()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST); // Prevent duplicate review
-        }
-        
-        Review review = ReviewMapper.toEntity(request);
+        Review review = reviewRepo.findByUser_IdAndTour_Id(user.getId(), tour.getId())
+                .orElseGet(() -> ReviewMapper.toEntity(request));
+        ReviewMapper.updateEntityFromRequest(review, request);
         review.setTour(tour);
         review.setUser(user);
         Review savedReview = reviewRepo.save(review);

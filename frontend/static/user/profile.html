@@ -1,277 +1,206 @@
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hồ Sơ Của Tôi - TourBooking</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet">
+  <title>Ho So Cua Toi - TourBooking</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
-  <style>
-    .layout {
-      display: grid;
-      grid-template-columns: 240px 1fr;
-      gap: 24px;
-      align-items: start;
-      margin-top: 20px;
-    }
-
-    .sidebar-menu {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .sidebar-menu a {
-      padding: 12px 16px;
-      border-radius: 8px;
-      text-decoration: none;
-      color: var(--text-base);
-      font-weight: 600;
-    }
-
-    .sidebar-menu a:hover {
-      background: rgba(0, 0, 0, 0.05);
-    }
-
-    .sidebar-menu a.active {
-      background: var(--primary);
-      color: white;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 6px;
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: var(--text-base);
-    }
-
-    .form-group input {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 1rem;
-    }
-
-    .loyalty-card {
-      margin-bottom: 24px;
-      background: linear-gradient(135deg, #1e3a8a, #3b82f6);
-      color: white;
-      padding: 24px;
-      border-radius: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .loyalty-points {
-      font-size: 2.5rem;
-      font-weight: 800;
-      font-family: 'Fraunces', serif;
-    }
-
-    .upload-zone {
-      border: 2px dashed rgba(0, 0, 0, 0.2);
-      padding: 30px;
-      text-align: center;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    .upload-zone:hover {
-      background: rgba(0, 0, 0, 0.02);
-      border-color: var(--primary);
-    }
-
-    @media (max-width: 768px) {
-      .layout {
-        grid-template-columns: 1fr;
-      }
-
-      .sidebar-menu {
-        flex-direction: row;
-        overflow-x: auto;
-      }
-
-      .loyalty-card {
-        flex-direction: column;
-        text-align: center;
-        gap: 16px;
-      }
-    }
-  </style>
 </head>
+<body class="min-h-screen overflow-x-hidden bg-[#f6f8f7] text-slate-950">
+  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div class="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <a href="../pages/index.html" class="flex min-w-0 items-center gap-3 text-emerald-900">
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-emerald-800 text-sm font-black text-white shadow-sm">TB</span>
+        <span class="truncate text-base font-black">TourBooking</span>
+      </a>
+      <nav class="flex shrink-0 items-center gap-2 text-sm font-bold text-slate-600">
+        <a class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-emerald-800" href="personal-info.html">Ca nhan</a>
+        <a class="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800" href="profile.html">Ho so</a>
+        <a class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-emerald-800" href="wishlist.html">Wishlist</a>
+      </nav>
+    </div>
+  </header>
 
-<body>
-  <div class="container">
-    <div class="page-shell">
-      <div class="content-pad">
-        <div class="topbar">
-          <a class="brand" href="../pages/index.html">
-            <span class="brand-mark">TB</span>
-            <span class="brand-copy">
-              <strong>TourBooking</strong>
-              <span>An tâm tận hưởng</span>
-            </span>
-          </a>
-        </div>
-
-        <div class="layout">
-          <div class="card panel">
-            <nav class="sidebar-menu">
-              <a href="personal-info.html">Thông tin cá nhân</a>
-              <a href="profile.html" class="active">Cập nhật hồ sơ</a>
-              <a href="history.html">Lịch sử đặt tour</a>
-              <a href="wishlist.html">WishList</a>
-            </nav>
+  <main class="mx-auto grid min-h-[calc(100vh-65px)] w-full max-w-7xl gap-5 px-4 py-6 sm:px-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:px-8">
+    <aside class="lg:sticky lg:top-24 lg:self-start">
+      <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex items-center gap-3 border-b border-slate-100 pb-4">
+          <img id="sideAvatar" src="" alt="Avatar" class="h-14 w-14 rounded-full bg-slate-200 object-cover ring-4 ring-emerald-50">
+          <div class="min-w-0">
+            <p id="sideName" class="truncate text-sm font-black text-slate-950">Khach hang</p>
+            <p id="sideEmail" class="truncate text-xs font-semibold text-slate-500">-</p>
           </div>
+        </div>
+        <nav class="mt-4 grid gap-2 text-sm font-bold">
+          <a class="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="personal-info.html">Thong tin ca nhan</a>
+          <a class="rounded-lg bg-emerald-800 px-3 py-2 text-white" href="profile.html">Cap nhat ho so</a>
+          <a class="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="history.html">Lich su dat tour</a>
+          <a class="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100" href="wishlist.html">Wishlist</a>
+        </nav>
+      </div>
+    </aside>
 
-          <div>
-            <!-- View Loyalty Points -->
-            <div class="loyalty-card">
-              <div>
-                <h2 style="margin:0; font-size:1.2rem; font-family:'Manrope',sans-serif; font-weight:600;">Hội Viên
-                  TourBooking</h2>
-                <p style="margin:4px 0 0; color:rgba(255,255,255,0.8);" id="tierLabel">Hạng: -</p>
-              </div>
-              <div>
-                <div class="loyalty-points" id="loyaltyPoints">0</div>
-                <div style="font-size:0.85rem; text-align:right; color:rgba(255,255,255,0.8);">Điểm tích lũy</div>
-              </div>
-            </div>
-
-            <div class="card panel">
-              <h2 class="section-title">Cập Nhật Thông Tin</h2>
-              <form onsubmit="event.preventDefault(); updateProfile();">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-                  <div class="form-group">
-                    <label>Họ và Tên</label>
-                    <input type="text" id="profName" value="" required>
-                  </div>
-                  <div class="form-group">
-                    <label>Email (Không thể thay đổi)</label>
-                    <input type="email" id="profEmail" value="" disabled style="background:#f3f4f6; color:#9ca3af;">
-                  </div>
-                  <div class="form-group">
-                    <label>Số điện thoại</label>
-                    <input type="tel" id="profPhone" value="" required>
-                  </div>
-                  <div class="form-group">
-                    <label>Địa chỉ</label>
-                    <input type="text" id="profAddress" value="">
-                  </div>
-                  <div class="form-group" style="grid-column: span 2;">
-                    <label>Avatar / Profile Image</label>
-                    <div style="display:flex; align-items:center; gap: 15px;">
-                      <img id="avatarPreview"
-                        src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='38' r='18' fill='%2394a3b8'/%3E%3Cpath d='M50 60c-22 0-35 13-35 30h70c0-17-13-30-35-30z' fill='%2394a3b8'/%3E%3C/svg%3E"
-                        alt="Avatar Preview"
-                        style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #e2e8f0;">
-                      <div style="flex:1;">
-                        <input type="file" id="profAvatarFile" accept="image/*" style="display: none;"
-                          onchange="handleAvatarSelect(event)">
-                        <button type="button" class="btn btn-secondary"
-                          onclick="document.getElementById('profAvatarFile').click()">Chọn Ảnh</button>
-                        <p id="avatarUploadStatus" style="font-size: 0.85rem; color: #64748b; margin-top: 5px;"></p>
-                        <input type="hidden" id="profAvatar" value="">
-                      </div>
-                    </div>
-                  </div>
-                  <div class="form-group" id="genderGroup">
-                    <label>Giới tính</label>
-                    <select id="profGender">
-                      <option value="">Chọn giới tính</option>
-                      <option value="MALE">Nam</option>
-                      <option value="FEMALE">Nữ</option>
-                      <option value="OTHER">Khác</option>
-                    </select>
-                  </div>
-                  <div class="form-group" id="dobGroup">
-                    <label>Ngày sinh</label>
-                    <input type="date" id="profDob" value="">
-                  </div>
-                  <div class="form-group" id="bioGroup" style="display:none; grid-column: span 2;">
-                    <label>Giới thiệu bản thân (Bio)</label>
-                    <textarea id="profBio" rows="3"
-                      style="width: 100%; padding: 10px; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; font-family: inherit; font-size: 1rem;"></textarea>
-                  </div>
-                  <div class="form-group" id="expGroup" style="display:none;">
-                    <label>Năm kinh nghiệm</label>
-                    <input type="number" id="profExp" min="0" value="0">
-                  </div>
-                </div>
-                <button type="submit" class="btn" style="margin-top:10px;">Lưu Thay Đổi</button>
-              </form>
+    <section class="grid min-w-0 gap-5">
+      <div class="rounded-lg border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div class="min-w-0">
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-amber-600">Tai khoan khach hang</p>
+            <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Ho so cua toi</h1>
+            <p class="mt-2 max-w-2xl text-sm font-medium text-slate-500">Cap nhat thong tin lien he, anh dai dien va bao mat tai khoan.</p>
+          </div>
+          <div class="rounded-lg bg-emerald-900 px-5 py-4 text-white shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-wide text-emerald-100">Diem tich luy</p>
+            <div class="mt-1 flex items-end gap-2">
+              <span class="text-3xl font-black leading-none" id="loyaltyPoints">0</span>
+              <span class="pb-1 text-xs font-bold text-emerald-100" id="tierLabel">Hang: -</span>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
+
+      <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <form class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6" onsubmit="event.preventDefault(); updateProfile();">
+          <div class="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div>
+              <h2 class="text-lg font-black text-slate-950">Thong tin ho so</h2>
+              <p class="text-sm font-medium text-slate-500">Thong tin nay dung cho dat tour va lien he.</p>
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="grid gap-2 text-sm font-bold text-slate-700">
+              Ho va ten
+              <input class="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-50" type="text" id="profName" required>
+            </label>
+            <label class="grid gap-2 text-sm font-bold text-slate-700">
+              Email
+              <input class="h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500" type="email" id="profEmail" disabled>
+            </label>
+            <label class="grid gap-2 text-sm font-bold text-slate-700">
+              So dien thoai
+              <input class="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-50" type="tel" id="profPhone" required>
+            </label>
+            <label class="grid gap-2 text-sm font-bold text-slate-700">
+              Dia chi
+              <input class="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-50" type="text" id="profAddress">
+            </label>
+            <label class="grid gap-2 text-sm font-bold text-slate-700">
+              Ngay sinh
+              <input class="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-50" type="date" id="profDob">
+            </label>
+            <label class="grid gap-2 text-sm font-bold text-slate-700">
+              Gioi tinh
+              <select class="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-50" id="profGender">
+                <option value="">Chon gioi tinh</option>
+                <option value="MALE">Nam</option>
+                <option value="FEMALE">Nu</option>
+                <option value="OTHER">Khac</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <img id="avatarPreview" src="" alt="Avatar" class="h-20 w-20 rounded-full bg-slate-200 object-cover ring-4 ring-white">
+              <div class="min-w-0 flex-1">
+                <label class="grid gap-2 text-sm font-bold text-slate-700">
+                  Avatar URL
+                  <input class="h-11 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-50" type="text" id="profAvatar" placeholder="/uploads/avatar.png">
+                </label>
+                <div class="mt-3 flex flex-wrap items-center gap-3">
+                  <input type="file" id="profAvatarFile" accept="image/*" class="hidden" onchange="handleAvatarSelect(event)">
+                  <button type="button" class="inline-flex h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-black text-slate-700 transition hover:bg-slate-100" onclick="$('profAvatarFile').click()">Chon anh</button>
+                  <span id="avatarUploadStatus" class="text-sm font-semibold text-slate-500"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p id="profileError" class="mt-4 text-sm font-bold text-rose-600"></p>
+          <button type="submit" id="saveProfileBtn" class="mt-4 inline-flex h-11 w-full items-center justify-center rounded-lg bg-emerald-800 px-5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-900 sm:w-auto">Luu thay doi</button>
+        </form>
+
+        <form class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6" onsubmit="event.preventDefault(); changePassword();">
+          <div class="mb-5 border-b border-slate-100 pb-4">
+            <h2 class="text-lg font-black text-slate-950">Doi mat khau</h2>
+            <p class="text-sm font-medium text-slate-500">Mat khau moi can toi thieu 8 ky tu.</p>
+          </div>
+          <div class="grid gap-4">
+            <label class="grid gap-2 text-sm font-bold text-slate-700">
+              Current Password
+              <input class="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-50" type="password" id="currentPassword" required>
+            </label>
+            <label class="grid gap-2 text-sm font-bold text-slate-700">
+              New Password
+              <input class="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-50" type="password" id="newPassword" required oninput="renderPasswordStrength()">
+              <span class="h-2 overflow-hidden rounded-full bg-slate-200">
+                <span id="passwordStrengthBar" class="block h-full w-0 bg-rose-500 transition-all"></span>
+              </span>
+            </label>
+            <label class="grid gap-2 text-sm font-bold text-slate-700">
+              Confirm Password
+              <input class="h-11 rounded-lg border border-slate-200 px-3 text-sm font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-50" type="password" id="confirmPassword" required>
+            </label>
+          </div>
+          <p id="passwordError" class="mt-4 text-sm font-bold text-rose-600"></p>
+          <button type="submit" id="changePasswordBtn" class="mt-4 inline-flex h-11 w-full items-center justify-center rounded-lg bg-slate-950 px-5 text-sm font-black text-white shadow-sm transition hover:bg-slate-800">Doi mat khau</button>
+        </form>
+      </div>
+    </section>
+  </main>
 
   <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/toast.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
+    const DEFAULT_AVATAR = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%23e2e8f0%22/%3E%3Ccircle cx=%2250%22 cy=%2238%22 r=%2218%22 fill=%22%2394a3b8%22/%3E%3Cpath d=%22M50 60c-22 0-35 13-35 30h70c0-17-13-30-35-30z%22 fill=%22%2394a3b8%22/%3E%3C/svg%3E';
 
     function calcTier(points) {
       const p = Number(points || 0);
-      if (p >= 5000) return 'Kim cương (Diamond)';
-      if (p >= 2000) return 'Bạch kim (Platinum)';
-      if (p >= 1000) return 'Vàng (Gold)';
-      if (p >= 300) return 'Bạc (Silver)';
-      return 'Thành viên (Member)';
+      if (p >= 5000) return 'Diamond';
+      if (p >= 2000) return 'Platinum';
+      if (p >= 1000) return 'Gold';
+      if (p >= 300) return 'Silver';
+      return 'Member';
     }
 
     async function loadProfile() {
-      const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e2e8f0'/%3E%3Ccircle cx='50' cy='38' r='18' fill='%2394a3b8'/%3E%3Cpath d='M50 60c-22 0-35 13-35 30h70c0-17-13-30-35-30z' fill='%2394a3b8'/%3E%3C/svg%3E";
       const user = JSON.parse(sessionStorage.getItem('user') || 'null');
       if (!user?.id) {
-        TB.goToLogin('Vui lòng đăng nhập để xem hồ sơ.');
+        TB.goToLogin('Vui long dang nhap de xem ho so.');
         return;
       }
 
       const [uRes, pRes] = await Promise.all([
-        TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}`, { method: 'GET' }),
+        TB.apiFetch('/api/customers/profile', { method: 'GET' }),
         TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}/loyalty-points`, { method: 'GET' })
       ]);
 
       const u = uRes?.data || {};
       const points = pRes?.data ?? 0;
+      const avatar = u.avatarUrl ? TB.normalizeImageUrl(u.avatarUrl) : DEFAULT_AVATAR;
 
       $('profName').value = u.fullName || '';
       $('profEmail').value = u.email || '';
       $('profPhone').value = u.phoneNumber || '';
       $('profAddress').value = u.address || '';
-      $('profAvatar').value = u.avatarUrl || '';
-      $('avatarPreview').src = u.avatarUrl ? TB.normalizeImageUrl(u.avatarUrl) : DEFAULT_AVATAR;
-      $('profGender').value = u.gender || '';
       $('profDob').value = u.dateOfBirth || '';
-
-      if (u.role === 'GUIDE') {
-        $('bioGroup').style.display = 'block';
-        $('expGroup').style.display = 'block';
-        $('profBio').value = u.bio || '';
-        $('profExp').value = u.experienceYears || 0;
-      }
-
+      $('profGender').value = u.gender || '';
+      $('profAvatar').value = u.avatarUrl || '';
+      $('avatarPreview').src = avatar;
+      $('sideAvatar').src = avatar;
+      $('sideName').textContent = u.fullName || 'Khach hang';
+      $('sideEmail').textContent = u.email || '-';
       $('loyaltyPoints').textContent = Number(points || 0).toLocaleString('vi-VN');
-      $('tierLabel').textContent = `Hạng: ${calcTier(points)}`;
+      $('tierLabel').textContent = calcTier(points);
     }
 
     async function updateProfile() {
       const user = JSON.parse(sessionStorage.getItem('user') || 'null');
       if (!user?.id) {
-        TB.goToLogin('Vui lòng đăng nhập.');
+        TB.goToLogin('Vui long dang nhap.');
         return;
       }
 
@@ -279,65 +208,138 @@
         fullName: $('profName').value.trim(),
         phoneNumber: $('profPhone').value.trim(),
         address: $('profAddress').value.trim(),
-        avatarUrl: $('profAvatar').value.trim(),
+        dateOfBirth: $('profDob').value || null,
         gender: $('profGender').value,
-        dateOfBirth: $('profDob').value || null
+        avatarUrl: $('profAvatar').value.trim()
       };
 
-      if (user.role === 'GUIDE') {
-        payload.bio = $('profBio').value.trim();
-        payload.experienceYears = parseInt($('profExp').value) || 0;
+      const profileError = $('profileError');
+      profileError.textContent = '';
+      if (!payload.fullName) {
+        profileError.textContent = 'Ten khong duoc de trong.';
+        return;
+      }
+      if (payload.phoneNumber && !/^[0-9+()\-\s]{8,20}$/.test(payload.phoneNumber)) {
+        profileError.textContent = 'So dien thoai khong hop le.';
+        return;
+      }
+      if (payload.address.length > 255) {
+        profileError.textContent = 'Dia chi qua dai.';
+        return;
       }
 
-      await TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload)
-      });
+      const saveBtn = $('saveProfileBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Dang luu...';
+      try {
+        const res = await TB.apiFetch('/api/customers/profile', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        const saved = res?.data || payload;
+        const me = JSON.parse(sessionStorage.getItem('user') || 'null') || {};
+        me.fullName = saved.fullName || payload.fullName;
+        sessionStorage.setItem('user', JSON.stringify(me));
+        $('sideName').textContent = me.fullName || 'Khach hang';
+        if (payload.avatarUrl) {
+          $('avatarPreview').src = TB.normalizeImageUrl(payload.avatarUrl);
+          $('sideAvatar').src = TB.normalizeImageUrl(payload.avatarUrl);
+        }
+        alert('Cap nhat thong tin ca nhan thanh cong.');
+      } catch (err) {
+        profileError.textContent = err.message || 'Cap nhat that bai.';
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Luu thay doi';
+      }
+    }
 
-      // refresh localStorage user fields
-      const me = JSON.parse(sessionStorage.getItem('user') || 'null') || {};
-      me.fullName = payload.fullName;
-      sessionStorage.setItem('user', JSON.stringify(me));
+    function renderPasswordStrength() {
+      const value = $('newPassword').value;
+      let score = 0;
+      if (value.length >= 8) score += 25;
+      if (/[A-Z]/.test(value)) score += 25;
+      if (/[0-9]/.test(value)) score += 25;
+      if (/[^A-Za-z0-9]/.test(value)) score += 25;
+      const bar = $('passwordStrengthBar');
+      bar.style.width = `${score}%`;
+      bar.className = 'block h-full transition-all ' + (score < 50 ? 'bg-rose-500' : score < 75 ? 'bg-amber-500' : 'bg-emerald-600');
+    }
 
-      alert('Cập nhật thông tin cá nhân thành công.');
+    async function changePassword() {
+      const payload = {
+        currentPassword: $('currentPassword').value,
+        newPassword: $('newPassword').value,
+        confirmPassword: $('confirmPassword').value
+      };
+      const passwordError = $('passwordError');
+      passwordError.textContent = '';
+      if (!payload.currentPassword || !payload.newPassword || !payload.confirmPassword) {
+        passwordError.textContent = 'Vui long nhap day du mat khau.';
+        return;
+      }
+      if (payload.newPassword.length < 8) {
+        passwordError.textContent = 'Mat khau moi phai co it nhat 8 ky tu.';
+        return;
+      }
+      if (payload.newPassword === payload.currentPassword) {
+        passwordError.textContent = 'Mat khau moi phai khac mat khau cu.';
+        return;
+      }
+      if (payload.newPassword !== payload.confirmPassword) {
+        passwordError.textContent = 'Confirm Password phai khop.';
+        return;
+      }
+
+      const btn = $('changePasswordBtn');
+      btn.disabled = true;
+      btn.textContent = 'Dang doi...';
+      try {
+        await TB.apiFetch('/api/customers/change-password', {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        $('currentPassword').value = '';
+        $('newPassword').value = '';
+        $('confirmPassword').value = '';
+        renderPasswordStrength();
+        alert('Doi mat khau thanh cong.');
+      } catch (err) {
+        passwordError.textContent = err.message || 'Doi mat khau that bai.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Doi mat khau';
+      }
     }
 
     async function handleAvatarSelect(event) {
       const file = event.target.files[0];
-      if (!file) return;
-
       const user = JSON.parse(sessionStorage.getItem('user') || 'null');
-      if (!user?.id) return;
+      if (!file || !user?.id) return;
 
-      $('avatarUploadStatus').textContent = 'Đang tải ảnh lên...';
-
+      const status = $('avatarUploadStatus');
+      status.textContent = 'Dang tai anh...';
       try {
         const formData = new FormData();
         formData.append('file', file);
-
         const res = await TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}/documents`, {
           method: 'POST',
           body: formData,
-          headers: {} // Let browser set Content-Type to multipart/form-data with boundary
+          headers: {}
         });
-
-        if (res?.data) {
-          $('profAvatar').value = res.data; // giữ path tương đối để lưu DB
-          $('avatarPreview').src = TB.normalizeImageUrl(res.data); // hiển thị thì normalize
-          $('avatarUploadStatus').textContent = 'Tải ảnh thành công!';
-          $('avatarUploadStatus').style.color = '#10b981';
-        }
+        $('profAvatar').value = res?.data || '';
+        $('avatarPreview').src = TB.normalizeImageUrl(res?.data || '');
+        $('sideAvatar').src = TB.normalizeImageUrl(res?.data || '');
+        status.textContent = 'Tai anh thanh cong.';
       } catch (err) {
-        $('avatarUploadStatus').textContent = 'Lỗi tải ảnh: ' + err.message;
-        $('avatarUploadStatus').style.color = '#ef4444';
+        status.textContent = err.message || 'Khong the tai anh.';
       }
     }
 
     loadProfile().catch(err => {
       console.error(err);
-      alert(err?.message || 'Không tải được hồ sơ');
+      alert(err?.message || 'Khong tai duoc ho so');
     });
   </script>
 </body>
-
 </html>
