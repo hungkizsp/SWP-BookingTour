@@ -1135,6 +1135,177 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Could not generate invoice PDF", e);
         }
     }
+    
+    /**
+     * UC22: Generate invoice PDF with validation and authorization
+     */
+    @Override
+    public byte[] generateInvoice(Long bookingId, Long customerId) {
+        log.info("[UC22] Generating invoice for booking {} requested by customer {}", bookingId, customerId);
+        
+        // Fetch booking
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        
+        // Authorization check
+        if (!booking.getUser().getId().equals(customerId)) {
+            log.warn("[UC22] Authorization failed: Customer {} cannot download invoice for booking {} owned by {}", 
+                     customerId, bookingId, booking.getUser().getId());
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
+        // Business rule: Can only download invoice for CONFIRMED or COMPLETED bookings
+        if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.COMPLETED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, 
+                    "Invoice is only available for confirmed or completed bookings. Current status: " + booking.getStatus());
+        }
+        
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            doc.addPage(page);
+            
+            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+                float yPosition = 770;
+                float leftMargin = 50;
+                float rightMargin = 545;
+                
+                // Header - Company Name
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 24);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("TOURBOOKING");
+                cs.endText();
+                yPosition -= 20;
+                
+                // Invoice Title
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("INVOICE");
+                cs.endText();
+                yPosition -= 30;
+                
+                // Invoice metadata
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("Invoice Number: INV-" + booking.getId());
+                cs.newLineAtOffset(0, -15);
+                cs.showText("Booking Reference: BK-" + booking.getId());
+                cs.newLineAtOffset(0, -15);
+                cs.showText("Issue Date: " + java.time.LocalDate.now().toString());
+                cs.newLineAtOffset(0, -15);
+                cs.showText("Status: " + normalizeForPdf(booking.getStatus().name()));
+                cs.endText();
+                yPosition -= 60;
+                
+                // Bill To section
+                yPosition -= 10;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("BILL TO:");
+                cs.endText();
+                yPosition -= 18;
+                
+                User customer = booking.getUser();
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText(normalizeForPdf(customer.getFullName()));
+                cs.newLineAtOffset(0, -15);
+                cs.showText("Email: " + customer.getEmail());
+                cs.newLineAtOffset(0, -15);
+                cs.showText("Phone: " + (customer.getPhone() != null ? customer.getPhone() : "N/A"));
+                cs.endText();
+                yPosition -= 60;
+                
+                // Tour Details section
+                yPosition -= 10;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("TOUR DETAILS:");
+                cs.endText();
+                yPosition -= 18;
+                
+                TourSchedule schedule = booking.getSchedule();
+                if (schedule != null && schedule.getTour() != null) {
+                    cs.beginText();
+                    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
+                    cs.newLineAtOffset(leftMargin, yPosition);
+                    cs.showText("Tour: " + normalizeForPdf(schedule.getTour().getName()));
+                    cs.newLineAtOffset(0, -15);
+                    cs.showText("Destination: " + normalizeForPdf(schedule.getTour().getDestination()));
+                    cs.newLineAtOffset(0, -15);
+                    cs.showText("Departure: " + schedule.getStartDate().toString());
+                    cs.newLineAtOffset(0, -15);
+                    cs.showText("Duration: " + schedule.getTour().getDuration() + " days");
+                    cs.newLineAtOffset(0, -15);
+                    cs.showText("Participants: " + booking.getNumberOfPeople());
+                    cs.endText();
+                    yPosition -= 90;
+                }
+                
+                // Payment Details
+                yPosition -= 10;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("PAYMENT DETAILS:");
+                cs.endText();
+                yPosition -= 18;
+                
+                BigDecimal subtotal = booking.getTotalPrice();
+                BigDecimal discount = booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO;
+                if (discount.compareTo(BigDecimal.ZERO) > 0) {
+                    subtotal = subtotal.add(discount);
+                }
+                
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("Subtotal:");
+                cs.newLineAtOffset(rightMargin - leftMargin - 100, 0);
+                cs.showText(subtotal.toString() + " VND");
+                cs.newLineAtOffset(-(rightMargin - leftMargin - 100), -15);
+                
+                if (discount.compareTo(BigDecimal.ZERO) > 0) {
+                    cs.showText("Discount:");
+                    cs.newLineAtOffset(rightMargin - leftMargin - 100, 0);
+                    cs.showText("-" + discount.toString() + " VND");
+                    cs.newLineAtOffset(-(rightMargin - leftMargin - 100), -15);
+                }
+                
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                cs.showText("Total:");
+                cs.newLineAtOffset(rightMargin - leftMargin - 100, 0);
+                cs.showText(booking.getTotalPrice().toString() + " VND");
+                cs.endText();
+                yPosition -= 50;
+                
+                // Footer
+                yPosition = 50;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("Thank you for booking with TourBooking!");
+                cs.newLineAtOffset(0, -12);
+                cs.showText("For any questions, please contact support@tourbooking.com");
+                cs.endText();
+            }
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            doc.save(baos);
+            
+            log.info("[UC22] Invoice generated successfully for booking {}", bookingId);
+            return baos.toByteArray();
+            
+        } catch (Exception e) {
+            log.error("[UC22] Error generating PDF for booking {}", bookingId, e);
+            throw new RuntimeException("Could not generate invoice PDF: " + e.getMessage(), e);
+        }
+    }
 
     @Override
     @Transactional
