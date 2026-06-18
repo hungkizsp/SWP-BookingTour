@@ -40,10 +40,10 @@
     }
 
     try {
-      const items = typeof itineraryJson === 'string' && itineraryJson.trim().startsWith('[') 
-                    ? JSON.parse(itineraryJson) 
-                    : itineraryJson;
-      
+      const items = typeof itineraryJson === 'string' && itineraryJson.trim().startsWith('[')
+        ? JSON.parse(itineraryJson)
+        : itineraryJson;
+
       if (Array.isArray(items)) {
         root.innerHTML = items.map((item, idx) => `
           <div class="itinerary-item ${idx === 0 ? 'active' : ''}">
@@ -70,7 +70,7 @@
       root.innerHTML = '<option value="">Liên hệ hotline để xem lịch</option>';
       return;
     }
-    
+
     // Format JSON array dates like [2026, 4, 18] to string
     const toDateObj = (d) => {
       if (Array.isArray(d)) return new Date(d[0], d[1] - 1, d[2]);
@@ -179,10 +179,10 @@
         fetch(`${BACKEND}/api/v1/faqs/global`)
       ]);
 
-      const tourFaqs   = tourRes.ok   ? await tourRes.json()   : [];
+      const tourFaqs = tourRes.ok ? await tourRes.json() : [];
       const globalFaqs = globalRes.ok ? await globalRes.json() : [];
       const list = [...(Array.isArray(tourFaqs) ? tourFaqs : []),
-                    ...(Array.isArray(globalFaqs) ? globalFaqs : [])];
+      ...(Array.isArray(globalFaqs) ? globalFaqs : [])];
 
       const elFaqList = el('tourFaqList');
       if (!list || list.length === 0) {
@@ -200,7 +200,7 @@
           <div style="padding: 0 20px 15px; color: var(--text-soft); font-size: 0.95rem; line-height: 1.6; display: none;">${escapeHtml(f.answer)}</div>
         </div>
       `).join('');
-    } catch(e) {
+    } catch (e) {
       console.error('FAQ load error:', e);
       el('tourFaqList').innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-faint);">Không thể tải câu hỏi.</div>';
     }
@@ -225,7 +225,7 @@
           <button class="btn btn-secondary" id="logoutBtn" style="padding: 0 20px; min-height: 40px; height: 40px; font-size: 0.8rem; border-radius: 10px;">Đăng xuất</button>
         </div>`;
       const btn = el('logoutBtn');
-      if(btn) btn.onclick = () => { sessionStorage.clear(); location.reload(); };
+      if (btn) btn.onclick = () => { sessionStorage.clear(); location.reload(); };
     } else {
       navRight.innerHTML = `
         <div style="display: flex; align-items: center; gap: 15px;">
@@ -235,44 +235,16 @@
     }
   }
 
-  if (user) {
-    const loginPrompt = el('loginPromptReview');
-    const formContainer = el('reviewFormContainer');
-    if(loginPrompt) loginPrompt.style.display = 'none';
-    if(formContainer) formContainer.style.display = 'block';
-
-    const submitBtn = el('submitReviewBtn');
-    if (submitBtn) {
-      submitBtn.onclick = async () => {
-        const rating = el('reviewRating').value;
-        const comment = el('reviewComment').value;
-        if (!comment.trim()) {
-          alert('Vui lòng nhập nhận xét!');
-          return;
-        }
-        try {
-          submitBtn.disabled = true;
-          submitBtn.textContent = 'Đang gửi...';
-          await TB.apiFetch('/api/v1/reviews', {
-            method: 'POST',
-            body: JSON.stringify({
-              tourId: Number(id),
-              userId: user.id || user.userId || user.id, // Fallback check
-              rating: Number(rating),
-              comment: comment.trim()
-            })
-          });
-          alert('Đã lưu đánh giá thành công!');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Cập nhật đánh giá';
-          loadReviews();
-        } catch (err) {
-          console.error(err);
-          alert('Có lỗi xảy ra: ' + (err.response?.data?.message || err.message));
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Gửi đánh giá';
-        }
-      };
-    }
+  const formContainer = el('reviewFormContainer');
+  const loginPrompt = el('loginPromptReview');
+  if (loginPrompt) loginPrompt.style.display = 'none';
+  if (formContainer) {
+    formContainer.innerHTML = `
+      <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 20px; text-align: center; color: #0369a1;">
+        Bạn chỉ có thể viết đánh giá sau khi đã hoàn tất chuyến tour này.
+        Vui lòng vào mục <a href="../user/history.html" style="color: var(--primary); font-weight: 700;">Lịch sử đặt tour</a> để gửi đánh giá.
+      </div>
+    `;
+    formContainer.style.display = 'block';
   }
 })();

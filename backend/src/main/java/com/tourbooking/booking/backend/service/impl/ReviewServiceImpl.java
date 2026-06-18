@@ -75,17 +75,18 @@ public class ReviewServiceImpl implements ReviewService {
         // Validation: user must have a COMPLETED booking for this tour
         boolean hasCompletedBooking = tour.getSchedules().stream()
                 .flatMap(schedule -> schedule.getBookings().stream())
-                .anyMatch(booking -> booking.getUser().getId().equals(user.getId()) 
-                                  && booking.getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.COMPLETED);
+                .anyMatch(booking -> booking.getUser().getId().equals(user.getId())
+                        && booking
+                                .getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.COMPLETED);
 
         if (!hasCompletedBooking) {
-            throw new AppException(ErrorCode.INVALID_REQUEST); // Or a specific error
+            throw new RuntimeException("USER_HAS_NO_COMPLETED_BOOKING");
         }
 
         if (reviewRepo.findByUser_IdAndTour_Id(user.getId(), tour.getId()).isPresent()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST); // Prevent duplicate review
+            throw new RuntimeException("REVIEW_ALREADY_EXISTS");
         }
-        
+
         Review review = ReviewMapper.toEntity(request);
         review.setTour(tour);
         review.setUser(user);
@@ -128,7 +129,8 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public com.tourbooking.booking.backend.model.dto.response.PagedResponse<ReviewResponse> getAllReviewsPaged(Long tourId, Integer rating, org.springframework.data.domain.Pageable pageable) {
+    public com.tourbooking.booking.backend.model.dto.response.PagedResponse<ReviewResponse> getAllReviewsPaged(
+            Long tourId, Integer rating, org.springframework.data.domain.Pageable pageable) {
         org.springframework.data.domain.Page<Review> page;
 
         if (tourId != null && rating != null) {
