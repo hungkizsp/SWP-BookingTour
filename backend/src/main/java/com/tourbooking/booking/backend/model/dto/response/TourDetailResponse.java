@@ -4,6 +4,8 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.util.List;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Data
 public class TourDetailResponse {
@@ -32,8 +34,12 @@ public class TourDetailResponse {
         private Long scheduleId;
         private LocalDate startDate;
         private LocalDate endDate;
+        private LocalTime departureTime;
+        private LocalTime returnTime;
         private Integer availableSlots;
         private Integer maxSlots;
         private String status;
+        /** ISO-8601 datetime string for the booking deadline. */
+        private LocalDateTime bookingDeadline;
     }
 }

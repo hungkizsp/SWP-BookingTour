@@ -54,17 +54,35 @@ function renderSchedulesPage() {
     }
 
     pageItems.forEach(s => {
+        const STATUS_STYLE = {
+            OPEN:           'background:#d1fae5; color:#059669;',
+            BOOKING_CLOSED: 'background:#fef3c7; color:#d97706;',
+            SOLD_OUT:       'background:#fee2e2; color:#dc2626;',
+            IN_PROGRESS:    'background:#dbeafe; color:#2563eb;',
+            COMPLETED:      'background:#f1f5f9; color:#64748b;',
+            CANCELLED:      'background:#f3f4f6; color:#9ca3af;',
+        };
+        const statusKey = String(s.status || '').toUpperCase();
+        const statusStyle = STATUS_STYLE[statusKey] || 'background:#f3f4f6; color:#6b7280;';
+        const STATUS_LABELS = {
+            OPEN: 'Mở đặt', BOOKING_CLOSED: 'Đóng đặt', SOLD_OUT: 'Hết chỗ',
+            IN_PROGRESS: 'Đang diễn ra', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy',
+        };
+        const statusLabel = STATUS_LABELS[statusKey] || s.status;
+        const NON_ASSIGNABLE = ['COMPLETED', 'IN_PROGRESS', 'CANCELLED'];
+        const canAssign = !NON_ASSIGNABLE.includes(statusKey);
+
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>SD-${s.id}</td>
             <td>${s.tourName || 'Basic Tour'}</td>
             <td>${s.startDate} - ${s.endDate}</td>
             <td>${s.guideId ? 'Guide #' + s.guideId : '<span style="color:#d97706">Unassigned</span>'}</td>
-            <td>${s.status}</td>
+            <td><span style="display:inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; ${statusStyle}">${statusLabel}</span></td>
             <td>
-                ${s.status === 'COMPLETED'
-                    ? '<button class="action-btn" style="background: #cbd5e1; color: #64748b; cursor: not-allowed;" disabled title="Schedule completed - cannot re-assign guide">Assign</button>'
-                    : '<button class="action-btn" onclick="openAssignModal(' + s.id + ')">Assign</button>'}
+                ${canAssign
+                    ? `<button class="action-btn" onclick="openAssignModal(${s.id})">Assign</button>`
+                    : `<button class="action-btn" style="background: #cbd5e1; color: #64748b; cursor: not-allowed;" disabled title="Cannot assign: ${statusLabel}">Assign</button>`}
                 <button class="action-btn" style="background: #64748b" onclick="openDetailsModal(${s.id})">Details</button>
             </td>
         `;

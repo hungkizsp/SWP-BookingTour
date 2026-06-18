@@ -153,13 +153,50 @@ public class BookingServiceImpl implements BookingService {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+        // ── 1. Acquire Pessimistic Write Lock on the schedule row ──────────────
+        // This is the ONLY place we load the schedule; the lock is held for the
+        // entire transaction, preventing concurrent slot deductions.
         TourSchedule schedule = tourScheduleRepository.findByIdWithLock(request.getScheduleId())
-                .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
 
+        // ── 2. Status guard: reject CANCELLED / COMPLETED schedules ───────────
+        com.tourbooking.booking.backend.model.entity.enums.TourStatus currentStatus = schedule.getStatus();
+        if (currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED
+                || currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.COMPLETED) {
+            throw new AppException(ErrorCode.SCHEDULE_NOT_BOOKABLE);
+        }
+
+        // ── 3. Not-started check: current time must be BEFORE departure ────────
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime departureDateTime = schedule.getDepartureDateTime();
+        if (departureDateTime != null && !now.isBefore(departureDateTime)) {
+            throw new AppException(ErrorCode.TOUR_ALREADY_STARTED,
+                    "Tour đã bắt đầu vào " + departureDateTime + ". Không thể đặt chỗ.");
+        }
+
+        // ── 4. Booking-deadline check ──────────────────────────────────────────
+        java.time.LocalDateTime deadline = schedule.getEffectiveBookingDeadline();
+        if (deadline != null && !now.isBefore(deadline)) {
+            // Proactively mark schedule as BOOKING_CLOSED if it is still OPEN/SOLD_OUT
+            if (currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN
+                    || currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT) {
+                schedule.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.BOOKING_CLOSED);
+                tourScheduleRepository.save(schedule);
+            }
+            throw new AppException(ErrorCode.BOOKING_DEADLINE_PASSED,
+                    "Hạn đặt tour đã kết thúc lúc " + deadline + ".");
+        }
+
+        // ── 5. IN_PROGRESS guard (belt-and-suspenders) ────────────────────────
+        if (currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.IN_PROGRESS) {
+            throw new AppException(ErrorCode.TOUR_ALREADY_STARTED, "Tour đang diễn ra, không thể đặt chỗ.");
+        }
+
+        // ── 6. Passenger classification & slot calculation ─────────────────────
         int declaredAdultCount = request.getAdultCount() != null ? request.getAdultCount() : 1;
         int declaredChildCount = request.getChildCount() != null ? request.getChildCount() : 0;
         int declaredInfantCount = request.getInfantCount() != null ? request.getInfantCount() : 0;
-        LocalDate tourStartDate = schedule.getStartDate();
+        java.time.LocalDate tourStartDate = schedule.getStartDate();
 
         PassengerClassificationService.ClassificationResult classification = passengerClassificationService.classify(
                 request.getPassengers(),
@@ -170,6 +207,30 @@ public class BookingServiceImpl implements BookingService {
                 schedule.getMaxSlots());
 
         int slotsToDeduct = classification.getSlotsToDeduct();
+
+        // ── 7. Available-slots check (within the locked transaction) ──────────
+        Integer available = schedule.getAvailableSlots();
+        if (available == null || available <= 0) {
+            schedule.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT);
+            tourScheduleRepository.save(schedule);
+            throw new AppException(ErrorCode.SCHEDULE_SOLD_OUT);
+        }
+        if (available < slotsToDeduct) {
+            throw new AppException(ErrorCode.INSUFFICIENT_SLOTS,
+                    "Chỉ còn " + available + " chỗ nhưng yêu cầu " + slotsToDeduct + " chỗ.");
+        }
+
+        // ── 8. Deduct slots (still in same transaction / lock scope) ──────────
+        int remaining = available - slotsToDeduct;
+        schedule.setAvailableSlots(remaining);
+        if (remaining == 0
+                && schedule.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN) {
+            schedule.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT);
+            log.info("[BOOKING] Schedule #{} marked SOLD_OUT after deduction of {} slots.", schedule.getId(), slotsToDeduct);
+        }
+        tourScheduleRepository.save(schedule);
+
+        // ── 9. Price calculation ───────────────────────────────────────────────
         BigDecimal tourPrice = schedule.getTour().getPrice();
         BigDecimal totalPrice = calculatePassengerTotalPrice(
                 tourPrice,
@@ -177,6 +238,7 @@ public class BookingServiceImpl implements BookingService {
                 classification.getRealChildCount(),
                 classification.getRealInfantCount());
 
+        // ── 10. Create & persist Booking ──────────────────────────────────────
         Booking booking = new Booking();
         booking.setUser(user);
         booking.setSchedule(schedule);
@@ -188,8 +250,7 @@ public class BookingServiceImpl implements BookingService {
 
         Booking saved = bookingRepository.save(booking);
 
-        tourScheduleService.deductAvailableSlots(schedule.getId(), slotsToDeduct);
-
+        // ── 11. Persist passengers ────────────────────────────────────────────
         for (PassengerClassificationService.ClassifiedPassenger classified : classification.getPassengers()) {
             PassengerRequest pr = classified.getRequest();
             Passenger passenger = new Passenger();
@@ -201,6 +262,7 @@ public class BookingServiceImpl implements BookingService {
             passengerRepository.save(passenger);
         }
 
+        // ── 12. Apply discount (if any) ───────────────────────────────────────
         applyDiscountIfPresent(saved, request.getDiscountCode());
 
         Booking savedBooking = bookingRepository.save(saved);
@@ -213,6 +275,7 @@ public class BookingServiceImpl implements BookingService {
         
         return BookingMapper.toResponse(savedBooking);
     }
+
 
     private BigDecimal calculatePassengerTotalPrice(
             BigDecimal tourPrice,

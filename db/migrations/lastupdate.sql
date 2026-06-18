@@ -609,3 +609,59 @@ BEGIN
     ALTER TABLE dbo.Reviews DROP COLUMN TourID;
 END
 GO
+
+-- ============================================================
+-- TOUR SCHEDULE REFACTOR: Guaranteed Departure Model
+-- Add BookingDeadline, DepartureTime, ReturnTime columns
+-- ============================================================
+
+-- 1. BookingDeadline: the cut-off datetime after which new bookings are rejected.
+--    NULL means "no explicit deadline" — the backend will default to the departure datetime.
+IF COL_LENGTH('dbo.TourSchedules', 'BookingDeadline') IS NULL
+BEGIN
+    ALTER TABLE dbo.TourSchedules ADD BookingDeadline DATETIME2 NULL;
+END
+GO
+
+-- 2. DepartureTime: the clock time on StartDate when the tour departs (e.g. 07:00).
+--    Stored as TIME so it can be combined with StartDate in application code.
+IF COL_LENGTH('dbo.TourSchedules', 'DepartureTime') IS NULL
+BEGIN
+    ALTER TABLE dbo.TourSchedules ADD DepartureTime TIME NULL;
+END
+GO
+
+-- 3. ReturnTime: the clock time on EndDate when the tour returns (e.g. 18:00).
+IF COL_LENGTH('dbo.TourSchedules', 'ReturnTime') IS NULL
+BEGIN
+    ALTER TABLE dbo.TourSchedules ADD ReturnTime TIME NULL;
+END
+GO
+
+-- 4. Backfill: for existing rows where BookingDeadline is NULL,
+--    set it to midnight of StartDate (safe fallback — guests could already book up to the departure day).
+UPDATE dbo.TourSchedules
+SET BookingDeadline = CAST(CAST(StartDate AS DATETIME2) AS DATETIME2)
+WHERE BookingDeadline IS NULL AND StartDate IS NOT NULL;
+GO
+
+-- 5. Migrate legacy Status values to the new ScheduleStatus vocabulary.
+--    ACTIVE  -> OPEN      (ACTIVE was an old informal status, now normalised)
+--    FULL    -> SOLD_OUT  (FULL is replaced by SOLD_OUT)
+UPDATE dbo.TourSchedules SET Status = 'OPEN'      WHERE Status = 'ACTIVE';
+UPDATE dbo.TourSchedules SET Status = 'SOLD_OUT'  WHERE Status = 'FULL';
+GO
+
+-- 6. Add CHECK constraint to lock valid Status values.
+--    Only add if it does not already exist.
+IF NOT EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_TourSchedules_Status'
+      AND parent_object_id = OBJECT_ID('dbo.TourSchedules')
+)
+BEGIN
+    ALTER TABLE dbo.TourSchedules
+    ADD CONSTRAINT CK_TourSchedules_Status
+        CHECK (Status IN ('OPEN','BOOKING_CLOSED','SOLD_OUT','IN_PROGRESS','COMPLETED','CANCELLED'));
+END
+GO

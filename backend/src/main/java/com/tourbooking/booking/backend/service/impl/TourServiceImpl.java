@@ -183,9 +183,11 @@ public class TourServiceImpl implements TourService {
                         .ifPresent(existing -> {
                             existing.setStartDate(sReq.getStartDate());
                             existing.setEndDate(sReq.getEndDate());
+                            if (sReq.getDepartureTime() != null) existing.setDepartureTime(sReq.getDepartureTime());
+                            if (sReq.getReturnTime() != null) existing.setReturnTime(sReq.getReturnTime());
+                            if (sReq.getBookingDeadline() != null) existing.setBookingDeadline(sReq.getBookingDeadline());
                             existing.setMaxSlots(sReq.getMaxSlots());
                             if (sReq.getAvailableSlots() != null) existing.setAvailableSlots(sReq.getAvailableSlots());
-                            // status can be updated if sent
                             existing.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN);
                         });
                 } else {
@@ -285,14 +287,18 @@ public class TourServiceImpl implements TourService {
     @Transactional(readOnly = true)
     public TourDetailResponse.TourScheduleSummary getScheduleById(Long id) {
         com.tourbooking.booking.backend.model.entity.TourSchedule schedule = tourScheduleRepo.findById(id)
-                .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
-        
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+
         TourDetailResponse.TourScheduleSummary s = new TourDetailResponse.TourScheduleSummary();
         s.setScheduleId(schedule.getId());
         s.setStartDate(schedule.getStartDate());
         s.setEndDate(schedule.getEndDate());
+        s.setDepartureTime(schedule.getDepartureTime());
+        s.setReturnTime(schedule.getReturnTime());
         s.setAvailableSlots(schedule.getAvailableSlots());
+        s.setMaxSlots(schedule.getMaxSlots());
         s.setStatus(schedule.getStatus() == null ? null : schedule.getStatus().name());
+        s.setBookingDeadline(schedule.getEffectiveBookingDeadline());
         return s;
     }
 }

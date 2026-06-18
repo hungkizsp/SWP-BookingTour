@@ -17,6 +17,81 @@
       .replaceAll("'", '&#039;');
   }
 
+  // ── Status helpers ─────────────────────────────────────────────────────────
+
+  const STATUS_META = {
+    OPEN:           { label: 'Đang nhận đặt',   color: '#059669', bg: '#d1fae5', icon: '🟢' },
+    BOOKING_CLOSED: { label: 'Đã đóng đặt chỗ', color: '#d97706', bg: '#fef3c7', icon: '🔒' },
+    SOLD_OUT:       { label: 'Hết chỗ',          color: '#dc2626', bg: '#fee2e2', icon: '🔴' },
+    IN_PROGRESS:    { label: 'Đang diễn ra',     color: '#2563eb', bg: '#dbeafe', icon: '🚀' },
+    COMPLETED:      { label: 'Đã hoàn thành',    color: '#64748b', bg: '#f1f5f9', icon: '✅' },
+    CANCELLED:      { label: 'Đã hủy',           color: '#9ca3af', bg: '#f3f4f6', icon: '❌' },
+  };
+
+  function getStatusMeta(status) {
+    return STATUS_META[String(status).toUpperCase()] || { label: status || 'Không rõ', color: '#6b7280', bg: '#f3f4f6', icon: '⚪' };
+  }
+
+  /**
+   * Returns whether booking is currently allowed based on status + deadline.
+   * @param {object} s - schedule summary object
+   * @returns {{ canBook: boolean, reason: string }}
+   */
+  function getBookabilityState(s) {
+    const status = String(s.status || '').toUpperCase();
+    const now = new Date();
+
+    if (status === 'CANCELLED') return { canBook: false, reason: 'Lịch trình đã bị hủy.' };
+    if (status === 'COMPLETED') return { canBook: false, reason: 'Tour đã hoàn thành.' };
+    if (status === 'IN_PROGRESS') return { canBook: false, reason: 'Tour đang diễn ra, không thể đặt thêm.' };
+    if (status === 'BOOKING_CLOSED') return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.' };
+    if (status === 'SOLD_OUT') return { canBook: false, reason: 'Tour đã hết chỗ.' };
+
+    // Additional client-side checks against deadline (backend is authoritative, this is UX only)
+    if (s.bookingDeadline) {
+      const deadline = toDateObj(s.bookingDeadline);
+      if (now >= deadline) return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.' };
+    }
+
+    if ((s.availableSlots ?? 1) <= 0) return { canBook: false, reason: 'Tour đã hết chỗ.' };
+
+    return { canBook: true, reason: '' };
+  }
+
+  // ── Date/time parsing helpers ─────────────────────────────────────────────
+
+  const toDateObj = (d) => {
+    if (!d) return null;
+    if (Array.isArray(d)) {
+      if (d.length >= 5) return new Date(d[0], d[1] - 1, d[2], d[3], d[4]);
+      return new Date(d[0], d[1] - 1, d[2]);
+    }
+    return new Date(d);
+  };
+
+  const formatDate = (d) => {
+    const obj = toDateObj(d);
+    return obj ? obj.toLocaleDateString('vi-VN') : '—';
+  };
+
+  const formatTime = (t) => {
+    if (!t) return '';
+    if (Array.isArray(t)) return `${String(t[0]).padStart(2,'0')}:${String(t[1]).padStart(2,'0')}`;
+    const d = new Date(t);
+    if (!isNaN(d)) return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    // Already a string like "07:00"
+    return String(t).substring(0, 5);
+  };
+
+  const formatDateTime = (dt) => {
+    if (!dt) return '—';
+    const d = toDateObj(dt);
+    if (!d || isNaN(d)) return String(dt);
+    return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  };
+
+  // ── Gallery ──────────────────────────────────────────────────────────────
+
   function renderGallery(images) {
     const root = el('gallery');
     if (!images || images.length === 0) {
@@ -31,6 +106,8 @@
     });
     root.innerHTML = html;
   }
+
+  // ── Itinerary ─────────────────────────────────────────────────────────────
 
   function renderItinerary(itineraryJson) {
     const root = el('itinerary');
@@ -64,39 +141,104 @@
     }
   }
 
+  // ── Schedule select + booking button ─────────────────────────────────────
+
   function renderSchedules(list) {
     const root = el('schedules');
+    const btn = el('bookNowBtn');
+    const statusBadgeWrap = el('scheduleStatusBadge');
+    const deadlineInfo = el('scheduleDeadlineInfo');
+
     if (!list || list.length === 0) {
       root.innerHTML = '<option value="">Liên hệ hotline để xem lịch</option>';
+      if (btn) { btn.disabled = true; }
       return;
     }
 
-    // Format JSON array dates like [2026, 4, 18] to string
-    const toDateObj = (d) => {
-      if (Array.isArray(d)) return new Date(d[0], d[1] - 1, d[2]);
-      return new Date(d);
-    };
-
-    const formatDate = (d) => toDateObj(d).toLocaleDateString('vi-VN');
-
-    const formatTime = (d) => {
-      const date = toDateObj(d);
-      const hh = String(date.getHours()).padStart(2, '0');
-      const mm = String(date.getMinutes()).padStart(2, '0');
-      return `${hh}:${mm}`;
-    };
-
     root.innerHTML = '<option value="">-- Chọn lịch khởi hành --</option>' + list.map(s => {
       const status = String(s.status || '').toUpperCase();
-      const isAvailable = status === 'AVAILABLE' || status === 'OPEN';
+      const { canBook } = getBookabilityState(s);
+      const meta = getStatusMeta(status);
       const dateStr = formatDate(s.startDate);
-      // Show "khung giờ" based on schedule time
-      const timeStr = formatTime(s.startDate);
-      return `<option value="${s.scheduleId}" ${!isAvailable ? 'disabled' : ''}>
-        🚀 ${dateStr} lúc ${timeStr} - Còn ${s.availableSlots} chỗ
+      const timeStr = formatTime(s.departureTime) || formatTime(s.startDate);
+      const slotText = (s.availableSlots ?? 0) > 0 ? `Còn ${s.availableSlots} chỗ` : 'Hết chỗ';
+
+      return `<option value="${s.scheduleId}" ${!canBook ? 'disabled' : ''} data-status="${escapeHtml(status)}">
+        ${meta.icon} ${dateStr}${timeStr ? ' lúc ' + timeStr : ''} · ${slotText} · ${meta.label}
       </option>`;
     }).join('');
+
+    // Trigger initial state render
+    updateBookingState(list);
+
+    root.onchange = () => updateBookingState(list);
   }
+
+  function updateBookingState(list) {
+    const root = el('schedules');
+    const btn = el('bookNowBtn');
+    const statusBadgeWrap = el('scheduleStatusBadge');
+    const deadlineInfo = el('scheduleDeadlineInfo');
+    const selectedId = root ? parseInt(root.value) : null;
+
+    if (!selectedId || !list) {
+      if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
+      if (statusBadgeWrap) statusBadgeWrap.innerHTML = '';
+      if (deadlineInfo) deadlineInfo.innerHTML = '';
+      return;
+    }
+
+    const schedule = list.find(s => s.scheduleId === selectedId);
+    if (!schedule) return;
+
+    const { canBook, reason } = getBookabilityState(schedule);
+    const meta = getStatusMeta(schedule.status);
+
+    // Status badge
+    if (statusBadgeWrap) {
+      statusBadgeWrap.innerHTML = `
+        <span style="
+          display: inline-flex; align-items: center; gap: 6px;
+          background: ${meta.bg}; color: ${meta.color};
+          border: 1px solid ${meta.color}33;
+          padding: 5px 14px; border-radius: 20px;
+          font-size: 0.8rem; font-weight: 700;
+        ">${meta.icon} ${meta.label}</span>`;
+    }
+
+    // Deadline info
+    if (deadlineInfo) {
+      const deadline = schedule.bookingDeadline;
+      if (deadline) {
+        const deadlineDate = toDateObj(deadline);
+        const isPast = deadlineDate && new Date() >= deadlineDate;
+        deadlineInfo.innerHTML = `
+          <div style="font-size: 0.82rem; color: ${isPast ? '#dc2626' : '#64748b'}; margin-top: 8px;">
+            📅 Hạn đặt: <strong>${formatDateTime(deadline)}</strong>
+            ${isPast ? ' <span style="color:#dc2626; font-weight:700;">(Đã hết hạn)</span>' : ''}
+          </div>`;
+      } else {
+        deadlineInfo.innerHTML = '';
+      }
+    }
+
+    // Button state
+    if (btn) {
+      if (canBook) {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+        btn.textContent = 'ĐẶT TOUR NGAY';
+      } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.textContent = reason || 'Không thể đặt';
+      }
+    }
+  }
+
+  // ── Book now button ───────────────────────────────────────────────────────
 
   el('bookNowBtn').onclick = () => {
     const scheduleId = el('schedules').value;
@@ -109,6 +251,8 @@
     qs.set('scheduleId', String(scheduleId));
     window.location.href = `./checkout.html?${qs.toString()}`;
   };
+
+  // ── Main data load ────────────────────────────────────────────────────────
 
   async function load() {
     const res = await TB.apiFetch(`/api/v1/tours/${encodeURIComponent(id)}`, { method: 'GET' });
@@ -132,6 +276,8 @@
     renderItinerary(t.itinerary);
     renderSchedules(t.schedules);
   }
+
+  // ── Reviews ───────────────────────────────────────────────────────────────
 
   async function loadReviews() {
     try {
@@ -170,9 +316,10 @@
     }
   }
 
+  // ── FAQs ──────────────────────────────────────────────────────────────────
+
   async function loadFaqs() {
     try {
-      // Dùng plain fetch vì đây là public endpoint (không cần auth)
       const BACKEND = 'http://localhost:8080';
       const [tourRes, globalRes] = await Promise.all([
         fetch(`${BACKEND}/api/v1/faqs/tour/${id}`),
@@ -205,6 +352,8 @@
       el('tourFaqList').innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-faint);">Không thể tải câu hỏi.</div>';
     }
   }
+
+  // ── Bootstrap ─────────────────────────────────────────────────────────────
 
   load().then(() => {
     loadReviews();
