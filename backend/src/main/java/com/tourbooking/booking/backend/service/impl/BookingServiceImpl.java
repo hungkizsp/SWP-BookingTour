@@ -23,6 +23,7 @@ import com.tourbooking.booking.backend.model.dto.request.PassengerRequest;
 import com.tourbooking.booking.backend.repository.UserRepository;
 import java.time.LocalDateTime;
 import com.tourbooking.booking.backend.service.BookingService;
+import com.tourbooking.booking.backend.repository.ReviewRepository;
 import com.tourbooking.booking.backend.service.PassengerClassificationService;
 import com.tourbooking.booking.backend.service.PaymentService;
 import com.tourbooking.booking.backend.service.TourScheduleService;
@@ -75,6 +76,7 @@ public class BookingServiceImpl implements BookingService {
     private final com.tourbooking.booking.backend.service.MailService mailService;
 
     private final com.tourbooking.booking.backend.repository.DiscountPolicyRepository discountPolicyRepository;
+    private final ReviewRepository reviewRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -111,7 +113,12 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByUserId(Long userId) {
         return bookingRepository.findByUserId(userId).stream()
-                .map(BookingMapper::toResponse)
+                .map(booking -> {
+                    BookingResponse response = BookingMapper.toResponse(booking);
+                    // Populate the 'reviewed' flag so the frontend can show correct button state
+                    response.setReviewed(reviewRepository.findByBookingId(booking.getId()).isPresent());
+                    return response;
+                })
                 .toList();
     }
 

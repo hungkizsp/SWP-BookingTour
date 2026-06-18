@@ -24,7 +24,9 @@ public enum ErrorCode {
     VNPAY_NOT_CONFIGURED(1016,
             "Chưa cấu hình VNPay: đặt VNP_TMN_CODE và VNP_HASH_SECRET trong .env rồi khởi động lại backend."),
     VNPAY_SIGNATURE_INVALID(1017, "Chữ ký VNPay không hợp lệ."),
-    VNPAY_PAYMENT_FAILED(1018, "Thanh toán VNPay không thành công.");
+    VNPAY_PAYMENT_FAILED(1018, "Thanh toán VNPay không thành công."),
+    REVIEW_ALREADY_EXISTS(1019, "Đặt tour này đã có đánh giá. Mỗi đặt tour chỉ được đánh giá một lần."),
+    TOUR_NOT_COMPLETED_YET(1020, "Chuyến đi chưa hoàn thành. Bạn chỉ có thể đánh giá sau khi tour kết thúc.");
 
     private final int code;
     private final String message;

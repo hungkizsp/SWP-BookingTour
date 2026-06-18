@@ -539,6 +539,73 @@ BEGIN
     INSERT INTO dbo.DiscountPolicies (PassengerType, Rate, IsActive) VALUES ('INFANT', 0.10, 1);
 END
 GO
+-- ============================================================
+-- REVIEW MODULE REFACTOR: 1 User + 1 Tour = 1 Review => 1 Booking = 1 Review
+-- ============================================================
 
-- -   N o   D B   s c h e m a   m o d i f i c a t i o n s   r e q u i r e d   f o r   T A S K   5   ( D y n a m i c   I n f a n t   L i m i t )   a s   M a x S l o t s   a l r e a d y   e x i s t s   i n   T o u r S c h e d u l e s .  
- 
+-- Step 1: DROP CONSTRAINT UQ_Reviews_User_Tour (old uniqueness guard)
+IF EXISTS (
+    SELECT 1 FROM sys.key_constraints 
+    WHERE name = 'UQ_Reviews_User_Tour' AND parent_object_id = OBJECT_ID('dbo.Reviews')
+)
+BEGIN
+    ALTER TABLE dbo.Reviews DROP CONSTRAINT UQ_Reviews_User_Tour;
+END
+GO
+
+-- Step 2: DROP CONSTRAINT FK_Reviews_Tours (old Tour foreign key)
+IF EXISTS (
+    SELECT 1 FROM sys.foreign_keys 
+    WHERE name = 'FK_Reviews_Tours' AND parent_object_id = OBJECT_ID('dbo.Reviews')
+)
+BEGIN
+    ALTER TABLE dbo.Reviews DROP CONSTRAINT FK_Reviews_Tours;
+END
+GO
+
+-- Step 3: ADD COLUMN BookingID BIGINT NULL
+IF COL_LENGTH('dbo.Reviews', 'BookingID') IS NULL
+BEGIN
+    ALTER TABLE dbo.Reviews ADD BookingID BIGINT NULL;
+END
+GO
+
+-- Step 4: ADD CONSTRAINT FK_Reviews_Bookings -> Bookings(BookingID)
+IF NOT EXISTS (
+    SELECT 1 FROM sys.foreign_keys 
+    WHERE name = 'FK_Reviews_Bookings' AND parent_object_id = OBJECT_ID('dbo.Reviews')
+)
+BEGIN
+    ALTER TABLE dbo.Reviews 
+    ADD CONSTRAINT FK_Reviews_Bookings FOREIGN KEY (BookingID) REFERENCES dbo.Bookings(BookingID);
+END
+GO
+
+-- Step 5: Tạo Filtered Unique Index thay vì UNIQUE Constraint thông thường
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes 
+    WHERE name = 'UQ_Reviews_Booking' AND object_id = OBJECT_ID('dbo.Reviews')
+)
+BEGIN
+    -- Chỉ ép UNIQUE đối với những dòng có dữ liệu BookingID (khác NULL)
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_Reviews_Booking 
+    ON dbo.Reviews(BookingID) 
+    WHERE BookingID IS NOT NULL;
+END
+GO
+-- 1. Kiểm tra và xóa ràng buộc khóa ngoại cũ nếu nó còn sót lại
+IF EXISTS (
+    SELECT 1 FROM sys.foreign_keys 
+    WHERE name = 'FK_Reviews_Tours' AND parent_object_id = OBJECT_ID('dbo.Reviews')
+)
+BEGIN
+    ALTER TABLE dbo.Reviews DROP CONSTRAINT FK_Reviews_Tours;
+END
+GO
+
+-- 2. Xóa bỏ hẳn cột TourID ra khỏi bảng Reviews
+IF COL_LENGTH('dbo.Reviews', 'TourID') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.Reviews DROP COLUMN TourID;
+END
+GO

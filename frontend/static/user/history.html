@@ -358,7 +358,21 @@
       root.innerHTML = list.map(b => {
         const badge = statusBadge(b.status);
         const canCancel = String(b.status || '').toUpperCase() === 'PENDING' || String(b.status || '').toUpperCase() === 'CONFIRMED';
-        const canReview = String(b.status || '').toUpperCase() === 'COMPLETED';
+        const isCompleted = String(b.status || '').toUpperCase() === 'COMPLETED';
+        // b.reviewed is a boolean flag returned by the backend booking response
+        const alreadyReviewed = isCompleted && Boolean(b.reviewed);
+
+        let reviewBtn = '';
+        if (isCompleted) {
+          if (alreadyReviewed) {
+            reviewBtn = `<button class="btn" id="review-btn-${b.id}" disabled
+              style="background:#94a3b8; color:white; cursor:not-allowed; opacity:0.7;">✅ Đã Đánh Giá</button>`;
+          } else {
+            reviewBtn = `<button class="btn" id="review-btn-${b.id}"
+              style="background:#0284c7; color:white;"
+              onclick="openReviewModal(${b.id})">Viết Đánh Giá</button>`;
+          }
+        }
 
         return `
           <div class="booking-card">
@@ -390,7 +404,7 @@
               <button class="btn btn-secondary" onclick="downloadInvoice(${b.id})">Tải Hóa Đơn PDF</button>
               <button class="btn" style="background:#059669; color:white; border:none;" onclick="openDetailsModal(${b.id})">Xem Chi Tiết</button>
               ${canCancel ? `<button class="btn btn-secondary" style="color:#ef4444; border-color:#fee2e2; background:#fef2f2;" onclick="openCancelModal(${b.id})">Hủy Đặt Tour</button>` : ''}
-              ${canReview ? `<button class="btn" style="background:#0284c7; color:white;" onclick="openReviewModal(${b.id})">Đánh Giá Chuyến Đi</button>` : ''}
+              ${reviewBtn}
             </div>
           </div>
         `;
@@ -504,7 +518,12 @@
 
     function openReviewModal(bookingId) {
       currentBooking = allBookings.find(b => Number(b.id) === Number(bookingId)) || null;
-      $('reviewCode').innerText = currentBooking ? `#${currentBooking.id}` : `#${bookingId}`;
+      if (!currentBooking) return;
+      // Store the bookingId on the modal so submitReview() can read it
+      $('reviewModal').dataset.bookingId = bookingId;
+      $('reviewCode').innerText = `#${currentBooking.id}`;
+      $('reviewRating').value = '5';
+      $('reviewComment').value = '';
       $('reviewModal').style.display = 'flex';
     }
 
@@ -666,31 +685,56 @@
     }
 
     async function submitReview() {
-      const user = JSON.parse(sessionStorage.getItem('user') || 'null');
-      if (!user?.id) {
-        TB.goToLogin('Vui lòng đăng nhập để đánh giá.');
-        return;
-      }
-      if (!currentBooking?.tourId) {
-        alert("Không xác định được tourId để đánh giá (thiếu dữ liệu tour).");
+      const bookingId = $('reviewModal').dataset.bookingId;
+      if (!bookingId) {
+        alert('Không xác định được mã đặt tour. Vui lòng thử lại.');
         return;
       }
 
       const rating = Number($('reviewRating').value || 5);
       const comment = $('reviewComment').value.trim();
 
-      await TB.apiFetch('/api/v1/reviews', {
-        method: 'POST',
-        body: JSON.stringify({
-          tourId: currentBooking.tourId,
-          userId: user.id,
-          rating,
-          comment
-        })
-      });
+      if (!comment) {
+        alert('Vui lòng nhập cảm nhận của bạn trước khi gửi.');
+        return;
+      }
 
-      alert("Cảm ơn bạn đã gửi đánh giá!");
-      closeModals();
+      const submitBtn = document.querySelector('#reviewModal button[onclick="submitReview()"]');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Đang gửi...'; }
+
+      try {
+        await TB.apiFetch('/api/v1/reviews', {
+          method: 'POST',
+          body: JSON.stringify({
+            bookingId: Number(bookingId),
+            rating,
+            comment
+          })
+        });
+
+        // Mark the booking as reviewed in local state
+        const bk = allBookings.find(b => Number(b.id) === Number(bookingId));
+        if (bk) bk.reviewed = true;
+
+        // Update the button in-place without a full reload
+        const reviewBtn = document.getElementById(`review-btn-${bookingId}`);
+        if (reviewBtn) {
+          reviewBtn.disabled = true;
+          reviewBtn.style.background = '#94a3b8';
+          reviewBtn.style.cursor = 'not-allowed';
+          reviewBtn.style.opacity = '0.7';
+          reviewBtn.onclick = null;
+          reviewBtn.innerText = '✅ Đã Đánh Giá';
+        }
+
+        alert('Cảm ơn bạn đã gửi đánh giá!');
+        closeModals();
+      } catch (err) {
+        console.error(err);
+        alert('Gửi đánh giá thất bại: ' + (err.message || 'Vui lòng thử lại sau.'));
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Gửi Đánh Giá'; }
+      }
     }
 
     $('filterAll').onclick = () => applyFilter('all');

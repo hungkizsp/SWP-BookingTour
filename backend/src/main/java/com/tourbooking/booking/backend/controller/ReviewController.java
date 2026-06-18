@@ -18,6 +18,7 @@ public class ReviewController {
 
     private final ReviewService reviewService;
 
+    /** Paged listing — supports optional tourId / rating filters (admin/public). */
     @GetMapping
     public ApiResponse<com.tourbooking.booking.backend.model.dto.response.PagedResponse<ReviewResponse>> getAllReviews(
             @RequestParam(required = false) Long tourId,
@@ -25,7 +26,8 @@ public class ReviewController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
-                page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "id"));
+                page, size, org.springframework.data.domain.Sort.by(
+                        org.springframework.data.domain.Sort.Direction.DESC, "id"));
         return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.PagedResponse<ReviewResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Successfully retrieved reviews (page " + page + ")")
@@ -33,6 +35,7 @@ public class ReviewController {
                 .build();
     }
 
+    /** Public tour-detail page: all reviews for a given tour, sortable/filterable. */
     @GetMapping("/tour/{tourId}")
     public ApiResponse<List<ReviewResponse>> getReviewsByTour(
             @PathVariable Long tourId,
@@ -47,6 +50,11 @@ public class ReviewController {
                 .build();
     }
 
+    /**
+     * Create a new review.
+     * Payload: { "bookingId": 42, "rating": 5, "comment": "..." }
+     * The authenticated user is resolved server-side; no userId in body.
+     */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ReviewResponse> createReview(@RequestBody ReviewRequest request) {
@@ -57,8 +65,10 @@ public class ReviewController {
                 .build();
     }
 
+    /** Update rating/comment of an existing review (owner only). */
     @PutMapping("/{id}")
-    public ApiResponse<ReviewResponse> updateReview(@PathVariable Long id, @RequestBody ReviewRequest request) {
+    public ApiResponse<ReviewResponse> updateReview(
+            @PathVariable Long id, @RequestBody ReviewRequest request) {
         return ApiResponse.<ReviewResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Review updated successfully")

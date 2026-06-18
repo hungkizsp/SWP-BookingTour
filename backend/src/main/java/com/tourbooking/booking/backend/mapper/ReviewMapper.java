@@ -11,14 +11,22 @@ public class ReviewMapper {
             return null;
         ReviewResponse response = new ReviewResponse();
         response.setReviewId(review.getId());
+
         if (review.getUser() != null) {
             response.setUserId(review.getUser().getId());
             response.setUserName(review.getUser().getFullName());
         }
-        if (review.getTour() != null) {
-            response.setTourId(review.getTour().getId());
-            response.setTourName(review.getTour().getTourName());
+
+        if (review.getBooking() != null) {
+            response.setBookingId(review.getBooking().getId());
+            // Resolve tour from booking -> schedule -> tour for backward-compat fields
+            if (review.getBooking().getSchedule() != null
+                    && review.getBooking().getSchedule().getTour() != null) {
+                response.setTourId(review.getBooking().getSchedule().getTour().getId());
+                response.setTourName(review.getBooking().getSchedule().getTour().getTourName());
+            }
         }
+
         response.setRating(review.getRating());
         response.setComment(review.getComment());
         response.setCreatedAt(review.getCreatedAt());
@@ -42,6 +50,6 @@ public class ReviewMapper {
         if (request.getComment() != null) {
             review.setComment(request.getComment());
         }
-        // Tour and User should be set in Service layer if needed
+        // Booking and User must be set in the Service layer
     }
 }
