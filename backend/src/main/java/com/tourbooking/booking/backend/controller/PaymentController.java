@@ -45,6 +45,27 @@ public class PaymentController {
                 .build();
     }
 
+    @PostMapping("/repay")
+    public ApiResponse<PaymentResponse> repayBooking(@RequestParam Long bookingId, 
+                                                     @RequestParam String gateway, 
+                                                     jakarta.servlet.http.HttpServletRequest httpRequest) {
+        PaymentResponse response;
+        if ("VNPAY".equalsIgnoreCase(gateway)) {
+            response = paymentService.createVNPayPayment(bookingId, httpRequest);
+        } else {
+            // Default to PayOS
+            PaymentRequest pr = new PaymentRequest();
+            pr.setBookingId(bookingId);
+            response = paymentService.createPayOSPayment(pr);
+        }
+        
+        return ApiResponse.<PaymentResponse>builder()
+                .code(200)
+                .message("Repayment link created")
+                .data(response)
+                .build();
+    }
+
     @PostMapping("/payos/webhook")
     public void handlePayOSWebhook(@RequestBody String payload,
                                    @RequestHeader(value = "x-api-validate-signature", required = false) String signature) {

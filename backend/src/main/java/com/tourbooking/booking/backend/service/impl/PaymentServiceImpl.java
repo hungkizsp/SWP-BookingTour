@@ -64,8 +64,7 @@ public class PaymentServiceImpl implements PaymentService {
         Booking booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
-        Payment payment = new Payment();
-        payment.setBooking(booking);
+        Payment payment = getOrCreatePayment(booking);
         payment.setPaymentMethod(request.getPaymentMethod());
         payment.setTransactionCode(request.getTransactionCode());
         payment.setPaymentDate(LocalDateTime.now());
@@ -89,6 +88,24 @@ public class PaymentServiceImpl implements PaymentService {
 
         return toResponse(saved);
     }
+
+    private Payment getOrCreatePayment(Booking booking) {
+        List<Payment> existing = paymentRepository.findByBooking_Id(booking.getId());
+        if (existing != null && !existing.isEmpty()) {
+            Payment keep = existing.get(existing.size() - 1); // Keep the latest one by insertion order
+            if (existing.size() > 1) {
+                for (int i = 0; i < existing.size() - 1; i++) {
+                    paymentRepository.delete(existing.get(i));
+                }
+                paymentRepository.flush();
+            }
+            return keep;
+        }
+        Payment p = new Payment();
+        p.setBooking(booking);
+        return p;
+    }
+
 
     @Override
     @Transactional
@@ -119,8 +136,7 @@ public class PaymentServiceImpl implements PaymentService {
                 amount,
                 "Booking #" + booking.getId());
 
-        Payment payment = new Payment();
-        payment.setBooking(booking);
+        Payment payment = getOrCreatePayment(booking);
         payment.setAmount(payAmount);
         payment.setPaymentMethod("PAYOS");
         payment.setTransactionCode(transactionCode);
@@ -146,8 +162,7 @@ public class PaymentServiceImpl implements PaymentService {
         Booking booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
-        Payment payment = new Payment();
-        payment.setBooking(booking);
+        Payment payment = getOrCreatePayment(booking);
         payment.setAmount(booking.getTotalPrice());
         payment.setPaymentMethod("CASH");
         payment.setTransactionCode("CASH-" + System.currentTimeMillis());
@@ -192,8 +207,7 @@ public class PaymentServiceImpl implements PaymentService {
                 "Thanh toan dat tour #" + bookingId,
                 VNPayConfig.getIpAddress(request));
 
-        Payment payment = new Payment();
-        payment.setBooking(booking);
+        Payment payment = getOrCreatePayment(booking);
         payment.setAmount(payAmount);
         payment.setPaymentMethod("VNPAY");
         payment.setTransactionCode(transactionCode);

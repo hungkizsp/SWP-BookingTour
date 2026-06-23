@@ -743,3 +743,36 @@ CHECK (
     )
 );
 GO
+
+-- 1. Xóa các bản ghi liên quan trong bảng con (PaymentLogs) của những Payment bị trùng
+WITH CTE_Payments AS (
+    SELECT PaymentID,
+           ROW_NUMBER() OVER(PARTITION BY BookingID ORDER BY PaymentID DESC) as rn
+    FROM dbo.Payments
+)
+DELETE FROM dbo.PaymentLogs
+WHERE PaymentID IN (
+    SELECT PaymentID FROM CTE_Payments WHERE rn > 1
+);
+
+-- 2. Giờ đã sạch khóa ngoại, tiến hành xóa các bản ghi Payment trùng lặp
+WITH CTE_Payments AS (
+    SELECT PaymentID,
+           ROW_NUMBER() OVER(PARTITION BY BookingID ORDER BY PaymentID DESC) as rn
+    FROM dbo.Payments
+)
+DELETE FROM dbo.Payments 
+WHERE PaymentID IN (
+    SELECT PaymentID FROM CTE_Payments WHERE rn > 1
+);
+GO
+
+-- 3. Tạo UNIQUE Constraint (Lúc này chắc chắn sẽ thành công vì Booking 40 đã sạch bóng hàng trùng)
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes 
+    WHERE name = 'UQ_Payments_BookingID' AND object_id = OBJECT_ID('dbo.Payments')
+)
+BEGIN
+    ALTER TABLE dbo.Payments ADD CONSTRAINT UQ_Payments_BookingID UNIQUE (BookingID);
+END
+GO

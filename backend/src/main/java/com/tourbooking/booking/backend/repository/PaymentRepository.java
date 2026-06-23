@@ -30,6 +30,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     Optional<Payment> findFirstByBooking_IdOrderByPaymentDateDesc(Long bookingId);
 
+    List<Payment> findByBooking_Id(Long bookingId);
+
+    void deleteByBooking_Id(Long bookingId);
+
     @Query("""
             SELECT p FROM Payment p
             WHERE p.status = :status

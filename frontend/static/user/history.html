@@ -354,6 +354,30 @@
     </div>
   </div>
 
+  <!-- Modal Chọn Phương Thức Thanh Toán -->
+  <div class="modal-overlay" id="paymentMethodModal">
+    <div class="modal-box">
+      <h3 style="margin-top:0;">Chọn phương thức thanh toán</h3>
+      <p style="font-size:0.9rem; color:var(--text-faint);">Vui lòng chọn cổng thanh toán để tiếp tục giao dịch cho mã tour <strong id="repayCode"></strong>.</p>
+      
+      <div style="margin-top:16px; display:flex; flex-direction:column; gap:12px;">
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.1); border-radius:8px; cursor:pointer;">
+          <input type="radio" name="paymentGateway" value="PAYOS" checked style="width:18px; height:18px;" />
+          <strong style="color:#0369a1;">PayOS (Chuyển khoản / QR Ngân hàng)</strong>
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.1); border-radius:8px; cursor:pointer;">
+          <input type="radio" name="paymentGateway" value="VNPAY" style="width:18px; height:18px;" />
+          <strong style="color:#0369a1;">VNPay (Ví điện tử / Thẻ ATM)</strong>
+        </label>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeModals()">Đóng</button>
+        <button class="btn" id="confirmRepayBtn" onclick="confirmRepayment()">Tiếp Tục Thanh Toán</button>
+      </div>
+    </div>
+  </div>
+
   <script src="../assets/js/api.js"></script>
   <script>
     let allBookings = [];
@@ -723,6 +747,7 @@
       $('cancelModal').style.display = 'none';
       $('reviewModal').style.display = 'none';
       if ($('detailsModal')) $('detailsModal').style.display = 'none';
+      if ($('paymentMethodModal')) $('paymentMethodModal').style.display = 'none';
       if ($('bankName')) $('bankName').value = '';
       if ($('accountNumber')) $('accountNumber').value = '';
       if ($('accountHolder')) $('accountHolder').value = '';
@@ -863,24 +888,40 @@
     }, 1000);
 
     async function retryPayment(bookingId) {
-        const btn = event.target;
+        currentBooking = allBookings.find(b => Number(b.id) === Number(bookingId)) || null;
+        if (!currentBooking) return;
+        $('repayCode').innerText = '#' + currentBooking.id;
+        $('paymentMethodModal').style.display = 'flex';
+    }
+
+    async function confirmRepayment() {
+        if (!currentBooking) return;
+        
+        const gatewayEl = document.querySelector('input[name="paymentGateway"]:checked');
+        const gateway = gatewayEl ? gatewayEl.value : 'PAYOS';
+
+        const btn = $('confirmRepayBtn');
+        const origText = btn.innerText;
         btn.disabled = true;
         btn.innerText = 'Đang tạo link...';
+        
         try {
-            // Using PayOS or VNPay - assume PayOS as default
-            const res = await TB.apiFetch(`/api/v1/payments/payos/create`, {
-                method: 'POST',
-                body: JSON.stringify({ bookingId: bookingId })
+            // Updated to use the new repay endpoint
+            const res = await TB.apiFetch(`/api/v1/payments/repay?bookingId=${currentBooking.id}&gateway=${gateway}`, {
+                method: 'POST'
             });
             if (res.data?.checkoutUrl) {
                 window.location.href = res.data.checkoutUrl;
+            } else if (res.data?.paymentUrl) {
+                window.location.href = res.data.paymentUrl; // VNPay returns paymentUrl usually, but let's check what our wrapper does
             } else {
                 throw new Error("Không nhận được link thanh toán");
             }
         } catch (e) {
             alert('Lỗi: ' + e.message);
             btn.disabled = false;
-            btn.innerText = '💳 Thanh Toán Lại';
+            btn.innerText = origText;
+            closeModals();
         }
     }
 
