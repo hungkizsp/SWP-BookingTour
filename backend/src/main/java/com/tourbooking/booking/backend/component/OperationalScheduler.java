@@ -75,6 +75,13 @@ public class OperationalScheduler {
             LocalDateTime departure = schedule.getDepartureDateTime();
             if (departure == null) continue;
 
+            // Bypass workflows if schedule has 0 bookings
+            int maxSlots = schedule.getMaxSlots() != null ? schedule.getMaxSlots() : 0;
+            int availableSlots = schedule.getAvailableSlots() != null ? schedule.getAvailableSlots() : 0;
+            if (maxSlots - availableSlots <= 0) {
+                continue;
+            }
+
             for (int i = 0; i < ALERT_HOURS.length; i++) {
                 long hoursAhead = ALERT_HOURS[i];
                 String window = ALERT_WINDOWS[i];
@@ -96,8 +103,8 @@ public class OperationalScheduler {
                             .scheduleId(schedule.getId())
                             .alertWindow(window)
                             .build();
-                    operationalAlertRepository.save(alert);
-                } catch (DataIntegrityViolationException e) {
+                    operationalAlertRepository.saveAndFlush(alert);
+                } catch (Exception e) {
                     log.debug("[OPS-ALERT] Race-condition duplicate suppressed for schedule #{} window {}", schedule.getId(), window);
                     continue;
                 }
@@ -150,6 +157,13 @@ public class OperationalScheduler {
         for (TourSchedule schedule : candidates) {
             LocalDateTime departure = schedule.getDepartureDateTime();
             if (departure == null) continue;
+
+            // Bypass workflows if schedule has 0 bookings
+            int maxSlots = schedule.getMaxSlots() != null ? schedule.getMaxSlots() : 0;
+            int availableSlots = schedule.getAvailableSlots() != null ? schedule.getAvailableSlots() : 0;
+            if (maxSlots - availableSlots <= 0) {
+                continue;
+            }
 
             // Only flag if we are within 1 hour of departure (or past it but not yet handled by auto-cancel)
             if (now.isBefore(departure.minusHours(1))) {
@@ -286,6 +300,13 @@ public class OperationalScheduler {
             LocalDateTime departure = schedule.getDepartureDateTime();
             if (departure == null || now.isBefore(departure)) {
                 continue; // not yet at departure
+            }
+
+            // Bypass workflows if schedule has 0 bookings
+            int maxSlots = schedule.getMaxSlots() != null ? schedule.getMaxSlots() : 0;
+            int availableSlots = schedule.getAvailableSlots() != null ? schedule.getAvailableSlots() : 0;
+            if (maxSlots - availableSlots <= 0) {
+                continue;
             }
             // This schedule has reached departure with no guide — block IN_PROGRESS
             if (schedule.getStatus() == TourStatus.OPEN) {

@@ -452,6 +452,24 @@
           </div>
         ` : '';
 
+        // Repayment Window
+        let repaymentBtn = '';
+        if (bStatus === 'PENDING') {
+            const createdAt = new Date(b.createdAt || b.bookingDate);
+            const now = new Date();
+            const expiresAt = createdAt.getTime() + 15 * 60000;
+            if (expiresAt > now.getTime()) {
+                repaymentBtn = `
+                <div id="repayment-container-${b.id}" style="margin-top: 10px; background: #fffbeb; border: 1px dashed #fde68a; padding: 12px; border-radius: 8px;">
+                    <div style="font-weight: 600; color: #b45309; margin-bottom: 6px;">Thanh toán chưa hoàn tất</div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button class="btn" style="background:#f59e0b; color:white; padding: 6px 16px;" onclick="retryPayment(${b.id})">💳 Thanh Toán Lại</button>
+                        <span style="font-size: 0.85rem; color: #d97706; font-weight: 600;">Link expires in <span class="repayment-timer" data-expires="${expiresAt}" data-id="${b.id}">--:--</span></span>
+                    </div>
+                </div>`;
+            }
+        }
+
         return `
           <div class="booking-card" style="${isOperatorCancelled || isRefunded ? 'border-color:#fca5a5;' : ''}">
             <div class="booking-header">
@@ -485,6 +503,7 @@
               ${canCancel ? `<button class="btn btn-secondary" style="color:#ef4444; border-color:#fee2e2; background:#fef2f2;" onclick="openCancelModal(${b.id})">Hủy Đặt Tour</button>` : ''}
               ${reviewBtn}
             </div>
+            ${repaymentBtn}
           </div>
         `;
       }).join('');
@@ -825,6 +844,48 @@
       console.error(err);
       $('bookingList').innerHTML = `<div class="card panel" style="border-color:#fecaca;color:#991b1b;">${(err?.message || 'Không tải được lịch sử đặt tour')}</div>`;
     });
+
+    // Timer cho repayment
+    setInterval(() => {
+        document.querySelectorAll('.repayment-timer').forEach(el => {
+            const expiresAt = parseInt(el.dataset.expires);
+            const now = new Date().getTime();
+            const diff = expiresAt - now;
+            if (diff <= 0) {
+                const container = document.getElementById(`repayment-container-${el.dataset.id}`);
+                if (container) container.style.display = 'none';
+            } else {
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((diff % (1000 * 60)) / 1000);
+                el.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            }
+        });
+    }, 1000);
+
+    async function retryPayment(bookingId) {
+        const btn = event.target;
+        btn.disabled = true;
+        btn.innerText = 'Đang tạo link...';
+        try {
+            // Using PayOS or VNPay - assume PayOS as default
+            const res = await TB.apiFetch(`/api/v1/payments/payos/create`, {
+                method: 'POST',
+                body: JSON.stringify({ bookingId: bookingId })
+            });
+            if (res.data?.checkoutUrl) {
+                window.location.href = res.data.checkoutUrl;
+            } else {
+                throw new Error("Không nhận được link thanh toán");
+            }
+        } catch (e) {
+            alert('Lỗi: ' + e.message);
+            btn.disabled = false;
+            btn.innerText = '💳 Thanh Toán Lại';
+        }
+    }
+
+    // Khởi tạo
+    loadBookings();
   </script>
 </body>
 

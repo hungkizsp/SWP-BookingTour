@@ -96,6 +96,14 @@ public class PaymentServiceImpl implements PaymentService {
         Booking booking = bookingRepository.findById(request.getBookingId())
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.PENDING_CASH) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (booking.getCreatedAt().plusMinutes(15).isBefore(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
         BigDecimal payAmount = request.getAmount() != null ? request.getAmount() : booking.getTotalPrice();
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
@@ -160,6 +168,14 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentResponse createVNPayPayment(Long bookingId, HttpServletRequest request) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        if (booking.getStatus() != BookingStatus.PENDING && booking.getStatus() != BookingStatus.PENDING_CASH) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        if (booking.getCreatedAt().plusMinutes(15).isBefore(LocalDateTime.now())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
 
         BigDecimal payAmount = booking.getTotalPrice();
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {

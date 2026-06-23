@@ -970,6 +970,28 @@
                 const scheduleId = alert.scheduleId;
                 const assignLink = `./manageTours.html?highlight=${scheduleId}`;
 
+                let actionArea = `
+                    <div style="margin-top:10px;">
+                        <a href="${assignLink}" class="btn-assign-guide">
+                            👤 Assign Guide
+                        </a>
+                    </div>`;
+                    
+                if (isUrgent) {
+                    actionArea = `
+                    <div style="margin-top:12px; background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
+                        <div style="font-size:0.85rem; font-weight:600; color:#1e293b; margin-bottom:8px;">
+                            Action Required: Tour Guide missing for ${alert.tourName} - Departure in ${mins} minutes.
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <select id="quick-assign-${scheduleId}" class="guide-select-dropdown" style="flex:1; padding:6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.8rem; max-width: 250px;">
+                                <option value="">-- Select a Guide --</option>
+                            </select>
+                            <button onclick="quickAssign(${scheduleId})" class="btn-assign-guide" style="padding:6px 12px; margin:0;">Assign</button>
+                        </div>
+                    </div>`;
+                }
+
                 return `
                 <div class="alert-card ${cardClass}" id="ops-alert-${scheduleId}">
                     ${urgentBanner}
@@ -987,14 +1009,50 @@
                         Departure: ${alert.departureDateTime ? new Date(alert.departureDateTime).toLocaleString('vi-VN') : '—'}
                         ${alert.alertCreatedAt ? ' &nbsp;|&nbsp; Alert fired: ' + new Date(alert.alertCreatedAt).toLocaleTimeString('vi-VN') : ''}
                     </div>
-                    <div style="margin-top:10px;">
-                        <a href="${assignLink}" class="btn-assign-guide">
-                            👤 Assign Guide
-                        </a>
-                    </div>
+                    ${actionArea}
                 </div>`;
             }).join('');
+            
+            // Populate guide dropdowns
+            populateGuideDropdowns();
         }
+
+        async function populateGuideDropdowns() {
+            try {
+                const res = await TB.apiFetch('/api/v1/staff/guides');
+                const guides = res.data || [];
+                const dropdowns = document.querySelectorAll('.guide-select-dropdown');
+                dropdowns.forEach(select => {
+                    if (select.options.length <= 1) { // Only populate if not already populated
+                        guides.forEach(g => {
+                            if (g.isActive !== false) {
+                                const opt = document.createElement('option');
+                                opt.value = g.id;
+                                opt.textContent = `${g.fullName} (${g.phoneNumber || g.email})`;
+                                select.appendChild(opt);
+                            }
+                        });
+                    }
+                });
+            } catch (err) {
+                console.error("Lỗi lấy danh sách HDV:", err);
+            }
+        }
+
+        window.quickAssign = async function(scheduleId) {
+            const el = document.getElementById('quick-assign-' + scheduleId);
+            if(!el || !el.value) { alert('Vui lòng nhập Guide ID hợp lệ.'); return; }
+            try {
+                const res = await TB.apiFetch('/api/v1/staff/schedules/' + scheduleId + '/assign-guide?guideId=' + el.value, { method: 'PATCH' });
+                if (res.status === 'rejected') throw new Error(res.reason?.message || 'Lỗi phân công');
+                if (typeof showToast === 'function') showToast('Gán hướng dẫn viên thành công!', 'success');
+                else alert('Gán hướng dẫn viên thành công!');
+                loadOperationalData();
+            } catch (e) {
+                if (typeof showToast === 'function') showToast('Lỗi: ' + e.message, 'error');
+                else alert('Lỗi: ' + e.message);
+            }
+        };
 
         // Load operational data on startup and every 60 seconds
         loadOperationalData();
