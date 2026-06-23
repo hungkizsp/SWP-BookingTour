@@ -366,6 +366,149 @@
         header h1 {
             font-size: 1.6rem;
         }
+
+        /* ── Operational Alerts ── */
+        .ops-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .ops-metric-card {
+            background: var(--bg-white);
+            border-radius: 1rem;
+            padding: 1.25rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .ops-metric-card:hover { transform: translateY(-2px); }
+
+        .ops-metric-card .ops-metric-val {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .ops-metric-card .ops-metric-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-top: 0.4rem;
+        }
+
+        .ops-metric-card.red .ops-metric-val   { color: #dc2626; }
+        .ops-metric-card.amber .ops-metric-val { color: #d97706; }
+        .ops-metric-card.blue .ops-metric-val  { color: #2563eb; }
+        .ops-metric-card.purple .ops-metric-val{ color: #7c3aed; }
+
+        /* Alert cards */
+        .alert-card {
+            border-radius: 0.875rem;
+            border: 1.5px solid var(--border);
+            padding: 1rem 1.25rem;
+            margin-bottom: 0.75rem;
+            background: var(--bg-white);
+            transition: box-shadow 0.2s;
+            position: relative;
+        }
+
+        .alert-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+
+        .alert-card.urgent {
+            border-color: #f87171;
+            background: linear-gradient(135deg, #fff5f5, #fff);
+        }
+
+        .alert-card.warning {
+            border-color: #fbbf24;
+            background: linear-gradient(135deg, #fffbeb, #fff);
+        }
+
+        .alert-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .alert-badge.urgent { background:#fee2e2; color:#991b1b; }
+        .alert-badge.warning { background:#fef3c7; color:#92400e; }
+        .alert-badge.early { background:#ede9fe; color:#5b21b6; }
+
+        .alert-countdown {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #dc2626;
+        }
+
+        .alert-tour-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--text-main);
+        }
+
+        .alert-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        .btn-assign-guide {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.4rem 0.9rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-assign-guide:hover { opacity: 0.85; }
+
+        .empty-alerts {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .ops-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+            margin-right: 6px;
+        }
     </style>
 </head>
 
@@ -506,8 +649,51 @@
                     </div>
                 </div>
             </div>
+            <!-- ── Operational Readiness Section ── -->
+            <div style="margin-bottom:1rem;">
+                <div class="ops-section-header">
+                    <span class="panel-title" style="font-size:1rem;">
+                        <span class="live-dot"></span>🚨 Operational Readiness Center
+                    </span>
+                    <button class="btn-refresh" id="opsRefreshBtn" onclick="loadOperationalData()">
+                        <span class="icon">🔄</span> Làm mới
+                    </button>
+                </div>
+
+                <!-- Metrics Row -->
+                <div class="ops-metrics-grid" id="opsMetricsGrid">
+                    <div class="ops-metric-card amber">
+                        <div class="ops-metric-val" id="opsOpenNoGuide"><span class="skeleton skeleton-val"></span></div>
+                        <div class="ops-metric-label">⚠️ Schedules No Guide</div>
+                    </div>
+                    <div class="ops-metric-card red">
+                        <div class="ops-metric-val" id="opsPendingGuide"><span class="skeleton skeleton-val"></span></div>
+                        <div class="ops-metric-label">🔴 PENDING_GUIDE</div>
+                    </div>
+                    <div class="ops-metric-card purple">
+                        <div class="ops-metric-val" id="opsCancelledOp"><span class="skeleton skeleton-val"></span></div>
+                        <div class="ops-metric-label">🚫 Cancelled by Operator</div>
+                    </div>
+                    <div class="ops-metric-card blue">
+                        <div class="ops-metric-val" id="opsAffected"><span class="skeleton skeleton-val"></span></div>
+                        <div class="ops-metric-label">👥 Affected Customers</div>
+                    </div>
+                </div>
+
+                <!-- Alert Cards -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">🔔 Live Alert Queue</span>
+                        <span class="panel-badge" id="opsAlertCount">—</span>
+                    </div>
+                    <div id="opsAlertList">
+                        <div class="empty-alerts">Đang tải cảnh báo...</div>
+                    </div>
+                </div>
+            </div>
 
         </main>
+
     </div>
 
     <script>
@@ -707,7 +893,114 @@
                 window.location.href = '/pages/auth/login.html';
             }
         });
+
+        // ── Operational Readiness Center ─────────────────────────
+        async function loadOperationalData() {
+            const btn = document.getElementById('opsRefreshBtn');
+            if (btn) btn.classList.add('spinning');
+
+            const token = sessionStorage.getItem('token');
+            if (!token) { if (btn) btn.classList.remove('spinning'); return; }
+
+            try {
+                const [metricsRes, alertsRes] = await Promise.allSettled([
+                    TB.apiFetch('/api/v1/admin/operational-metrics'),
+                    TB.apiFetch('/api/v1/admin/operational-alerts')
+                ]);
+
+                // Metrics
+                if (metricsRes.status === 'fulfilled' && metricsRes.value) {
+                    const m = metricsRes.value.data || metricsRes.value;
+                    document.getElementById('opsOpenNoGuide').textContent = m.openSchedulesWithNoGuide ?? '—';
+                    document.getElementById('opsPendingGuide').textContent = m.pendingGuideSchedules ?? '—';
+                    document.getElementById('opsCancelledOp').textContent = m.cancelledByOperatorSchedules ?? '—';
+                    document.getElementById('opsAffected').textContent = m.affectedCustomers ?? '—';
+                } else {
+                    ['opsOpenNoGuide','opsPendingGuide','opsCancelledOp','opsAffected']
+                        .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+                }
+
+                // Alerts
+                if (alertsRes.status === 'fulfilled' && alertsRes.value) {
+                    const d = alertsRes.value.data || alertsRes.value;
+                    const alerts = d.alerts || [];
+                    document.getElementById('opsAlertCount').textContent = alerts.length;
+                    renderOpsAlerts(alerts);
+                } else {
+                    document.getElementById('opsAlertList').innerHTML =
+                        '<div class="empty-alerts" style="color:#dc2626;">⚠️ Không tải được cảnh báo. Kiểm tra kết nối backend.</div>';
+                }
+            } catch (err) {
+                console.error('[OPS] loadOperationalData error:', err);
+            } finally {
+                if (btn) btn.classList.remove('spinning');
+            }
+        }
+
+        function renderOpsAlerts(alerts) {
+            const container = document.getElementById('opsAlertList');
+            if (!alerts || alerts.length === 0) {
+                container.innerHTML = '<div class="empty-alerts">✅ Không có cảnh báo nào. Tất cả tour đã có hướng dẫn viên!</div>';
+                return;
+            }
+
+            // Sort: PENDING_GUIDE first, then by minutes remaining ascending
+            const sorted = [...alerts].sort((a, b) => {
+                if (a.type === 'PENDING_GUIDE' && b.type !== 'PENDING_GUIDE') return -1;
+                if (b.type === 'PENDING_GUIDE' && a.type !== 'PENDING_GUIDE') return 1;
+                return (a.minutesRemaining ?? 9999) - (b.minutesRemaining ?? 9999);
+            });
+
+            container.innerHTML = sorted.map(alert => {
+                const mins = alert.minutesRemaining ?? 0;
+                const isPendingGuide = alert.type === 'PENDING_GUIDE';
+                const isUrgent = alert.isUrgent || isPendingGuide;
+                const cardClass = isPendingGuide ? 'urgent' : (isUrgent ? 'warning' : '');
+                const badgeClass = isPendingGuide ? 'urgent' : (alert.alertWindow === '2H' || alert.alertWindow === '6H' ? 'warning' : 'early');
+
+                const countdownTxt = mins > 0
+                    ? `${Math.floor(mins / 60)}h ${mins % 60}m remaining`
+                    : `<span style="color:#7c3aed;">Departure reached!</span>`;
+
+                const urgentBanner = isPendingGuide ? `
+                    <div style="background:#fee2e2;border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:0.78rem;font-weight:700;color:#991b1b;">
+                        🚨 URGENT — Schedule Requires Immediate Action
+                    </div>` : '';
+
+                const scheduleId = alert.scheduleId;
+                const assignLink = `./manageTours.html?highlight=${scheduleId}`;
+
+                return `
+                <div class="alert-card ${cardClass}" id="ops-alert-${scheduleId}">
+                    ${urgentBanner}
+                    <div class="alert-card-header">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="alert-badge ${badgeClass}">
+                                ${isPendingGuide ? '🔴 PENDING GUIDE' : '⚠️ ' + (alert.alertWindow || 'ALERT')}
+                            </span>
+                        </div>
+                        <span class="alert-countdown">⏱ ${countdownTxt}</span>
+                    </div>
+                    <div class="alert-tour-name">${alert.tourName || 'Schedule #' + scheduleId}</div>
+                    <div class="alert-meta">
+                        Schedule ID: #${scheduleId} &nbsp;|&nbsp;
+                        Departure: ${alert.departureDateTime ? new Date(alert.departureDateTime).toLocaleString('vi-VN') : '—'}
+                        ${alert.alertCreatedAt ? ' &nbsp;|&nbsp; Alert fired: ' + new Date(alert.alertCreatedAt).toLocaleTimeString('vi-VN') : ''}
+                    </div>
+                    <div style="margin-top:10px;">
+                        <a href="${assignLink}" class="btn-assign-guide">
+                            👤 Assign Guide
+                        </a>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Load operational data on startup and every 60 seconds
+        loadOperationalData();
+        setInterval(loadOperationalData, 60_000);
     </script>
+
 </body>
 
 </html>

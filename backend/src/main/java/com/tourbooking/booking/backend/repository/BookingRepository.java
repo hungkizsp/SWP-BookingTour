@@ -51,4 +51,24 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("SELECT b FROM Booking b WHERE b.createdAt >= :from AND b.createdAt < :to")
     List<Booking> findAllInPeriod(@Param("from") LocalDateTime from,
                                   @Param("to") LocalDateTime to);
+
+    // ── Operational Scheduler Queries ─────────────────────────────────────
+
+    /** Find all CONFIRMED bookings for a specific schedule — used by the auto-cancellation refund flow. */
+    @Query("SELECT b FROM Booking b WHERE b.schedule.id = :scheduleId " +
+           "AND b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED")
+    List<Booking> findConfirmedByScheduleId(@Param("scheduleId") Long scheduleId);
+
+    /** Count bookings with REFUNDED status (caused by CANCELLED_BY_OPERATOR). */
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.REFUNDED " +
+           "AND EXISTS (SELECT 1 FROM TourSchedule s WHERE s.id = b.schedule.id " +
+           "AND s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR)")
+    long countOperatorCancelledRefundedBookings();
+
+    /** Sum total refund amounts for bookings caused by CANCELLED_BY_OPERATOR. */
+    @Query("SELECT COALESCE(SUM(b.totalPrice), 0) FROM Booking b WHERE b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.REFUNDED " +
+           "AND EXISTS (SELECT 1 FROM TourSchedule s WHERE s.id = b.schedule.id " +
+           "AND s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR)")
+    java.math.BigDecimal sumOperatorCancelledRefundAmounts();
 }
+

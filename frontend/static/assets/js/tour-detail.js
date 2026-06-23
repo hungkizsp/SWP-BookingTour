@@ -20,12 +20,14 @@
   // ── Status helpers ─────────────────────────────────────────────────────────
 
   const STATUS_META = {
-    OPEN:           { label: 'Đang nhận đặt',   color: '#059669', bg: '#d1fae5', icon: '🟢' },
-    BOOKING_CLOSED: { label: 'Đã đóng đặt chỗ', color: '#d97706', bg: '#fef3c7', icon: '🔒' },
-    SOLD_OUT:       { label: 'Hết chỗ',          color: '#dc2626', bg: '#fee2e2', icon: '🔴' },
-    IN_PROGRESS:    { label: 'Đang diễn ra',     color: '#2563eb', bg: '#dbeafe', icon: '🚀' },
-    COMPLETED:      { label: 'Đã hoàn thành',    color: '#64748b', bg: '#f1f5f9', icon: '✅' },
-    CANCELLED:      { label: 'Đã hủy',           color: '#9ca3af', bg: '#f3f4f6', icon: '❌' },
+    OPEN:                 { label: 'Đang nhận đặt',        color: '#059669', bg: '#d1fae5', icon: '🟢' },
+    BOOKING_CLOSED:       { label: 'Đã đóng đặt chỗ',      color: '#d97706', bg: '#fef3c7', icon: '🔒' },
+    SOLD_OUT:             { label: 'Hết chỗ',               color: '#dc2626', bg: '#fee2e2', icon: '🔴' },
+    PENDING_GUIDE:        { label: 'Tạm thời không khả dụng', color: '#b45309', bg: '#fef9c3', icon: '⚠️' },
+    IN_PROGRESS:          { label: 'Đang diễn ra',           color: '#2563eb', bg: '#dbeafe', icon: '🚀' },
+    COMPLETED:            { label: 'Đã hoàn thành',          color: '#64748b', bg: '#f1f5f9', icon: '✅' },
+    CANCELLED:            { label: 'Đã hủy',                 color: '#9ca3af', bg: '#f3f4f6', icon: '❌' },
+    CANCELLED_BY_OPERATOR:{ label: 'Đã hủy bởi nhà điều hành', color: '#7c3aed', bg: '#ede9fe', icon: '🚫' },
   };
 
   function getStatusMeta(status) {
@@ -41,21 +43,28 @@
     const status = String(s.status || '').toUpperCase();
     const now = new Date();
 
-    if (status === 'CANCELLED') return { canBook: false, reason: 'Lịch trình đã bị hủy.' };
-    if (status === 'COMPLETED') return { canBook: false, reason: 'Tour đã hoàn thành.' };
-    if (status === 'IN_PROGRESS') return { canBook: false, reason: 'Tour đang diễn ra, không thể đặt thêm.' };
-    if (status === 'BOOKING_CLOSED') return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.' };
-    if (status === 'SOLD_OUT') return { canBook: false, reason: 'Tour đã hết chỗ.' };
+    if (status === 'CANCELLED') return { canBook: false, reason: 'Lịch trình đã bị hủy.', isPendingGuide: false };
+    if (status === 'CANCELLED_BY_OPERATOR') return { canBook: false, reason: 'Lịch trình đã bị hủy bởi nhà điều hành.', isPendingGuide: false };
+    if (status === 'COMPLETED') return { canBook: false, reason: 'Tour đã hoàn thành.', isPendingGuide: false };
+    if (status === 'IN_PROGRESS') return { canBook: false, reason: 'Tour đang diễn ra, không thể đặt thêm.', isPendingGuide: false };
+    if (status === 'BOOKING_CLOSED') return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.', isPendingGuide: false };
+    if (status === 'SOLD_OUT') return { canBook: false, reason: 'Tour đã hết chỗ.', isPendingGuide: false };
+    // PENDING_GUIDE: departure is < 1h away and no guide assigned — booking is blocked
+    if (status === 'PENDING_GUIDE') return {
+      canBook: false,
+      reason: 'Tour temporarily unavailable. Please contact support.',
+      isPendingGuide: true
+    };
 
     // Additional client-side checks against deadline (backend is authoritative, this is UX only)
     if (s.bookingDeadline) {
       const deadline = toDateObj(s.bookingDeadline);
-      if (now >= deadline) return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.' };
+      if (now >= deadline) return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.', isPendingGuide: false };
     }
 
-    if ((s.availableSlots ?? 1) <= 0) return { canBook: false, reason: 'Tour đã hết chỗ.' };
+    if ((s.availableSlots ?? 1) <= 0) return { canBook: false, reason: 'Tour đã hết chỗ.', isPendingGuide: false };
 
-    return { canBook: true, reason: '' };
+    return { canBook: true, reason: '', isPendingGuide: false };
   }
 
   // ── Date/time parsing helpers ─────────────────────────────────────────────
@@ -191,7 +200,8 @@
     const schedule = list.find(s => s.scheduleId === selectedId);
     if (!schedule) return;
 
-    const { canBook, reason } = getBookabilityState(schedule);
+    const bookState = getBookabilityState(schedule);
+    const { canBook, reason } = bookState;
     const meta = getStatusMeta(schedule.status);
 
     // Status badge
@@ -222,18 +232,63 @@
       }
     }
 
+    // ── PENDING_GUIDE special alert banner ────────────────────────────────
+    let pgAlert = document.getElementById('pendingGuideAlert');
+    if (bookState.isPendingGuide) {
+      if (!pgAlert) {
+        pgAlert = document.createElement('div');
+        pgAlert.id = 'pendingGuideAlert';
+        pgAlert.style.cssText = [
+          'background: linear-gradient(135deg, #fef9c3, #fef3c7)',
+          'border: 2px solid #f59e0b',
+          'border-radius: 12px',
+          'padding: 16px 20px',
+          'margin-top: 12px',
+          'display: flex',
+          'align-items: flex-start',
+          'gap: 12px',
+          'box-shadow: 0 2px 8px rgba(245,158,11,0.15)'
+        ].join(';');
+        pgAlert.innerHTML = `
+          <span style="font-size:1.6rem;flex-shrink:0;">⚠️</span>
+          <div>
+            <div style="font-weight:800;color:#92400e;font-size:0.95rem;margin-bottom:4px;">Tour Temporarily Unavailable</div>
+            <div style="color:#78350f;font-size:0.875rem;line-height:1.5;">
+              This tour schedule is currently pending guide assignment and cannot be booked.
+              Please <a href="../chat.html" style="color:#b45309;font-weight:700;">contact support</a> or check back later.
+            </div>
+          </div>
+        `;
+        // Insert alert after the deadline info or status badge
+        const anchor = deadlineInfo || statusBadgeWrap;
+        if (anchor && anchor.parentNode) {
+          anchor.parentNode.insertBefore(pgAlert, anchor.nextSibling);
+        }
+      }
+      pgAlert.style.display = 'flex';
+    } else {
+      if (pgAlert) pgAlert.style.display = 'none';
+    }
+
     // Button state
     if (btn) {
       if (canBook) {
         btn.disabled = false;
         btn.style.opacity = '1';
         btn.style.cursor = 'pointer';
+        btn.style.display = '';
         btn.textContent = 'ĐẶT TOUR NGAY';
       } else {
         btn.disabled = true;
-        btn.style.opacity = '0.5';
         btn.style.cursor = 'not-allowed';
-        btn.textContent = reason || 'Không thể đặt';
+        if (bookState.isPendingGuide) {
+          // Hide the button entirely for PENDING_GUIDE
+          btn.style.display = 'none';
+        } else {
+          btn.style.display = '';
+          btn.style.opacity = '0.5';
+          btn.textContent = reason || 'Không thể đặt';
+        }
       }
     }
   }

@@ -32,7 +32,8 @@ public enum ErrorCode {
     TOUR_ALREADY_STARTED(1023, "Tour đã bắt đầu, không thể đặt chỗ."),
     BOOKING_DEADLINE_PASSED(1024, "Đã quá hạn đặt tour. Vui lòng chọn lịch khác."),
     SCHEDULE_SOLD_OUT(1025, "Tour đã hết chỗ."),
-    INSUFFICIENT_SLOTS(1026, "Số chỗ trống không đủ cho số lượng hành khách yêu cầu.");
+    INSUFFICIENT_SLOTS(1026, "Số chỗ trống không đủ cho số lượng hành khách yêu cầu."),
+    SCHEDULE_PENDING_GUIDE(1027, "This schedule is temporarily unavailable because operational requirements are not completed.");
 
     private final int code;
     private final String message;

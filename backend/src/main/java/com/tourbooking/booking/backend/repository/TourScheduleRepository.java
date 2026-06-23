@@ -67,4 +67,33 @@ public interface TourScheduleRepository extends JpaRepository<TourSchedule, Long
      * Find all schedules with given statuses.
      */
     List<TourSchedule> findByStatusIn(List<TourStatus> statuses);
+
+    // ── Operational Readiness Queries ─────────────────────────────────────
+
+    /**
+     * Find OPEN schedules where guideId IS NULL and startDate is on or after today.
+     * Used by the early-warning alert system (24H/12H/6H/2H windows).
+     */
+    @Query("SELECT s FROM TourSchedule s WHERE s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN " +
+           "AND s.guide IS NULL AND s.startDate >= :today")
+    List<TourSchedule> findOpenSchedulesWithNoGuide(@Param("today") LocalDate today);
+
+    /**
+     * Find OPEN schedules with no guide where departure datetime is within 1 hour from now.
+     * These should be transitioned to PENDING_GUIDE.
+     */
+    @Query("SELECT s FROM TourSchedule s WHERE s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN " +
+           "AND s.guide IS NULL AND s.startDate <= :today")
+    List<TourSchedule> findOpenNoGuideSchedulesOnOrBeforeDate(@Param("today") LocalDate today);
+
+    /**
+     * Find PENDING_GUIDE schedules whose departure datetime has passed.
+     * These should be auto-cancelled.
+     */
+    @Query("SELECT s FROM TourSchedule s WHERE s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.PENDING_GUIDE " +
+           "AND s.startDate <= :today")
+    List<TourSchedule> findPendingGuideSchedulesPastDeparture(@Param("today") LocalDate today);
+
+    /** Count schedules with PENDING_GUIDE status. */
+    long countByStatus(TourStatus status);
 }

@@ -102,6 +102,15 @@ public class TourScheduleScheduler {
                 continue; // departureTime pushes it later in the day
             }
 
+            // ── GUIDE REQUIREMENT GUARD ───────────────────────────────────────
+            // A schedule CANNOT go IN_PROGRESS without an assigned guide.
+            // The OperationalScheduler will transition it to PENDING_GUIDE / CANCELLED_BY_OPERATOR.
+            if (schedule.getGuide() == null) {
+                log.warn("[SCHEDULER] Schedule #{} reached departure but has NO guide — skipping IN_PROGRESS transition.",
+                        schedule.getId());
+                continue;
+            }
+
             TourStatus old = schedule.getStatus();
             schedule.setStatus(TourStatus.IN_PROGRESS);
             tourScheduleRepository.save(schedule);

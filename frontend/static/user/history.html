@@ -80,6 +80,60 @@
       color: #991b1b;
     }
 
+    .status-badge.operator-cancelled {
+      background: #ede9fe;
+      color: #5b21b6;
+    }
+
+    .status-badge.refunded {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    /* Operator cancellation banner */
+    .operator-cancel-banner {
+      background: linear-gradient(135deg, #fef2f2, #fce7f3);
+      border: 2px solid #f87171;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .operator-cancel-banner .banner-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .operator-cancel-banner .banner-title {
+      font-weight: 800;
+      color: #991b1b;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .operator-cancel-banner .banner-body {
+      font-size: 0.875rem;
+      color: #7f1d1d;
+      line-height: 1.6;
+    }
+
+    .refund-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
     .booking-actions {
       display: flex;
       gap: 10px;
@@ -341,10 +395,12 @@
       const s = String(status || '').toUpperCase();
       if (s === 'CANCELLED') return { cls: 'cancelled', label: 'Đã hủy' };
       if (s === 'EXPIRED') return { cls: 'cancelled', label: 'Hết hạn thanh toán' };
+      if (s === 'CANCELLED_BY_OPERATOR') return { cls: 'operator-cancelled', label: '🚫 Hủy bởi Nhà điều hành' };
+      if (s === 'REFUNDED') return { cls: 'refunded', label: '💰 Đã hoàn tiền' };
+      if (s === 'REFUND_REQUESTED') return { cls: 'refunded', label: '⏳ Đang chờ hoàn tiền' };
       if (s === 'COMPLETED' || s === 'SUCCESS') return { cls: 'success', label: 'Đã hoàn thành' };
       if (s === 'CONFIRMED') return { cls: 'pending', label: 'Đã xác nhận' };
       if (s === 'IN_PROGRESS') return { cls: 'pending', label: 'Đang diễn ra' };
-      if (s === 'REFUND_REQUESTED') return { cls: 'pending', label: 'Đang chờ hoàn tiền' };
       return { cls: 'pending', label: 'Đang chờ' };
     }
 
@@ -357,8 +413,11 @@
 
       root.innerHTML = list.map(b => {
         const badge = statusBadge(b.status);
-        const canCancel = String(b.status || '').toUpperCase() === 'PENDING' || String(b.status || '').toUpperCase() === 'CONFIRMED';
-        const isCompleted = String(b.status || '').toUpperCase() === 'COMPLETED';
+        const bStatus = String(b.status || '').toUpperCase();
+        const canCancel = bStatus === 'PENDING' || bStatus === 'CONFIRMED';
+        const isCompleted = bStatus === 'COMPLETED';
+        const isOperatorCancelled = bStatus === 'CANCELLED_BY_OPERATOR';
+        const isRefunded = bStatus === 'REFUNDED';
         // b.reviewed is a boolean flag returned by the backend booking response
         const alreadyReviewed = isCompleted && Boolean(b.reviewed);
 
@@ -374,8 +433,27 @@
           }
         }
 
+        // Operator-Cancellation Banner (MODULE 5 — CANCELLED_BY_OPERATOR)
+        const operatorCancelBanner = (isOperatorCancelled || isRefunded) ? `
+          <div class="operator-cancel-banner">
+            <div class="banner-icon">🚨</div>
+            <div>
+              <div class="banner-title">Tour Cancelled by Operator</div>
+              <div class="banner-body">
+                This tour schedule was automatically cancelled because a tour guide could not be assigned before the scheduled departure.
+                <br><strong>Reason:</strong> Guide Not Assigned
+                <br><strong>Total Paid:</strong> ${formatCurrency(b.totalPrice)}
+              </div>
+              <div style="margin-top:8px;">
+                <span class="refund-chip">💰 Refund Status: ${isRefunded ? 'Refunded' : 'Processing'}</span>
+                ${isRefunded ? `<span class="refund-chip" style="background:#dcfce7;color:#166534;border-color:#86efac;">✅ Full Refund: ${formatCurrency(b.totalPrice)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        ` : '';
+
         return `
-          <div class="booking-card">
+          <div class="booking-card" style="${isOperatorCancelled || isRefunded ? 'border-color:#fca5a5;' : ''}">
             <div class="booking-header">
               <div>
                 <h3 style="margin:0; font-size:1.1rem;">${(b.tourName || 'Tour').toString()}</h3>
@@ -399,6 +477,7 @@
                     </div>
                 </div>
                 ${renderItinerary(b.tourItinerary)}
+                ${operatorCancelBanner}
             </div>
             <div class="booking-actions">
               <button class="btn btn-secondary" onclick="downloadInvoice(${b.id})">Tải Hóa Đơn PDF</button>
@@ -422,7 +501,7 @@
         return;
       }
       if (k === 'cancelled') {
-        render(allBookings.filter(b => ['CANCELLED', 'EXPIRED'].includes(String(b.status || '').toUpperCase())));
+        render(allBookings.filter(b => ['CANCELLED', 'EXPIRED', 'CANCELLED_BY_OPERATOR', 'REFUNDED', 'REFUND_REQUESTED'].includes(String(b.status || '').toUpperCase())));
         return;
       }
       render(allBookings);

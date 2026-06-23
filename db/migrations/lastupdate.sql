@@ -662,6 +662,84 @@ IF NOT EXISTS (
 BEGIN
     ALTER TABLE dbo.TourSchedules
     ADD CONSTRAINT CK_TourSchedules_Status
-        CHECK (Status IN ('OPEN','BOOKING_CLOSED','SOLD_OUT','IN_PROGRESS','COMPLETED','CANCELLED'));
+        CHECK (Status IN ('OPEN','BOOKING_CLOSED','SOLD_OUT','IN_PROGRESS','COMPLETED','CANCELLED','PENDING_GUIDE','CANCELLED_BY_OPERATOR'));
 END
-GO
+GO
+
+-- ============================================================
+-- MODULE 1: Tour Schedule Operational Readiness & Alerting Workflow
+-- Add PENDING_GUIDE and CANCELLED_BY_OPERATOR to the status CHECK constraint
+-- ============================================================
+
+-- Drop the old CHECK constraint (if it exists with the old 6-value list)
+IF EXISTS (
+    SELECT 1 FROM sys.check_constraints
+    WHERE name = 'CK_TourSchedules_Status'
+      AND parent_object_id = OBJECT_ID('dbo.TourSchedules')
+)
+BEGIN
+    ALTER TABLE dbo.TourSchedules DROP CONSTRAINT CK_TourSchedules_Status;
+END
+GO
+
+-- Recreate with all 8 values including the two new operational states
+ALTER TABLE dbo.TourSchedules
+ADD CONSTRAINT CK_TourSchedules_Status
+    CHECK (Status IN (
+        'OPEN',
+        'BOOKING_CLOSED',
+        'SOLD_OUT',
+        'PENDING_GUIDE',
+        'IN_PROGRESS',
+        'COMPLETED',
+        'CANCELLED',
+        'CANCELLED_BY_OPERATOR'
+    ));
+GO
+
+-- ============================================================
+-- OperationalAlerts Table
+-- Prevents duplicate alert notifications per schedule per window.
+-- The unique index on (ScheduleID, AlertWindow) is the idempotency key.
+-- ============================================================
+
+IF OBJECT_ID(N'dbo.OperationalAlerts', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.OperationalAlerts (
+        id            BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        ScheduleID    BIGINT NOT NULL,
+        AlertWindow   NVARCHAR(10) NOT NULL,  -- '24H', '12H', '6H', '2H'
+        CreatedAt     DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        CONSTRAINT FK_OperationalAlerts_Schedules
+            FOREIGN KEY (ScheduleID) REFERENCES dbo.TourSchedules(ScheduleID)
+    );
+END
+GO
+
+-- Unique index: each (schedule + window) pair can only ever have one row.
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = 'UQ_OperationalAlerts_Schedule_Window'
+      AND object_id = OBJECT_ID('dbo.OperationalAlerts')
+)
+BEGIN
+    CREATE UNIQUE NONCLUSTERED INDEX UQ_OperationalAlerts_Schedule_Window
+    ON dbo.OperationalAlerts (ScheduleID, AlertWindow);
+END
+GO
+
+ALTER TABLE dbo.TourSchedules
+ADD CONSTRAINT CK_TourSchedules_Status
+CHECK (
+    Status IN (
+        'OPEN',
+        'BOOKING_CLOSED',
+        'SOLD_OUT',
+        'PENDING_GUIDE',
+        'IN_PROGRESS',
+        'COMPLETED',
+        'CANCELLED',
+        'CANCELLED_BY_OPERATOR'
+    )
+);
+GO

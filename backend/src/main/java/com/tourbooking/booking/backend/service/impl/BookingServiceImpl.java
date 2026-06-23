@@ -162,8 +162,17 @@ public class BookingServiceImpl implements BookingService {
         // ── 2. Status guard: reject CANCELLED / COMPLETED schedules ───────────
         com.tourbooking.booking.backend.model.entity.enums.TourStatus currentStatus = schedule.getStatus();
         if (currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED
-                || currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.COMPLETED) {
+                || currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.COMPLETED
+                || currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR) {
             throw new AppException(ErrorCode.SCHEDULE_NOT_BOOKABLE);
+        }
+
+        // ── 2b. PENDING_GUIDE guard: strict rejection ──────────────────────────
+        // Departure is < 1 hour away and no guide has been assigned yet.
+        // Booking is blocked until the operational requirement is resolved.
+        if (currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.PENDING_GUIDE) {
+            throw new AppException(ErrorCode.SCHEDULE_PENDING_GUIDE,
+                    "This schedule is temporarily unavailable because operational requirements are not completed.");
         }
 
         // ── 3. Not-started check: current time must be BEFORE departure ────────

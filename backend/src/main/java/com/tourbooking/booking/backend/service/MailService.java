@@ -160,4 +160,54 @@ public class MailService {
         }
         return mailFrom;
     }
+
+    /**
+     * Sends an operational alert to the configured mail address (admin/staff).
+     * Used by OperationalScheduler when a schedule is missing a guide.
+     */
+    public void sendOperationalAlert(String subject, String body) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(resolveFromAddress());
+            message.setTo(mailFrom); // Alert goes back to the operator/admin mailbox
+            message.setSubject(subject);
+            message.setText(body);
+            mailSender.send(message);
+            log.info("Operational alert email sent: {}", subject);
+        } catch (Exception e) {
+            log.error("Failed to send operational alert '{}': {}", subject, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Sends a customer-facing notification when their tour is cancelled due to guide unavailability.
+     * A full refund has been initiated.
+     */
+    public void sendOperatorCancellationRefundEmail(
+            String toEmail, String customerName, Long bookingId, java.math.BigDecimal amount) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(resolveFromAddress());
+            message.setTo(toEmail);
+            message.setSubject("[TourBooking] Important: Tour Cancellation & Refund for Booking #" + bookingId);
+            message.setText(
+                "Dear " + customerName + ",\n\n" +
+                "We sincerely apologize for the inconvenience.\n\n" +
+                "We regret to inform you that your tour booking #" + bookingId +
+                " has been cancelled because operational requirements (guide assignment) " +
+                "could not be fulfilled before the scheduled departure.\n\n" +
+                "A FULL REFUND of " + (amount != null ? amount.toPlainString() : "your payment") + " VND " +
+                "has been initiated and will be processed shortly.\n\n" +
+                "Reason: Guide Not Assigned\n" +
+                "Refund Status: Processing\n\n" +
+                "We are truly sorry for this experience. Please contact our support team if you have any questions.\n\n" +
+                "Warm regards,\nThe TourBooking Team"
+            );
+            mailSender.send(message);
+            log.info("Operator cancellation refund email sent for booking {} to {}", bookingId, toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send operator cancellation refund email for booking {}: {}", bookingId, e.getMessage(), e);
+        }
+    }
 }
+
