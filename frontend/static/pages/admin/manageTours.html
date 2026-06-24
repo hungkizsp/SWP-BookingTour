@@ -114,8 +114,6 @@
                 <input type="text" id="transportType" class="form-control" placeholder="e.g., Bus, Plane">
             </div>
 
-
-
             <div class="form-group">
                 <label>Description</label>
                 <textarea id="description" class="form-control" rows="3"
@@ -154,6 +152,84 @@
             <div class="modal-buttons">
                 <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
                 <button onclick="saveTour()" class="btn btn-primary">Save Tour</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Schedule Modal -->
+    <div id="bulkScheduleModal" class="modal">
+        <div class="modal-content">
+            <h3>Clone / Bulk Schedule Tour #<span id="bulkTourIdDisplay"></span></h3>
+            <input type="hidden" id="bulkTourId">
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Recurrence Mode</label>
+                <div style="display: flex; gap: 15px; margin-top: 10px;">
+                    <label style="display: flex; align-items: center; gap: 5px;"><input type="radio"
+                            name="recurrenceMode" value="single" checked onchange="toggleRecurrence()"> Single
+                        Date</label>
+                    <label style="display: flex; align-items: center; gap: 5px;"><input type="radio"
+                            name="recurrenceMode" value="recurring" onchange="toggleRecurrence()"> Recurring Schedule
+                        (Lặp lại)</label>
+                </div>
+            </div>
+
+            <div id="singleDateBlock" style="display: block; margin-bottom: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Start Date *</label>
+                        <input type="date" id="singleStartDate" class="form-control">
+                    </div>
+                </div>
+            </div>
+
+            <div id="recurringBlock"
+                style="display: none; margin-bottom: 15px; border: 1px solid var(--border); padding: 15px; border-radius: 5px; background: var(--bg-light);">
+                <div class="form-group">
+                    <label>Days of Week (Thứ trong tuần)</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="MONDAY"> Mon</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="TUESDAY"> Tue</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="WEDNESDAY"> Wed</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="THURSDAY"> Thu</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="FRIDAY"> Fri</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="SATURDAY"> Sat</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="SUNDAY"> Sun</label>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Range Start (Bắt đầu lặp) *</label>
+                        <input type="date" id="bulkStartDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Range End (Kết thúc lặp) *</label>
+                        <input type="date" id="bulkEndDate" class="form-control">
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Departure Time *</label>
+                    <input type="time" id="bulkDepartureTime" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Max Slots *</label>
+                    <input type="number" id="bulkMaxSlots" class="form-control" min="1" value="20">
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button onclick="closeBulkModal()" class="btn btn-secondary">Cancel</button>
+                <button onclick="submitBulkSchedule()" class="btn btn-primary">Save Schedules</button>
             </div>
         </div>
     </div>
@@ -217,7 +293,7 @@
         async function loadTours(page = 0) {
             currentPage = page;
             const tourTable = document.getElementById("tourTable");
-            
+
             try {
                 const response = await TB.apiFetch(`${PUBLIC_API}/browse?page=${page}&size=${pageSize}&sortBy=tourName&sortDir=asc`);
                 const data = response.data;
@@ -247,6 +323,7 @@
                             <td class="action-buttons">
                                 <button onclick="viewTour(${t.id})" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">View</button>
                                 <button onclick="showEditModal(${t.id})" class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Edit</button>
+                                <button onclick="showBulkScheduleModal(${t.id})" class="btn btn-info" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background-color: var(--primary); color: white; border-color: var(--primary);">Clone Schedule</button>
                                 <button onclick="deleteTour(${t.id})" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Delete</button>
                             </td>
                         </tr>
@@ -271,11 +348,11 @@
                 return;
             }
             container.style.display = 'flex';
-            
+
             let html = `
                 <button class="page-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="loadTours(${currentPage - 1})">&laquo;</button>
             `;
-            
+
             for (let i = 0; i < totalPages; i++) {
                 if (i === 0 || i === totalPages - 1 || (i >= currentPage - 2 && i <= currentPage + 2)) {
                     html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadTours(${i})">${i + 1}</button>`;
@@ -283,7 +360,7 @@
                     html += `<span class="page-info">...</span>`;
                 }
             }
-            
+
             html += `
                 <button class="page-btn" ${currentPage === totalPages - 1 ? 'disabled' : ''} onclick="loadTours(${currentPage + 1})">&raquo;</button>
             `;
@@ -334,7 +411,7 @@
             document.getElementById('description').value = '';
             document.getElementById('itinerary').value = '';
             document.getElementById('categoryId').value = '';
-            
+
             // Set min check for schedules row to tomorrow
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
@@ -351,44 +428,44 @@
             try {
                 const response = await TB.apiFetch(`${PUBLIC_API}/${id}`);
                 const t = response.data;
-                    currentEditId = id;
-                    document.getElementById('modalTitle').innerText = 'Edit Tour';
-                    document.getElementById('tourId').value = t.id;
-                    document.getElementById('tourName').value = t.tourName || '';
-                    document.getElementById('price').value = t.price || '';
-                    document.getElementById('duration').value = t.duration || '';
-                    document.getElementById('startLocation').value = t.startLocation || '';
-                    document.getElementById('endLocation').value = t.endLocation || '';
-                    document.getElementById('transportType').value = t.transportType || '';
-                    document.getElementById('description').value = t.description || '';
-                    document.getElementById('itinerary').value = t.itinerary || '';
-                    document.getElementById('categoryId').value = t.categoryId || '';
+                currentEditId = id;
+                document.getElementById('modalTitle').innerText = 'Edit Tour';
+                document.getElementById('tourId').value = t.id;
+                document.getElementById('tourName').value = t.tourName || '';
+                document.getElementById('price').value = t.price || '';
+                document.getElementById('duration').value = t.duration || '';
+                document.getElementById('startLocation').value = t.startLocation || '';
+                document.getElementById('endLocation').value = t.endLocation || '';
+                document.getElementById('transportType').value = t.transportType || '';
+                document.getElementById('description').value = t.description || '';
+                document.getElementById('itinerary').value = t.itinerary || '';
+                document.getElementById('categoryId').value = t.categoryId || '';
 
-                    document.getElementById('tourImages').value = '';
-                    document.getElementById('existingImages').value = (t.imageUrls && t.imageUrls.length > 0) ? JSON.stringify(t.imageUrls) : '';
+                document.getElementById('tourImages').value = '';
+                document.getElementById('existingImages').value = (t.imageUrls && t.imageUrls.length > 0) ? JSON.stringify(t.imageUrls) : '';
 
-                    // Schedules
-                    const scheduleContainer = document.getElementById('scheduleContainer');
-                    scheduleContainer.innerHTML = '';
-                    if (t.schedules && t.schedules.length > 0) {
-                        t.schedules.forEach(s => addScheduleRow(s));
-                    }
+                // Schedules
+                const scheduleContainer = document.getElementById('scheduleContainer');
+                scheduleContainer.innerHTML = '';
+                if (t.schedules && t.schedules.length > 0) {
+                    t.schedules.forEach(s => addScheduleRow(s));
+                }
 
-                    const previewContainer = document.getElementById('imagePreviewContainer');
-                    previewContainer.innerHTML = '';
-                    if (t.imageUrls && t.imageUrls.length > 0) {
-                        t.imageUrls.forEach(urlOrData => {
-                            const img = document.createElement('img');
-                            img.src = TB.normalizeImageUrl(urlOrData);
-                            img.className = 'preview-img';
-                            img.style.width = '80px';
-                            img.style.height = '80px';
-                            img.style.objectFit = 'cover';
-                            img.style.borderRadius = '4px';
-                            img.style.border = '1px solid #ddd';
-                            previewContainer.appendChild(img);
-                        });
-                    }
+                const previewContainer = document.getElementById('imagePreviewContainer');
+                previewContainer.innerHTML = '';
+                if (t.imageUrls && t.imageUrls.length > 0) {
+                    t.imageUrls.forEach(urlOrData => {
+                        const img = document.createElement('img');
+                        img.src = TB.normalizeImageUrl(urlOrData);
+                        img.className = 'preview-img';
+                        img.style.width = '80px';
+                        img.style.height = '80px';
+                        img.style.objectFit = 'cover';
+                        img.style.borderRadius = '4px';
+                        img.style.border = '1px solid #ddd';
+                        previewContainer.appendChild(img);
+                    });
+                }
 
                 document.getElementById('tourModal').style.display = 'flex';
             } catch (error) {
@@ -591,10 +668,125 @@
             currentEditId = null;
         }
 
+        function closeBulkModal() {
+            document.getElementById('bulkScheduleModal').style.display = 'none';
+        }
+
         window.onclick = function (event) {
             const modal = document.getElementById('tourModal');
+            const bulkModal = document.getElementById('bulkScheduleModal');
             if (event.target === modal) {
                 closeModal();
+            } else if (event.target === bulkModal) {
+                closeBulkModal();
+            }
+        }
+
+        function toggleRecurrence() {
+            const mode = document.querySelector('input[name="recurrenceMode"]:checked').value;
+            if (mode === 'single') {
+                document.getElementById('singleDateBlock').style.display = 'block';
+                document.getElementById('recurringBlock').style.display = 'none';
+            } else {
+                document.getElementById('singleDateBlock').style.display = 'none';
+                document.getElementById('recurringBlock').style.display = 'block';
+            }
+        }
+
+        function showBulkScheduleModal(tourId) {
+            document.getElementById('bulkTourId').value = tourId;
+            document.getElementById('bulkTourIdDisplay').innerText = tourId;
+
+            document.getElementById('singleStartDate').value = '';
+            document.getElementById('bulkStartDate').value = '';
+            document.getElementById('bulkEndDate').value = '';
+            document.getElementById('bulkDepartureTime').value = '';
+            document.getElementById('bulkMaxSlots').value = '20';
+
+            const checkboxes = document.querySelectorAll('input[name="daysOfWeek"]');
+            checkboxes.forEach(cb => cb.checked = false);
+
+            document.getElementById('bulkScheduleModal').style.display = 'flex';
+        }
+
+        async function submitBulkSchedule() {
+            const tourId = document.getElementById('bulkTourId').value;
+            const mode = document.querySelector('input[name="recurrenceMode"]:checked').value;
+            const departureTime = document.getElementById('bulkDepartureTime').value;
+            const maxSlots = parseInt(document.getElementById('bulkMaxSlots').value);
+
+            if (!departureTime || isNaN(maxSlots) || maxSlots <= 0) {
+                showToast('Please fill departure time and valid max slots.', 'error');
+                return;
+            }
+
+            let payload = {
+                tourId: parseInt(tourId),
+                departureTime: departureTime + ':00', // ensure HH:mm:ss format for backend
+                maxSlots: maxSlots,
+                daysOfWeek: []
+            };
+
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            if (mode === 'single') {
+                const startDate = document.getElementById('singleStartDate').value;
+                if (!startDate) {
+                    showToast('Vui lòng chọn ngày bắt đầu (Please select a start date).', 'error');
+                    return;
+                }
+                if (startDate < todayStr) {
+                    showToast('Ngày bắt đầu không được nằm trong quá khứ (Start date cannot be in the past).', 'error');
+                    return;
+                }
+                payload.rangeStartDate = startDate;
+                payload.rangeEndDate = startDate;
+            } else {
+                const startDate = document.getElementById('bulkStartDate').value;
+                const endDate = document.getElementById('bulkEndDate').value;
+                if (!startDate || !endDate) {
+                    showToast('Vui lòng chọn cả ngày bắt đầu và ngày kết thúc (Please select both range start and end dates).', 'error');
+                    return;
+                }
+                if (startDate < todayStr || endDate < todayStr) {
+                    showToast('Ngày bắt đầu và kết thúc không được nằm trong quá khứ (Dates cannot be in the past).', 'error');
+                    return;
+                }
+                if (startDate > endDate) {
+                    showToast('Ngày bắt đầu không được lớn hơn ngày kết thúc (Start date cannot be after end date).', 'error');
+                    return;
+                }
+
+                const startObj = new Date(startDate);
+                const endObj = new Date(endDate);
+                const diffTime = Math.abs(endObj - startObj);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays > 365) {
+                    showToast('Khoảng thời gian lặp lại không được vượt quá 1 năm (Duration cannot exceed 365 days).', 'error');
+                    return;
+                }
+
+                const checkboxes = document.querySelectorAll('input[name="daysOfWeek"]:checked');
+                if (checkboxes.length === 0) {
+                    showToast('Vui lòng chọn ít nhất một thứ trong tuần để lặp lại (Please select at least one day).', 'error');
+                    return;
+                }
+                checkboxes.forEach(cb => payload.daysOfWeek.push(cb.value));
+
+                payload.rangeStartDate = startDate;
+                payload.rangeEndDate = endDate;
+            }
+
+            try {
+                const response = await TB.apiFetch('/api/v1/admin/tours/schedules/bulk', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                showToast('Schedules created successfully!', 'success');
+                closeBulkModal();
+            } catch (error) {
+                console.error('Error creating bulk schedules:', error);
+                showToast('Error: ' + error.message, 'error');
             }
         }
 
@@ -630,7 +822,7 @@
                     html += `<option value="${c.id}">${escapeHtml(c.categoryName)}</option>`;
                 });
                 select.innerHTML = html;
-            } catch(e) {
+            } catch (e) {
                 console.error("Error loading categories", e);
             }
         }

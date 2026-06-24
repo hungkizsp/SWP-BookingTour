@@ -39,7 +39,7 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
             @Param("minRating") Double minRating,
             @Param("startDate") LocalDate startDate);
 
-    @Query("SELECT DISTINCT t FROM Tour t LEFT JOIN t.schedules ts LEFT JOIN t.city tc WHERE " +
+    @Query("SELECT DISTINCT t FROM Tour t LEFT JOIN t.schedules ts LEFT JOIN t.city tc LEFT JOIN FETCH t.category tcat WHERE " +
             "(:keyword IS NULL OR LOWER(t.tourName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keywordPattern, '%')) " +
             "OR LOWER(t.startLocation) LIKE LOWER(CONCAT('%', :keyword, '%')) " +

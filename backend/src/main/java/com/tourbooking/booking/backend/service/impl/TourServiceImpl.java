@@ -45,7 +45,7 @@ public class TourServiceImpl implements TourService {
     @Override
     @Transactional(readOnly = true)
     public List<TourResponse> getAllTours() {
-        return tourRepo.findAll().stream()
+        return tourRepo.findAllWithBasicDetails().stream()
                 .map(TourMapper::toResponse)
                 .toList();
     }
