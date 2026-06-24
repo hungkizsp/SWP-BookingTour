@@ -123,19 +123,6 @@
         grid-template-rows: 200px 150px;
       }
     }
-
-    .uc-review-shell { width: 100%; overflow: hidden; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 18px; background: #fff; box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08); }
-    .uc-review-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 24px; border-bottom: 1px solid var(--border); background: #f8faf9; }
-    .uc-review-title { margin: 0; color: var(--primary-dark); font-size: 1.12rem; font-weight: 900; }
-    .uc-review-stats { min-width: 180px; border-radius: 12px; background: #064e3b; color: #fff; padding: 12px 16px; text-align: right; font-weight: 900; }
-    .uc-review-body { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 24px; padding: 24px; }
-    .uc-review-form { border: 1px solid var(--border); border-radius: 14px; background: #fcfdfc; padding: 20px; }
-    .uc-review-field { margin-bottom: 16px; }
-    .uc-review-field label { display: block; margin-bottom: 8px; color: var(--text-soft); font-size: .85rem; font-weight: 900; }
-    .uc-review-field select, .uc-review-field textarea { width: 100%; border: 1px solid var(--border); border-radius: 12px; background: #fff; padding: 12px; color: var(--text-main); font-weight: 700; outline: none; transition: .2s ease; }
-    .uc-review-field select:focus, .uc-review-field textarea:focus { border-color: var(--primary-light); box-shadow: 0 0 0 4px rgba(5, 150, 105, .12); }
-    .uc-review-list { display: grid; align-content: start; gap: 14px; min-width: 0; }
-    @media (max-width: 900px) { .uc-review-head, .uc-review-body { display: grid; grid-template-columns: 1fr; } .uc-review-stats { min-width: 0; text-align: left; } }
   </style>
 </head>
 
@@ -279,43 +266,42 @@
           </div>
         </div>
 
-        <div style="margin-bottom: 60px;" id="reviewSection" class="uc-review-shell">
-          <div class="uc-review-head">
-            <div>
-              <p style="margin:0 0 4px;color:var(--accent);font-size:.75rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase;">Trải nghiệm khách hàng</p>
-              <h3 class="uc-review-title">Đánh giá chuyến đi</h3>
+        <div style="margin-bottom: 60px;" id="reviewSection">
+          <h3 class="section-title"
+            style="margin-bottom: 25px; border-left: 5px solid var(--accent); padding-left: 20px;">ĐÁNH GIÁ CHUYẾN ĐI
+          </h3>
+          <div id="reviewFormContainer" style="margin-bottom: 30px; display: none;">
+            <div style="background: white; border: 1px solid var(--border); border-radius: 12px; padding: 25px;">
+              <h4 style="margin-bottom: 15px; color: var(--primary);">Viết đánh giá của bạn</h4>
+              <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; font-weight: 600;">Đánh giá (1-5 sao):</label>
+                <select id="reviewRating"
+                  style="width: 150px; padding: 8px; border-radius: 8px; border: 1px solid var(--border);">
+                  <option value="5">5 Sao ⭐⭐⭐⭐⭐</option>
+                  <option value="4">4 Sao ⭐⭐⭐⭐</option>
+                  <option value="3">3 Sao ⭐⭐⭐</option>
+                  <option value="2">2 Sao ⭐⭐</option>
+                  <option value="1">1 Sao ⭐</option>
+                </select>
+              </div>
+              <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom: 5px; font-weight: 600;">Nhận xét:</label>
+                <textarea id="reviewComment" rows="4"
+                  style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border);"
+                  placeholder="Chia sẻ trải nghiệm của bạn..."></textarea>
+              </div>
+              <button class="btn btn-search" id="submitReviewBtn"
+                style="padding: 10px 25px; border-radius: 8px; cursor: pointer;">Gửi đánh giá</button>
             </div>
-            <div id="reviewStats" class="uc-review-stats">Đang tải đánh giá...</div>
           </div>
-          <div class="uc-review-body">
-            <div>
-              <div id="reviewFormContainer" style="display: none;">
-                <div class="uc-review-form">
-                  <h4 style="margin-bottom: 15px; color: var(--primary);font-weight:900;">Viết đánh giá của bạn</h4>
-                  <div class="uc-review-field">
-                    <label>Đánh giá</label>
-                    <select id="reviewRating">
-                      <option value="5">5 Sao ⭐⭐⭐⭐⭐</option>
-                      <option value="4">4 Sao ⭐⭐⭐⭐</option>
-                      <option value="3">3 Sao ⭐⭐⭐</option>
-                      <option value="2">2 Sao ⭐⭐</option>
-                      <option value="1">1 Sao ⭐</option>
-                    </select>
-                  </div>
-                  <div class="uc-review-field">
-                    <label>Nhận xét</label>
-                    <textarea id="reviewComment" rows="5" placeholder="Chia sẻ trải nghiệm của bạn..."></textarea>
-                  </div>
-                  <button class="btn btn-search" id="submitReviewBtn" style="width:100%;padding: 12px 25px; border-radius: 12px; cursor: pointer;">Gửi đánh giá</button>
-                </div>
-              </div>
-              <div id="loginPromptReview" style="background: var(--bg-section); padding: 24px; border-radius: 14px; text-align: center;">
-                Vui lòng <a href="./auth/login.html" style="color: var(--primary); font-weight: bold; text-decoration: underline;">đăng nhập</a> để viết đánh giá.
-              </div>
-            </div>
-            <div id="reviewList" class="uc-review-list">
-              <div class="loader" style="margin: 0 auto;"></div>
-            </div>
+          <div id="loginPromptReview"
+            style="background: var(--bg-section); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+            Vui lòng <a href="./auth/login.html"
+              style="color: var(--primary); font-weight: bold; text-decoration: underline;">đăng nhập</a> để viết đánh
+            giá.
+          </div>
+          <div id="reviewList" style="display: grid; gap: 20px;">
+            <div class="loader" style="margin: 0 auto;"></div>
           </div>
         </div>
 
@@ -392,7 +378,7 @@
         ? '<a class="btn" href="./admin/manageUsers.html" style="font-size: 0.8rem; height: 40px; min-height: 40px; border-radius: 10px;">QUẢN TRỊ</a>'
         : '';
       const userLinks = !isAdmin
-        ? `<a href="../user/bookings.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem;">TOUR ĐÃ ĐẶT</a>
+        ? `<a href="../user/history.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem;">TOUR ĐÃ ĐẶT</a>
            <a href="../user/personal-info.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem; margin-left:15px;">CÁ NHÂN</a>`
         : '';
 

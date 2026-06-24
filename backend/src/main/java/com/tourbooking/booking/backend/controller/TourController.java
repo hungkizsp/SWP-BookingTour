@@ -3,10 +3,8 @@ package com.tourbooking.booking.backend.controller;
 import com.tourbooking.booking.backend.model.dto.request.TourRequest;
 import com.tourbooking.booking.backend.model.dto.response.ApiResponse;
 import com.tourbooking.booking.backend.model.dto.response.PagedResponse;
-import com.tourbooking.booking.backend.model.dto.response.ReviewResponse;
 import com.tourbooking.booking.backend.model.dto.response.TourDetailResponse;
 import com.tourbooking.booking.backend.model.dto.response.TourResponse;
-import com.tourbooking.booking.backend.service.ReviewService;
 import com.tourbooking.booking.backend.service.TourService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,15 +17,13 @@ import java.util.Arrays;
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/tours", "/api/tours"})
+@RequestMapping("/api/v1/tours")
 public class TourController {
 
     private final TourService tourService;
-    private final ReviewService reviewService;
 
-    public TourController(TourService tourService, ReviewService reviewService) {
+    public TourController(TourService tourService) {
         this.tourService = tourService;
-        this.reviewService = reviewService;
     }
 
     @GetMapping
@@ -45,15 +41,6 @@ public class TourController {
                 .code(HttpStatus.OK.value())
                 .message("Successfully retrieved tour details")
                 .data(tourService.getTourById(id))
-                .build();
-    }
-
-    @GetMapping("/{tourId}/reviews")
-    public ApiResponse<List<ReviewResponse>> getTourReviews(@PathVariable Long tourId) {
-        return ApiResponse.<List<ReviewResponse>>builder()
-                .code(HttpStatus.OK.value())
-                .message("Successfully retrieved reviews for tour: " + tourId)
-                .data(reviewService.getReviewsByTour(tourId, null, null, "createdAt", "desc"))
                 .build();
     }
 

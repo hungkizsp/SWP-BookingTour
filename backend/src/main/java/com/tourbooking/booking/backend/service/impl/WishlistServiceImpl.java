@@ -28,8 +28,12 @@ public class WishlistServiceImpl implements WishlistService {
     @Override
     @Transactional
     public boolean toggleWishlist(Long userId, Long tourId) {
-        requireUser(userId);
-        requireTour(tourId);
+        if (!userRepository.existsById(userId)) {
+            throw new AppException(ErrorCode.USER_NOT_FOUND);
+        }
+        if (!tourRepository.existsById(tourId)) {
+            throw new AppException(ErrorCode.TOUR_NOT_FOUND);
+        }
 
         java.util.Optional<Wishlist> existing = wishlistRepository.findByUserIdAndTourId(userId, tourId);
         if (existing.isPresent()) {
@@ -45,44 +49,9 @@ public class WishlistServiceImpl implements WishlistService {
     }
 
     @Override
-    @Transactional
-    public TourDetailResponse addWishlist(Long userId, Long tourId) {
-        User user = requireUser(userId);
-        Tour tour = requireTour(tourId);
-
-        Wishlist wishlist = wishlistRepository.findByUserIdAndTourId(userId, tourId)
-                .orElseGet(() -> {
-                    Wishlist item = new Wishlist();
-                    item.setUser(user);
-                    item.setTour(tour);
-                    return wishlistRepository.save(item);
-                });
-        return TourMapper.toDetailResponse(wishlist.getTour());
-    }
-
-    @Override
-    @Transactional
-    public void removeWishlist(Long userId, Long tourId) {
-        requireUser(userId);
-        requireTour(tourId);
-        wishlistRepository.findByUserIdAndTourId(userId, tourId)
-                .ifPresent(wishlistRepository::delete);
-    }
-
-    @Override
     @Transactional(readOnly = true)
     public Page<TourDetailResponse> getUserWishlist(Long userId, int page, int size) {
         Page<Wishlist> wishlistPage = wishlistRepository.findByUserId(userId, PageRequest.of(page, size));
         return wishlistPage.map(w -> TourMapper.toDetailResponse(w.getTour()));
-    }
-
-    private User requireUser(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-    }
-
-    private Tour requireTour(Long tourId) {
-        return tourRepository.findById(tourId)
-                .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
     }
 }

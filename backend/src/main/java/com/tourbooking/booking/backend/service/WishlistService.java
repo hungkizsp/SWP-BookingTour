@@ -5,7 +5,5 @@ import org.springframework.data.domain.Page;
 
 public interface WishlistService {
     boolean toggleWishlist(Long userId, Long tourId);
-    TourDetailResponse addWishlist(Long userId, Long tourId);
-    void removeWishlist(Long userId, Long tourId);
     Page<TourDetailResponse> getUserWishlist(Long userId, int page, int size);
 }

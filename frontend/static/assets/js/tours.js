@@ -17,10 +17,9 @@
     maxPrice: '',
     categoryId: params.get('cat') || '',
     sortBy: 'price',
-    selected: new Set(JSON.parse(localStorage.getItem('compareIds') || '[]')),
-    wishlist: new Set()
+    selected: new Set(JSON.parse(localStorage.getItem('compareIds') || '[]'))
   };
-  const currentUser = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
+  let wishlistIds = new Set();
 
   const pRange = params.get('price');
   if (pRange && pRange !== 'all') {
@@ -70,17 +69,6 @@
     }
   }
 
-  async function fetchWishlist() {
-    if (!currentUser || String(currentUser.role || '').toUpperCase() !== 'CUSTOMER') return;
-    try {
-      const res = await TB.apiFetch('/api/wishlist?page=0&size=200', { method: 'GET' });
-      const items = res?.content || res?.data?.content || [];
-      state.wishlist = new Set(items.map(t => String(t.id)));
-    } catch (err) {
-      console.warn('Failed to load wishlist', err);
-    }
-  }
-
   function renderTours(pageRes) {
     grid.innerHTML = '';
     const content = pageRes?.data?.content || [];
@@ -94,26 +82,26 @@
       card.className = 'tour-card reveal';
       card.style.animationDelay = `${(idx % 6) * 0.1}s`;
 
-      const priceHtml = t.price
-        ? `<span class="price-value">${Number(t.price).toLocaleString()}đ</span>`
-        : '<span class="price-value">Liên hệ</span>';
+      const isWished = wishlistIds.has(t.id);
 
       card.innerHTML = `
-        <div class="tour-card-img-wrapper">
+        <div class="tour-card-img-wrapper" style="position:relative;">
           <img src="${TB.normalizeImageUrl(t.imageUrl || (t.imageUrls && t.imageUrls[0]) || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg')}" class="tour-card-img" alt="${t.tourName}">
           <div class="tour-card-badge">✨ ${t.categoryName || 'Sản phẩm nổi bật'}</div>
-          <button class="wishlist-btn" data-id="${t.id}" title="Luu tour yeu thich" aria-label="Luu tour yeu thich"
-            style="position:absolute;top:14px;right:14px;z-index:4;width:46px;height:46px;border-radius:999px;border:1px solid rgba(255,255,255,.9);background:rgba(255,255,255,.96);box-shadow:0 14px 30px rgba(15,23,42,.2);font-size:1.45rem;line-height:1;color:${state.wishlist.has(String(t.id)) ? '#dc2626' : '#64748b'};cursor:pointer;display:grid;place-items:center;transition:transform .18s ease, background .18s ease, color .18s ease;">
-            ${state.wishlist.has(String(t.id)) ? '&#9829;' : '&#9825;'}
-          </button>
+          <button
+            class="wishlist-btn"
+            data-tour-id="${t.id}"
+            title="${isWished ? 'Bỏ khỏi yêu thích' : 'Lưu vào yêu thích'}"
+            style="position:absolute; top:10px; right:10px; background:white; border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.15); font-size:1.1rem; display:flex; align-items:center; justify-content:center; z-index:10; transition:transform 0.15s;"
+          >${isWished ? '❤️' : '🤍'}</button>
         </div>
         <div class="tour-card-body">
           <h3 class="tour-card-title">${t.tourName}</h3>
           <div class="tour-card-meta">
-            <span>⌛ ${t.duration ? t.duration + ' Ngày' : 'Liên hệ'}</span>
+            <span>⏳ ${t.duration ? t.duration + ' Ngày' : 'Liên hệ'}</span>
             <span>📍 ${t.startLocation || 'Đà Nẵng'}</span>
             <span>⭐ ${(t.rating || 5).toFixed(1)} Rating</span>
-            <span>🚌 ${t.transportType || 'Xe du lịch'}</span>
+            <span>😌 ${t.transportType || 'Xe du lịch'}</span>
           </div>
           <div class="tour-card-footer">
             <div class="tour-card-price">
@@ -152,6 +140,45 @@
     if (nextBtn) nextBtn.disabled = (page + 1 >= total);
   }
 
+  function attachWishlistListeners() {
+    document.querySelectorAll('.wishlist-btn').forEach(btn => {
+      btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.2)'; });
+      btn.addEventListener('mouseleave', () => { btn.style.transform = 'scale(1)'; });
+      btn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+        if (!userStr) {
+          alert('Vui lòng đăng nhập để lưu tour yêu thích!');
+          return;
+        }
+        const user = JSON.parse(userStr);
+        const tourId = Number(btn.dataset.tourId);
+        const prev = btn.textContent;
+        btn.textContent = '...';
+        btn.disabled = true;
+        try {
+          const res = await TB.apiFetch(`/api/v1/wishlist/toggle?userId=${user.id}&tourId=${tourId}`, { method: 'POST' });
+          const data = res.data || res;
+          if (data.isAdded) {
+            wishlistIds.add(tourId);
+            btn.textContent = '❤️';
+            btn.title = 'Bỏ khỏi yêu thích';
+          } else {
+            wishlistIds.delete(tourId);
+            btn.textContent = '🤍';
+            btn.title = 'Lưu vào yêu thích';
+          }
+        } catch (err) {
+          btn.textContent = prev;
+          alert('Lỗi: ' + err.message);
+        } finally {
+          btn.disabled = false;
+        }
+      };
+    });
+  }
+
   function attachCompareListeners() {
     document.querySelectorAll('.compare-btn').forEach(btn => {
       const id = btn.dataset.id;
@@ -170,43 +197,6 @@
           btn.style.background = 'var(--accent-soft)';
         }
         updateCompareBadge();
-      };
-    });
-  }
-
-  function attachWishlistListeners() {
-    document.querySelectorAll('.wishlist-btn').forEach(btn => {
-      btn.onclick = async (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (!currentUser) {
-          sessionStorage.setItem('authNotice', 'Vui long dang nhap de luu tour yeu thich.');
-          window.location.href = './auth/login.html';
-          return;
-        }
-
-        const id = String(btn.dataset.id);
-        const saved = state.wishlist.has(id);
-        btn.disabled = true;
-        try {
-          await TB.apiFetch(`/api/wishlist/${encodeURIComponent(id)}`, { method: saved ? 'DELETE' : 'POST' });
-          if (saved) {
-            state.wishlist.delete(id);
-            btn.innerHTML = '&#9825;';
-            btn.style.color = '#64748b';
-            alert('Da xoa tour khoi wishlist.');
-          } else {
-            state.wishlist.add(id);
-            btn.innerHTML = '&#9829;';
-            btn.style.color = '#dc2626';
-            alert('Da them tour vao wishlist.');
-          }
-        } catch (err) {
-          alert(err.message || 'Khong the cap nhat wishlist.');
-        } finally {
-          btn.disabled = false;
-        }
       };
     });
   }
@@ -255,7 +245,18 @@
     }
   }
 
+  async function initWishlist() {
+    const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+    try {
+      const res = await TB.apiFetch(`/api/v1/wishlist?userId=${user.id}&page=0&size=200`);
+      const pd = res.data || res;
+      if (pd.content) pd.content.forEach(t => wishlistIds.add(t.id));
+    } catch (e) {}
+  }
+
   updateCompareBadge();
   fetchCategories();
-  fetchWishlist().finally(fetchTours);
+  initWishlist().then(() => fetchTours());
 })();

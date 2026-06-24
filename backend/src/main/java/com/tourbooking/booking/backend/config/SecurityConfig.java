@@ -95,16 +95,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/categories/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
                 // Reviews: Public GET, customers may POST, Staff/Admin update/delete
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/reviews/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/reviews/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/tours/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/reviews").authenticated()
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/reviews").authenticated()
                 .requestMatchers("/api/v1/reviews/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
-                .requestMatchers("/api/reviews/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
-
-                // Customer self-service
-                .requestMatchers("/api/v1/customers/**", "/api/customers/**").hasAuthority("ROLE_CUSTOMER")
-                .requestMatchers("/api/v1/wishlist/**", "/api/wishlist/**").hasAuthority("ROLE_CUSTOMER")
 
                 // Bookings: Customer actions
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/bookings").authenticated()
@@ -119,9 +111,7 @@ public class SecurityConfig {
 
                 // Tours: Public GET, Staff/Admin manage
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/tours/**").permitAll()
                 .requestMatchers("/api/v1/tours/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
-                .requestMatchers("/api/tours/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
                 
                 // FAQs: fully public (no auth needed to browse FAQs)
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/faqs/**").permitAll()

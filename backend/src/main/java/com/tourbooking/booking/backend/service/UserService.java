@@ -1,7 +1,6 @@
 package com.tourbooking.booking.backend.service;
 
 import com.tourbooking.booking.backend.model.dto.request.UserRequest;
-import com.tourbooking.booking.backend.model.dto.request.ChangePasswordRequest;
 import com.tourbooking.booking.backend.model.dto.response.UserResponse;
 import com.tourbooking.booking.backend.model.dto.response.PagedResponse;
 import org.springframework.data.domain.Pageable;
@@ -21,12 +20,6 @@ public interface UserService {
     void deleteUser(Long id);
 
     UserResponse getUserByEmail(String email);
-
-    UserResponse getProfile(String email);
-
-    UserResponse updateProfile(String email, UserRequest request);
-
-    void changePassword(String email, ChangePasswordRequest request);
 
     void saveVerificationToken(String email, String token);
 

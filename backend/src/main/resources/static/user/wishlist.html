@@ -1,138 +1,83 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Wishlist - TourBooking</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="../assets/css/style.css">
+    <meta charset="UTF-8">
+    <title>My Wishlist - TourBooking</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
 </head>
-<body class="min-h-screen overflow-x-hidden bg-[#f6f8f7] text-slate-950">
-  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-    <div class="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-      <a href="../pages/tours.html" class="flex min-w-0 items-center gap-3 text-emerald-900">
-        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-emerald-800 text-sm font-black text-white shadow-sm">TB</span>
-        <span class="truncate text-base font-black">TourBooking</span>
-      </a>
-      <nav class="flex shrink-0 items-center gap-2 text-sm font-bold text-slate-600">
-        <a class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-emerald-800" href="../pages/tours.html">Tours</a>
-        <a class="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800" href="wishlist.html">Wishlist</a>
-        <a class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-emerald-800" href="profile.html">Ho so</a>
-      </nav>
+<body>
+    <div id="header-container"></div>
+
+    <div class="container my-5">
+        <h2 class="mb-4">Danh sách Tour Yêu Thích</h2>
+        <div id="wishlist-container" class="row g-4">
+            <!-- Rendered by JS -->
+        </div>
     </div>
-  </header>
 
-  <main class="mx-auto flex min-h-[calc(100vh-65px)] w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-    <section class="mb-6 rounded-lg border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
-      <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div class="min-w-0">
-          <p class="text-xs font-black uppercase tracking-[0.18em] text-amber-600">Danh sach da luu</p>
-          <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Tour yeu thich</h1>
-          <p class="mt-2 max-w-2xl text-sm font-medium text-slate-500">Luu lai nhung hanh trinh dang can nhac de xem chi tiet, so sanh va dat tour nhanh hon.</p>
-        </div>
-        <a href="../pages/tours.html" class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-emerald-800 px-5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-900 sm:w-auto">Xem them tour</a>
-      </div>
-    </section>
+    <script>
+        const API_WISHLIST = "http://localhost:8080/api/v1/wishlist";
+        
+        async function loadWishlist() {
+            const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+            if (!userStr) {
+                window.location.href = '/user/login.html';
+                return;
+            }
+            const user = JSON.parse(userStr);
+            const container = document.getElementById('wishlist-container');
+            
+            try {
+                const res = await fetch(`${API_WISHLIST}?userId=${user.id}&page=0&size=50`);
+                const pageData = await res.json();
+                
+                if (pageData.content.length === 0) {
+                    container.innerHTML = "<p>Bạn chưa lưu tour nào.</p>";
+                    return;
+                }
+                
+                let html = "";
+                pageData.content.forEach(tour => {
+                    const imageUrl = tour.images && tour.images.length > 0 ? tour.images[0].imageUrl : '/assets/images/default-tour.jpg';
+                    html += `
+                    <div class="col-md-4">
+                        <div class="card h-100 shadow-sm position-relative">
+                            <button onclick="removeFromWishlist(${tour.id}, this)" class="btn btn-light position-absolute top-0 end-0 m-2 rounded-circle" style="z-index:10; color: red;">
+                                <i class="bi bi-heart-fill"></i>
+                            </button>
+                            <img src="${imageUrl}" class="card-img-top" alt="Tour" style="height: 200px; object-fit: cover;">
+                            <div class="card-body">
+                                <h5 class="card-title">${tour.tourName}</h5>
+                                <p class="card-text text-primary fw-bold">${tour.price.toLocaleString()} VND</p>
+                                <a href="/pages/tour-detail.html?id=${tour.id}" class="btn btn-outline-primary w-100">Xem Chi Tiết</a>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } catch (e) {
+                console.error(e);
+            }
+        }
 
-    <section id="wishlistGrid" class="grid w-full flex-1 auto-rows-fr gap-5 sm:grid-cols-2 xl:grid-cols-3"></section>
-  </main>
+        async function removeFromWishlist(tourId, btnElement) {
+            const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+            if (!userStr) return;
+            const user = JSON.parse(userStr);
+            try {
+                const res = await fetch(`${API_WISHLIST}/toggle?userId=${user.id}&tourId=${tourId}`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success && !data.isAdded) {
+                    btnElement.closest('.col-md-4').remove();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
 
-  <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/toast.js"></script>
-  <script>
-    const grid = document.getElementById('wishlistGrid');
-
-    function money(value) {
-      return value ? Number(value).toLocaleString('vi-VN') + ' VND' : 'Lien he';
-    }
-
-    function imageOf(tour) {
-      return TB.normalizeImageUrl(tour.imageUrl || (tour.imageUrls && tour.imageUrls[0]) || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg');
-    }
-
-    function renderSkeleton() {
-      grid.innerHTML = Array.from({ length: 6 }).map(() => `
-        <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-          <div class="aspect-[16/10] animate-pulse bg-slate-200"></div>
-          <div class="space-y-4 p-5">
-            <div class="h-5 w-4/5 animate-pulse rounded bg-slate-200"></div>
-            <div class="h-4 w-1/2 animate-pulse rounded bg-slate-200"></div>
-            <div class="h-11 animate-pulse rounded-lg bg-slate-200"></div>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function renderEmpty() {
-      grid.innerHTML = `
-        <div class="col-span-full grid min-h-[420px] place-items-center rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center shadow-sm">
-          <div class="max-w-md">
-            <div class="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-rose-50 text-4xl text-rose-500">&#9825;</div>
-            <h2 class="text-xl font-black text-slate-950">Ban chua co tour yeu thich nao.</h2>
-            <p class="mt-2 text-sm font-medium text-slate-500">Hay luu cac tour phu hop de quay lai khi can dat lich.</p>
-            <a href="../pages/tours.html" class="mt-6 inline-flex h-11 items-center justify-center rounded-lg bg-emerald-800 px-5 text-sm font-black text-white transition hover:bg-emerald-900">Quay lai danh sach tour</a>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderTours(tours) {
-      if (!tours.length) {
-        renderEmpty();
-        return;
-      }
-      grid.innerHTML = tours.map(tour => `
-        <article class="group flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl" data-card="${tour.id}">
-          <div class="relative aspect-[16/10] overflow-hidden bg-slate-200">
-            <img class="h-full w-full object-cover transition duration-500 group-hover:scale-105" src="${imageOf(tour)}" alt="${tour.tourName || 'Tour'}">
-            <button class="remove-btn absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-white/95 text-xl text-rose-600 shadow-md ring-1 ring-black/5 transition hover:bg-rose-50" data-id="${tour.id}" title="Xoa khoi wishlist">&#9829;</button>
-          </div>
-          <div class="flex flex-1 flex-col p-5">
-            <h2 class="min-h-12 text-base font-black leading-snug text-slate-950">${tour.tourName || 'Tour'}</h2>
-            <div class="mt-4 grid gap-2 text-sm font-semibold text-slate-500">
-              <span class="truncate">${tour.startLocation || tour.endLocation || 'Da Nang'}</span>
-              <span>${tour.duration ? tour.duration + ' ngay' : 'Thoi gian linh hoat'}</span>
-            </div>
-            <div class="mt-auto flex items-center justify-between gap-3 pt-5">
-              <strong class="text-base font-black text-emerald-800">${money(tour.price)}</strong>
-              <a class="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-emerald-800 px-4 text-sm font-black text-emerald-800 transition hover:bg-emerald-50" href="../pages/tour-detail.html?id=${tour.id}">Chi tiet</a>
-            </div>
-          </div>
-        </article>
-      `).join('');
-
-      document.querySelectorAll('.remove-btn').forEach(btn => {
-        btn.onclick = async () => {
-          btn.disabled = true;
-          btn.classList.add('opacity-60');
-          try {
-            await TB.apiFetch(`/api/wishlist/${encodeURIComponent(btn.dataset.id)}`, { method: 'DELETE' });
-            document.querySelector(`[data-card="${btn.dataset.id}"]`)?.remove();
-            if (!document.querySelector('[data-card]')) renderEmpty();
-            alert('Da xoa tour khoi wishlist.');
-          } catch (err) {
-            alert(err.message || 'Khong the xoa tour.');
-            btn.disabled = false;
-            btn.classList.remove('opacity-60');
-          }
-        };
-      });
-    }
-
-    async function loadWishlist() {
-      if (!sessionStorage.getItem('token')) {
-        TB.goToLogin('Vui long dang nhap de xem wishlist.');
-        return;
-      }
-      renderSkeleton();
-      const res = await TB.apiFetch('/api/wishlist?page=0&size=50', { method: 'GET' });
-      renderTours(res?.content || res?.data?.content || []);
-    }
-
-    loadWishlist().catch(err => {
-      console.error(err);
-      grid.innerHTML = '<div class="col-span-full rounded-lg bg-white p-6 text-center font-bold text-rose-600 shadow-sm">Khong the tai wishlist.</div>';
-    });
-  </script>
+        document.addEventListener('DOMContentLoaded', loadWishlist);
+    </script>
 </body>
 </html>

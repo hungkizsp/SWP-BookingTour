@@ -1,138 +1,152 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src * data: blob:; connect-src 'self' http://localhost:8080 ws://localhost:8080;">
   <title>Wishlist - TourBooking</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    .layout { display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; margin-top: 20px; }
+    .sidebar-menu { display: flex; flex-direction: column; gap: 8px; }
+    .sidebar-menu a { padding: 12px 16px; border-radius: 8px; text-decoration: none; color: var(--text-base); font-weight: 600; }
+    .sidebar-menu a:hover { background: rgba(0, 0, 0, 0.05); }
+    .sidebar-menu a.active { background: var(--primary); color: white; }
+    .wishlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
+    .wishlist-card { border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s; background: #fff; }
+    .wishlist-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+    .wishlist-img { width: 100%; height: 140px; object-fit: cover; }
+    .wishlist-body { padding: 14px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+    .wishlist-title { font-weight: 700; font-size: 1rem; color: #1e293b; margin-bottom: 8px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .wishlist-price { color: var(--accent); font-weight: 800; font-size: 1.1rem; }
+    .btn-remove { margin-top: 12px; width: 100%; padding: 8px; font-size: 0.85rem; font-weight: 600; background: #fee2e2; color: #991b1b; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+    .btn-remove:hover { background: #fca5a5; }
+    .btn-view { margin-top: 8px; width: 100%; padding: 8px; font-size: 0.85rem; font-weight: 600; background: #f1f5f9; color: #334155; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s; text-align: center; text-decoration: none; display: block; }
+    .btn-view:hover { background: #e2e8f0; }
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar-menu { flex-direction: row; overflow-x: auto; }
+    }
+  </style>
 </head>
-<body class="min-h-screen overflow-x-hidden bg-[#f6f8f7] text-slate-950">
-  <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-    <div class="mx-auto flex min-h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-      <a href="../pages/tours.html" class="flex min-w-0 items-center gap-3 text-emerald-900">
-        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-emerald-800 text-sm font-black text-white shadow-sm">TB</span>
-        <span class="truncate text-base font-black">TourBooking</span>
-      </a>
-      <nav class="flex shrink-0 items-center gap-2 text-sm font-bold text-slate-600">
-        <a class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-emerald-800" href="../pages/tours.html">Tours</a>
-        <a class="rounded-lg bg-emerald-50 px-3 py-2 text-emerald-800" href="wishlist.html">Wishlist</a>
-        <a class="rounded-lg px-3 py-2 hover:bg-slate-100 hover:text-emerald-800" href="profile.html">Ho so</a>
-      </nav>
-    </div>
-  </header>
-
-  <main class="mx-auto flex min-h-[calc(100vh-65px)] w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-    <section class="mb-6 rounded-lg border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
-      <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div class="min-w-0">
-          <p class="text-xs font-black uppercase tracking-[0.18em] text-amber-600">Danh sach da luu</p>
-          <h1 class="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Tour yeu thich</h1>
-          <p class="mt-2 max-w-2xl text-sm font-medium text-slate-500">Luu lai nhung hanh trinh dang can nhac de xem chi tiet, so sanh va dat tour nhanh hon.</p>
+<body>
+  <div class="container">
+    <div class="page-shell">
+      <div class="content-pad">
+        <div class="topbar">
+          <a class="brand" href="../pages/index.html">
+            <span class="brand-mark">TB</span>
+            <span class="brand-copy">
+              <strong>TourBooking</strong>
+              <span>An tâm tận hưởng</span>
+            </span>
+          </a>
         </div>
-        <a href="../pages/tours.html" class="inline-flex h-11 w-full items-center justify-center rounded-lg bg-emerald-800 px-5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-900 sm:w-auto">Xem them tour</a>
-      </div>
-    </section>
 
-    <section id="wishlistGrid" class="grid w-full flex-1 auto-rows-fr gap-5 sm:grid-cols-2 xl:grid-cols-3"></section>
-  </main>
+        <div class="layout">
+          <div class="card panel">
+            <nav class="sidebar-menu">
+              <a href="personal-info.html">Thông tin cá nhân</a>
+              <a href="profile.html">Cập nhật hồ sơ</a>
+              <a href="history.html">Lịch sử đặt tour</a>
+              <a href="wishlist.html" class="active">WishList</a>
+            </nav>
+          </div>
+
+          <div class="card panel">
+            <h2 class="section-title">Tour Yêu Thích Của Bạn</h2>
+            <p style="color:var(--text-faint); margin-top:-5px; margin-bottom: 20px;">Danh sách các tour bạn đã lưu.</p>
+
+            <div id="wishlist-container" class="wishlist-grid">
+              <p style="color: #666; font-size: 0.9rem;">Đang tải wishlist...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/toast.js"></script>
   <script>
-    const grid = document.getElementById('wishlistGrid');
+    const $ = (id) => document.getElementById(id);
+    let currentUser = null;
 
-    function money(value) {
-      return value ? Number(value).toLocaleString('vi-VN') + ' VND' : 'Lien he';
-    }
-
-    function imageOf(tour) {
-      return TB.normalizeImageUrl(tour.imageUrl || (tour.imageUrls && tour.imageUrls[0]) || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg');
-    }
-
-    function renderSkeleton() {
-      grid.innerHTML = Array.from({ length: 6 }).map(() => `
-        <div class="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-          <div class="aspect-[16/10] animate-pulse bg-slate-200"></div>
-          <div class="space-y-4 p-5">
-            <div class="h-5 w-4/5 animate-pulse rounded bg-slate-200"></div>
-            <div class="h-4 w-1/2 animate-pulse rounded bg-slate-200"></div>
-            <div class="h-11 animate-pulse rounded-lg bg-slate-200"></div>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function renderEmpty() {
-      grid.innerHTML = `
-        <div class="col-span-full grid min-h-[420px] place-items-center rounded-lg border border-dashed border-slate-300 bg-white p-6 text-center shadow-sm">
-          <div class="max-w-md">
-            <div class="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-full bg-rose-50 text-4xl text-rose-500">&#9825;</div>
-            <h2 class="text-xl font-black text-slate-950">Ban chua co tour yeu thich nao.</h2>
-            <p class="mt-2 text-sm font-medium text-slate-500">Hay luu cac tour phu hop de quay lai khi can dat lich.</p>
-            <a href="../pages/tours.html" class="mt-6 inline-flex h-11 items-center justify-center rounded-lg bg-emerald-800 px-5 text-sm font-black text-white transition hover:bg-emerald-900">Quay lai danh sach tour</a>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderTours(tours) {
-      if (!tours.length) {
-        renderEmpty();
+    async function init() {
+      const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+      if (!userStr) {
+        TB.goToLogin('Vui lòng đăng nhập để xem Wishlist.');
         return;
       }
-      grid.innerHTML = tours.map(tour => `
-        <article class="group flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-xl" data-card="${tour.id}">
-          <div class="relative aspect-[16/10] overflow-hidden bg-slate-200">
-            <img class="h-full w-full object-cover transition duration-500 group-hover:scale-105" src="${imageOf(tour)}" alt="${tour.tourName || 'Tour'}">
-            <button class="remove-btn absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-white/95 text-xl text-rose-600 shadow-md ring-1 ring-black/5 transition hover:bg-rose-50" data-id="${tour.id}" title="Xoa khoi wishlist">&#9829;</button>
-          </div>
-          <div class="flex flex-1 flex-col p-5">
-            <h2 class="min-h-12 text-base font-black leading-snug text-slate-950">${tour.tourName || 'Tour'}</h2>
-            <div class="mt-4 grid gap-2 text-sm font-semibold text-slate-500">
-              <span class="truncate">${tour.startLocation || tour.endLocation || 'Da Nang'}</span>
-              <span>${tour.duration ? tour.duration + ' ngay' : 'Thoi gian linh hoat'}</span>
-            </div>
-            <div class="mt-auto flex items-center justify-between gap-3 pt-5">
-              <strong class="text-base font-black text-emerald-800">${money(tour.price)}</strong>
-              <a class="inline-flex h-10 shrink-0 items-center justify-center rounded-lg border border-emerald-800 px-4 text-sm font-black text-emerald-800 transition hover:bg-emerald-50" href="../pages/tour-detail.html?id=${tour.id}">Chi tiet</a>
-            </div>
-          </div>
-        </article>
-      `).join('');
-
-      document.querySelectorAll('.remove-btn').forEach(btn => {
-        btn.onclick = async () => {
-          btn.disabled = true;
-          btn.classList.add('opacity-60');
-          try {
-            await TB.apiFetch(`/api/wishlist/${encodeURIComponent(btn.dataset.id)}`, { method: 'DELETE' });
-            document.querySelector(`[data-card="${btn.dataset.id}"]`)?.remove();
-            if (!document.querySelector('[data-card]')) renderEmpty();
-            alert('Da xoa tour khoi wishlist.');
-          } catch (err) {
-            alert(err.message || 'Khong the xoa tour.');
-            btn.disabled = false;
-            btn.classList.remove('opacity-60');
-          }
-        };
-      });
+      currentUser = JSON.parse(userStr);
+      await loadWishlist();
     }
 
     async function loadWishlist() {
-      if (!sessionStorage.getItem('token')) {
-        TB.goToLogin('Vui long dang nhap de xem wishlist.');
-        return;
+      const container = $('wishlist-container');
+      try {
+        const res = await TB.apiFetch(`/api/v1/wishlist?userId=${currentUser.id}&page=0&size=20`);
+        const pageData = res.data || res;
+        
+        if (!pageData.content || pageData.content.length === 0) {
+            container.innerHTML = "<p style='color: #666; font-size: 0.9rem; grid-column: 1/-1;'>Bạn chưa lưu tour nào trong danh sách yêu thích.</p>";
+            container.style.display = 'block';
+            return;
+        }
+        
+        container.style.display = 'grid';
+        let html = "";
+        pageData.content.forEach(tour => {
+            const imageUrl = tour.imageUrls && tour.imageUrls.length > 0 ? TB.normalizeImageUrl(tour.imageUrls[0]) : '../assets/images/default-tour.jpg';
+            html += `
+            <div class="wishlist-card">
+                <img src="${imageUrl}" class="wishlist-img">
+                <div class="wishlist-body">
+                    <div>
+                        <div class="wishlist-title">${tour.tourName}</div>
+                        <div class="wishlist-price">${tour.price.toLocaleString('vi-VN')} đ</div>
+                    </div>
+                    <div>
+                        <button class="btn-remove" onclick="removeWishlist(${tour.id}, this)">Bỏ thích 💔</button>
+                        <a href="../pages/tour-detail.html?id=${tour.id}" class="btn-view">Xem chi tiết</a>
+                    </div>
+                </div>
+            </div>`;
+        });
+        container.innerHTML = html;
+      } catch(e) {
+        console.error(e);
+        container.innerHTML = "<p style='color: #dc2626; font-size: 0.9rem; grid-column: 1/-1;'>Lỗi tải wishlist. Vui lòng thử lại sau.</p>";
+        container.style.display = 'block';
       }
-      renderSkeleton();
-      const res = await TB.apiFetch('/api/wishlist?page=0&size=50', { method: 'GET' });
-      renderTours(res?.content || res?.data?.content || []);
     }
 
-    loadWishlist().catch(err => {
-      console.error(err);
-      grid.innerHTML = '<div class="col-span-full rounded-lg bg-white p-6 text-center font-bold text-rose-600 shadow-sm">Khong the tai wishlist.</div>';
-    });
+    async function removeWishlist(tourId, btnElement) {
+      btnElement.textContent = 'Đang xử lý...';
+      btnElement.disabled = true;
+      try {
+          const res = await TB.apiFetch(`/api/v1/wishlist/toggle?userId=${currentUser.id}&tourId=${tourId}`, { method: 'POST' });
+          const data = res.data || res;
+          if (data.success !== false && !data.isAdded) {
+              const card = btnElement.closest('.wishlist-card');
+              card.style.opacity = '0';
+              setTimeout(() => {
+                card.remove();
+                if ($('wishlist-container').children.length === 0) {
+                  $('wishlist-container').style.display = 'block';
+                  $('wishlist-container').innerHTML = "<p style='color: #666; font-size: 0.9rem;'>Bạn chưa lưu tour nào trong danh sách yêu thích.</p>";
+                }
+              }, 300);
+          }
+      } catch (e) {
+          console.error(e);
+          alert('Lỗi bỏ thích tour: ' + e.message);
+          btnElement.textContent = 'Bỏ thích 💔';
+          btnElement.disabled = false;
+      }
+    }
+
+    init();
   </script>
 </body>
 </html>

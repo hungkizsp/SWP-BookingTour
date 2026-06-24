@@ -4,16 +4,14 @@ import com.tourbooking.booking.backend.model.dto.request.ReviewRequest;
 import com.tourbooking.booking.backend.model.dto.response.ApiResponse;
 import com.tourbooking.booking.backend.model.dto.response.ReviewResponse;
 import com.tourbooking.booking.backend.service.ReviewService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/reviews", "/api/reviews"})
+@RequestMapping("/api/v1/reviews")
 @CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class ReviewController {
@@ -51,19 +49,16 @@ public class ReviewController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<ReviewResponse> createReview(@Valid @RequestBody ReviewRequest request, Authentication authentication) {
-        ReviewResponse response = authentication == null
-                ? reviewService.createReview(request)
-                : reviewService.createReview(request, authentication.getName());
+    public ApiResponse<ReviewResponse> createReview(@RequestBody ReviewRequest request) {
         return ApiResponse.<ReviewResponse>builder()
                 .code(HttpStatus.CREATED.value())
                 .message("Review saved successfully")
-                .data(response)
+                .data(reviewService.createReview(request))
                 .build();
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<ReviewResponse> updateReview(@PathVariable Long id, @Valid @RequestBody ReviewRequest request) {
+    public ApiResponse<ReviewResponse> updateReview(@PathVariable Long id, @RequestBody ReviewRequest request) {
         return ApiResponse.<ReviewResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Review updated successfully")
