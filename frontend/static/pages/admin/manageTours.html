@@ -412,10 +412,9 @@
             document.getElementById('itinerary').value = '';
             document.getElementById('categoryId').value = '';
 
-            // Set min check for schedules row to tomorrow
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            window.minDateStr = tomorrow.toISOString().split('T')[0];
+            // Set min check for schedules row to today
+            const today = new Date();
+            window.minDateStr = today.toISOString().split('T')[0];
             document.getElementById('tourImages').value = '';
             document.getElementById('imagePreviewContainer').innerHTML = '';
             document.getElementById('existingImages').value = '';
@@ -523,6 +522,15 @@
                 return;
             }
 
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toTimeString().substring(0,5);
+            for (const s of schedules) {
+                if (s.startDate === todayStr && s.departureTime && s.departureTime < nowTime) {
+                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
+                    return;
+                }
+            }
+
             let finalImageUrls = [];
             const existingImagesStr = document.getElementById('existingImages').value;
             if (existingImagesStr) {
@@ -613,9 +621,8 @@
             row.style.marginBottom = '10px';
             row.style.alignItems = 'center';
 
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const minDate = tomorrow.toISOString().split('T')[0];
+            const today = new Date();
+            const minDate = today.toISOString().split('T')[0];
 
             let depTime = '';
             if (data && data.departureTime) {
@@ -728,6 +735,7 @@
             };
 
             const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toTimeString().substring(0,5);
 
             if (mode === 'single') {
                 const startDate = document.getElementById('singleStartDate').value;
@@ -737,6 +745,10 @@
                 }
                 if (startDate < todayStr) {
                     showToast('Ngày bắt đầu không được nằm trong quá khứ (Start date cannot be in the past).', 'error');
+                    return;
+                }
+                if (startDate === todayStr && departureTime.substring(0,5) < nowTime) {
+                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
                     return;
                 }
                 payload.rangeStartDate = startDate;
@@ -754,6 +766,10 @@
                 }
                 if (startDate > endDate) {
                     showToast('Ngày bắt đầu không được lớn hơn ngày kết thúc (Start date cannot be after end date).', 'error');
+                    return;
+                }
+                if (startDate === todayStr && departureTime.substring(0,5) < nowTime) {
+                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
                     return;
                 }
 

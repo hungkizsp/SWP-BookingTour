@@ -164,7 +164,33 @@
       return;
     }
 
-    root.innerHTML = '<option value="">-- Chọn lịch khởi hành --</option>' + list.map(s => {
+    const now = new Date();
+    const validList = list.filter(s => {
+      if (!s.startDate) return true;
+      const start = new Date(s.startDate);
+      start.setHours(0, 0, 0, 0);
+      const today = new Date(now);
+      today.setHours(0, 0, 0, 0);
+
+      if (start < today) {
+        return false;
+      }
+      if (start.getTime() === today.getTime() && s.departureTime) {
+        const [hours, minutes] = s.departureTime.split(':').map(Number);
+        if (hours < now.getHours() || (hours === now.getHours() && minutes <= now.getMinutes())) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    if (validList.length === 0) {
+      root.innerHTML = '<option value="">Hiện chưa có lịch khởi hành phù hợp</option>';
+      if (btn) { btn.disabled = true; }
+      return;
+    }
+
+    root.innerHTML = '<option value="">-- Chọn lịch khởi hành --</option>' + validList.map(s => {
       const status = String(s.status || '').toUpperCase();
       const { canBook } = getBookabilityState(s);
       const meta = getStatusMeta(status);
@@ -178,9 +204,9 @@
     }).join('');
 
     // Trigger initial state render
-    updateBookingState(list);
+    updateBookingState(validList);
 
-    root.onchange = () => updateBookingState(list);
+    root.onchange = () => updateBookingState(validList);
   }
 
   function updateBookingState(list) {

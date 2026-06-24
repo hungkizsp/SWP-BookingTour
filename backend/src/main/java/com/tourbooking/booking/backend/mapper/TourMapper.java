@@ -87,7 +87,7 @@ public class TourMapper {
         return response;
     }
 
-    private static TourDetailResponse.TourScheduleSummary toScheduleSummary(TourSchedule schedule) {
+    public static TourDetailResponse.TourScheduleSummary toScheduleSummary(TourSchedule schedule) {
         TourDetailResponse.TourScheduleSummary s = new TourDetailResponse.TourScheduleSummary();
         s.setScheduleId(schedule.getId());
         s.setStartDate(schedule.getStartDate());

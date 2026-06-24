@@ -25,8 +25,6 @@ import com.tourbooking.booking.backend.repository.CityRepository;
 import com.tourbooking.booking.backend.repository.TourRepository;
 import com.tourbooking.booking.backend.service.TourService;
 
-import lombok.RequiredArgsConstructor;
-
 @Service
 public class TourServiceImpl implements TourService {
 
@@ -35,7 +33,8 @@ public class TourServiceImpl implements TourService {
     private final CityRepository cityRepository;
     private final com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo;
 
-    public TourServiceImpl(TourRepository tourRepo, CategoryRepository categoryRepo, CityRepository cityRepository, com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo) {
+    public TourServiceImpl(TourRepository tourRepo, CategoryRepository categoryRepo, CityRepository cityRepository,
+            com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo) {
         this.tourRepo = tourRepo;
         this.categoryRepo = categoryRepo;
         this.cityRepository = cityRepository;
@@ -45,7 +44,7 @@ public class TourServiceImpl implements TourService {
     @Override
     @Transactional(readOnly = true)
     public List<TourResponse> getAllTours() {
-        return tourRepo.findAllWithBasicDetails().stream()
+        return tourRepo.findAll().stream()
                 .map(TourMapper::toResponse)
                 .toList();
     }
@@ -78,7 +77,7 @@ public class TourServiceImpl implements TourService {
     @Transactional
     public TourResponse createTour(TourRequest request) {
         Tour tour = TourMapper.toEntity(request);
-        
+
         Long categoryId = request.getCategoryId();
         if (categoryId != null) {
             Category category = categoryRepo.findById(categoryId)
@@ -112,8 +111,14 @@ public class TourServiceImpl implements TourService {
 
         // Handle Schedules
         if (request.getSchedules() != null) {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalTime now = java.time.LocalTime.now();
             List<TourSchedule> schedules = request.getSchedules().stream()
                     .map(sReq -> {
+                        if (sReq.getStartDate() != null && sReq.getStartDate().equals(today) && 
+                            sReq.getDepartureTime() != null && sReq.getDepartureTime().isBefore(now)) {
+                            throw new IllegalArgumentException("Giờ khởi hành cho ngày hôm nay phải lớn hơn giờ hiện tại!");
+                        }
                         TourSchedule schedule = TourMapper.toScheduleEntity(sReq);
                         schedule.setTour(tour);
                         return schedule;
@@ -168,28 +173,40 @@ public class TourServiceImpl implements TourService {
                     .map(com.tourbooking.booking.backend.model.dto.request.TourScheduleRequest::getId)
                     .filter(java.util.Objects::nonNull)
                     .collect(java.util.stream.Collectors.toSet());
-                    
+
             for (TourSchedule existingSchedule : existingTour.getSchedules()) {
                 if (!incomingIds.contains(existingSchedule.getId())) {
                     existingSchedule.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED);
                 }
             }
-            
+
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalTime now = java.time.LocalTime.now();
+
             request.getSchedules().forEach(sReq -> {
+                if (sReq.getStartDate() != null && sReq.getStartDate().equals(today) && 
+                    sReq.getDepartureTime() != null && sReq.getDepartureTime().isBefore(now)) {
+                    throw new IllegalArgumentException("Giờ khởi hành cho ngày hôm nay phải lớn hơn giờ hiện tại!");
+                }
+
                 if (sReq.getId() != null) {
                     existingTour.getSchedules().stream()
-                        .filter(s -> s.getId().equals(sReq.getId()))
-                        .findFirst()
-                        .ifPresent(existing -> {
-                            existing.setStartDate(sReq.getStartDate());
-                            existing.setEndDate(sReq.getEndDate());
-                            if (sReq.getDepartureTime() != null) existing.setDepartureTime(sReq.getDepartureTime());
-                            if (sReq.getReturnTime() != null) existing.setReturnTime(sReq.getReturnTime());
-                            if (sReq.getBookingDeadline() != null) existing.setBookingDeadline(sReq.getBookingDeadline());
-                            existing.setMaxSlots(sReq.getMaxSlots());
-                            if (sReq.getAvailableSlots() != null) existing.setAvailableSlots(sReq.getAvailableSlots());
-                            existing.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN);
-                        });
+                            .filter(s -> s.getId().equals(sReq.getId()))
+                            .findFirst()
+                            .ifPresent(existing -> {
+                                existing.setStartDate(sReq.getStartDate());
+                                existing.setEndDate(sReq.getEndDate());
+                                if (sReq.getDepartureTime() != null)
+                                    existing.setDepartureTime(sReq.getDepartureTime());
+                                if (sReq.getReturnTime() != null)
+                                    existing.setReturnTime(sReq.getReturnTime());
+                                if (sReq.getBookingDeadline() != null)
+                                    existing.setBookingDeadline(sReq.getBookingDeadline());
+                                existing.setMaxSlots(sReq.getMaxSlots());
+                                if (sReq.getAvailableSlots() != null)
+                                    existing.setAvailableSlots(sReq.getAvailableSlots());
+                                existing.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN);
+                            });
                 } else {
                     TourSchedule schedule = TourMapper.toScheduleEntity(sReq);
                     schedule.setTour(existingTour);
@@ -213,7 +230,8 @@ public class TourServiceImpl implements TourService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TourResponse> searchToursWithFilters(String keyword, java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice, Double minRating, java.time.LocalDate startDate) {
+    public List<TourResponse> searchToursWithFilters(String keyword, java.math.BigDecimal minPrice,
+            java.math.BigDecimal maxPrice, Double minRating, java.time.LocalDate startDate) {
         return tourRepo.searchToursWithFilters(keyword, minPrice, maxPrice, minRating, startDate).stream()
                 .distinct()
                 .map(TourMapper::toResponse)
@@ -223,31 +241,35 @@ public class TourServiceImpl implements TourService {
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<TourResponse> browseTours(String keyword,
-                                                  java.math.BigDecimal minPrice,
-                                                  java.math.BigDecimal maxPrice,
-                                                  Double minRating,
-                                                  java.time.LocalDate startDate,
-                                                  Long categoryId,
-                                                  String transportType,
-                                                  Long cityId,
-                                                  Double lat,
-                                                  Double lng,
-                                                  String sortBy,
-                                                  String sortDir,
-                                                  Pageable pageable) {
+            java.math.BigDecimal minPrice,
+            java.math.BigDecimal maxPrice,
+            Double minRating,
+            java.time.LocalDate startDate,
+            Long categoryId,
+            String transportType,
+            Long cityId,
+            Double lat,
+            Double lng,
+            String sortBy,
+            String sortDir,
+            Pageable pageable) {
         String normalizedSortBy = sortBy == null ? "" : sortBy.trim().toLowerCase();
-        
+
         // Prepare keyword patterns
-        String pattern = (keyword == null || keyword.trim().isEmpty()) ? null : "%" + keyword.trim().toLowerCase() + "%";
+        String pattern = (keyword == null || keyword.trim().isEmpty()) ? null
+                : "%" + keyword.trim().toLowerCase() + "%";
 
         Page<Tour> page;
         if ("popularity".equals(normalizedSortBy)) {
-            page = tourRepo.browseToursByPopularity(keyword, minPrice, maxPrice, minRating, startDate, categoryId, transportType, pageable);
+            page = tourRepo.browseToursByPopularity(keyword, minPrice, maxPrice, minRating, startDate, categoryId,
+                    transportType, pageable);
         } else if ("distance".equals(normalizedSortBy)) {
             double[] coords = resolveCoords(cityId, lat, lng);
-            page = tourRepo.browseToursByDistance(keyword, minPrice, maxPrice, minRating, startDate, categoryId, transportType, coords[0], coords[1], pageable);
+            page = tourRepo.browseToursByDistance(keyword, minPrice, maxPrice, minRating, startDate, categoryId,
+                    transportType, coords[0], coords[1], pageable);
         } else {
-            page = tourRepo.browseTours(keyword, pattern, minPrice, maxPrice, minRating, startDate, categoryId, transportType, pageable);
+            page = tourRepo.browseTours(keyword, pattern, minPrice, maxPrice, minRating, startDate, categoryId,
+                    transportType, pageable);
         }
         return PagedResponse.<TourResponse>builder()
                 .content(page.getContent().stream().map(TourMapper::toResponse).toList())
@@ -262,14 +284,14 @@ public class TourServiceImpl implements TourService {
 
     private double[] resolveCoords(Long cityId, Double lat, Double lng) {
         if (lat != null && lng != null) {
-            return new double[]{lat, lng};
+            return new double[] { lat, lng };
         }
         if (cityId != null) {
             City city = cityRepository.findById(cityId)
                     .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
-            return new double[]{city.getCenterLatitude().doubleValue(), city.getCenterLongitude().doubleValue()};
+            return new double[] { city.getCenterLatitude().doubleValue(), city.getCenterLongitude().doubleValue() };
         }
-        return new double[]{0.0, 0.0};
+        return new double[] { 0.0, 0.0 };
     }
 
     @Override
