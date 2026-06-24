@@ -8,13 +8,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class PayosConfig {
 
-    @Value("${payos.client-id}")
+    @Value("${PAYOS_CLIENT_ID:}")
     private String clientId;
 
-    @Value("${payos.api-key}")
+    @Value("${PAYOS_API_KEY:}")
     private String apiKey;
 
-    @Value("${payos.checksum-key}")
+    @Value("${PAYOS_CHECKSUM_KEY:}")
     private String checksumKey;
 
     @Bean
