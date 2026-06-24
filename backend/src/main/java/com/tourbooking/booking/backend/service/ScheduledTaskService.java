@@ -70,14 +70,14 @@ public class ScheduledTaskService {
             // AvailableSlots hiện tại = tổng ban đầu - đã đặt CONFIRMED
             // Để đơn giản: không cho slot âm và đánh dấu FULL nếu == 0
             if (schedule.getAvailableSlots() != null && schedule.getAvailableSlots() <= 0) {
-                schedule.setStatus(TourStatus.FULL);
+                schedule.setStatus(TourStatus.SOLD_OUT);
                 tourScheduleRepository.save(schedule);
                 updated++;
             }
         }
 
         if (updated > 0) {
-            log.info("[UC46] Cập nhật {} TourSchedule sang trạng thái FULL.", updated);
+            log.info("[UC46] Cập nhật {} TourSchedule sang trạng thái SOLD_OUT.", updated);
         }
     }
 

@@ -80,6 +80,60 @@
       color: #991b1b;
     }
 
+    .status-badge.operator-cancelled {
+      background: #ede9fe;
+      color: #5b21b6;
+    }
+
+    .status-badge.refunded {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    /* Operator cancellation banner */
+    .operator-cancel-banner {
+      background: linear-gradient(135deg, #fef2f2, #fce7f3);
+      border: 2px solid #f87171;
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-top: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .operator-cancel-banner .banner-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .operator-cancel-banner .banner-title {
+      font-weight: 800;
+      color: #991b1b;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+    }
+
+    .operator-cancel-banner .banner-body {
+      font-size: 0.875rem;
+      color: #7f1d1d;
+      line-height: 1.6;
+    }
+
+    .refund-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
     .booking-actions {
       display: flex;
       gap: 10px;
@@ -300,6 +354,30 @@
     </div>
   </div>
 
+  <!-- Modal Chọn Phương Thức Thanh Toán -->
+  <div class="modal-overlay" id="paymentMethodModal">
+    <div class="modal-box">
+      <h3 style="margin-top:0;">Chọn phương thức thanh toán</h3>
+      <p style="font-size:0.9rem; color:var(--text-faint);">Vui lòng chọn cổng thanh toán để tiếp tục giao dịch cho mã tour <strong id="repayCode"></strong>.</p>
+      
+      <div style="margin-top:16px; display:flex; flex-direction:column; gap:12px;">
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.1); border-radius:8px; cursor:pointer;">
+          <input type="radio" name="paymentGateway" value="PAYOS" checked style="width:18px; height:18px;" />
+          <strong style="color:#0369a1;">PayOS (Chuyển khoản / QR Ngân hàng)</strong>
+        </label>
+        <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.1); border-radius:8px; cursor:pointer;">
+          <input type="radio" name="paymentGateway" value="VNPAY" style="width:18px; height:18px;" />
+          <strong style="color:#0369a1;">VNPay (Ví điện tử / Thẻ ATM)</strong>
+        </label>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeModals()">Đóng</button>
+        <button class="btn" id="confirmRepayBtn" onclick="confirmRepayment()">Tiếp Tục Thanh Toán</button>
+      </div>
+    </div>
+  </div>
+
   <script src="../assets/js/api.js"></script>
   <script>
     let allBookings = [];
@@ -341,10 +419,12 @@
       const s = String(status || '').toUpperCase();
       if (s === 'CANCELLED') return { cls: 'cancelled', label: 'Đã hủy' };
       if (s === 'EXPIRED') return { cls: 'cancelled', label: 'Hết hạn thanh toán' };
+      if (s === 'CANCELLED_BY_OPERATOR') return { cls: 'operator-cancelled', label: '🚫 Hủy bởi Nhà điều hành' };
+      if (s === 'REFUNDED') return { cls: 'refunded', label: '💰 Đã hoàn tiền' };
+      if (s === 'REFUND_REQUESTED') return { cls: 'refunded', label: '⏳ Đang chờ hoàn tiền' };
       if (s === 'COMPLETED' || s === 'SUCCESS') return { cls: 'success', label: 'Đã hoàn thành' };
       if (s === 'CONFIRMED') return { cls: 'pending', label: 'Đã xác nhận' };
       if (s === 'IN_PROGRESS') return { cls: 'pending', label: 'Đang diễn ra' };
-      if (s === 'REFUND_REQUESTED') return { cls: 'pending', label: 'Đang chờ hoàn tiền' };
       return { cls: 'pending', label: 'Đang chờ' };
     }
 
@@ -357,11 +437,65 @@
 
       root.innerHTML = list.map(b => {
         const badge = statusBadge(b.status);
-        const canCancel = String(b.status || '').toUpperCase() === 'PENDING' || String(b.status || '').toUpperCase() === 'CONFIRMED';
-        const canReview = String(b.status || '').toUpperCase() === 'COMPLETED';
+        const bStatus = String(b.status || '').toUpperCase();
+        const canCancel = bStatus === 'PENDING' || bStatus === 'CONFIRMED';
+        const isCompleted = bStatus === 'COMPLETED';
+        const isOperatorCancelled = bStatus === 'CANCELLED_BY_OPERATOR';
+        const isRefunded = bStatus === 'REFUNDED';
+        // b.reviewed is a boolean flag returned by the backend booking response
+        const alreadyReviewed = isCompleted && Boolean(b.reviewed);
+
+        let reviewBtn = '';
+        if (isCompleted) {
+          if (alreadyReviewed) {
+            reviewBtn = `<button class="btn" id="review-btn-${b.id}" disabled
+              style="background:#94a3b8; color:white; cursor:not-allowed; opacity:0.7;">✅ Đã Đánh Giá</button>`;
+          } else {
+            reviewBtn = `<button class="btn" id="review-btn-${b.id}"
+              style="background:#0284c7; color:white;"
+              onclick="openReviewModal(${b.id})">Viết Đánh Giá</button>`;
+          }
+        }
+
+        // Operator-Cancellation Banner (MODULE 5 — CANCELLED_BY_OPERATOR)
+        const operatorCancelBanner = (isOperatorCancelled || isRefunded) ? `
+          <div class="operator-cancel-banner">
+            <div class="banner-icon">🚨</div>
+            <div>
+              <div class="banner-title">Tour Cancelled by Operator</div>
+              <div class="banner-body">
+                This tour schedule was automatically cancelled because a tour guide could not be assigned before the scheduled departure.
+                <br><strong>Reason:</strong> Guide Not Assigned
+                <br><strong>Total Paid:</strong> ${formatCurrency(b.totalPrice)}
+              </div>
+              <div style="margin-top:8px;">
+                <span class="refund-chip">💰 Refund Status: ${isRefunded ? 'Refunded' : 'Processing'}</span>
+                ${isRefunded ? `<span class="refund-chip" style="background:#dcfce7;color:#166534;border-color:#86efac;">✅ Full Refund: ${formatCurrency(b.totalPrice)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        ` : '';
+
+        // Repayment Window
+        let repaymentBtn = '';
+        if (bStatus === 'PENDING') {
+            const createdAt = new Date(b.createdAt || b.bookingDate);
+            const now = new Date();
+            const expiresAt = createdAt.getTime() + 15 * 60000;
+            if (expiresAt > now.getTime()) {
+                repaymentBtn = `
+                <div id="repayment-container-${b.id}" style="margin-top: 10px; background: #fffbeb; border: 1px dashed #fde68a; padding: 12px; border-radius: 8px;">
+                    <div style="font-weight: 600; color: #b45309; margin-bottom: 6px;">Thanh toán chưa hoàn tất</div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button class="btn" style="background:#f59e0b; color:white; padding: 6px 16px;" onclick="retryPayment(${b.id})">💳 Thanh Toán Lại</button>
+                        <span style="font-size: 0.85rem; color: #d97706; font-weight: 600;">Link expires in <span class="repayment-timer" data-expires="${expiresAt}" data-id="${b.id}">--:--</span></span>
+                    </div>
+                </div>`;
+            }
+        }
 
         return `
-          <div class="booking-card">
+          <div class="booking-card" style="${isOperatorCancelled || isRefunded ? 'border-color:#fca5a5;' : ''}">
             <div class="booking-header">
               <div>
                 <h3 style="margin:0; font-size:1.1rem;">${(b.tourName || 'Tour').toString()}</h3>
@@ -385,13 +519,15 @@
                     </div>
                 </div>
                 ${renderItinerary(b.tourItinerary)}
+                ${operatorCancelBanner}
             </div>
             <div class="booking-actions">
               <button class="btn btn-secondary" onclick="downloadInvoice(${b.id})">Tải Hóa Đơn PDF</button>
               <button class="btn" style="background:#059669; color:white; border:none;" onclick="openDetailsModal(${b.id})">Xem Chi Tiết</button>
               ${canCancel ? `<button class="btn btn-secondary" style="color:#ef4444; border-color:#fee2e2; background:#fef2f2;" onclick="openCancelModal(${b.id})">Hủy Đặt Tour</button>` : ''}
-              ${canReview ? `<button class="btn" style="background:#0284c7; color:white;" onclick="openReviewModal(${b.id})">Đánh Giá Chuyến Đi</button>` : ''}
+              ${reviewBtn}
             </div>
+            ${repaymentBtn}
           </div>
         `;
       }).join('');
@@ -408,7 +544,7 @@
         return;
       }
       if (k === 'cancelled') {
-        render(allBookings.filter(b => ['CANCELLED', 'EXPIRED'].includes(String(b.status || '').toUpperCase())));
+        render(allBookings.filter(b => ['CANCELLED', 'EXPIRED', 'CANCELLED_BY_OPERATOR', 'REFUNDED', 'REFUND_REQUESTED'].includes(String(b.status || '').toUpperCase())));
         return;
       }
       render(allBookings);
@@ -504,7 +640,12 @@
 
     function openReviewModal(bookingId) {
       currentBooking = allBookings.find(b => Number(b.id) === Number(bookingId)) || null;
-      $('reviewCode').innerText = currentBooking ? `#${currentBooking.id}` : `#${bookingId}`;
+      if (!currentBooking) return;
+      // Store the bookingId on the modal so submitReview() can read it
+      $('reviewModal').dataset.bookingId = bookingId;
+      $('reviewCode').innerText = `#${currentBooking.id}`;
+      $('reviewRating').value = '5';
+      $('reviewComment').value = '';
       $('reviewModal').style.display = 'flex';
     }
 
@@ -606,6 +747,7 @@
       $('cancelModal').style.display = 'none';
       $('reviewModal').style.display = 'none';
       if ($('detailsModal')) $('detailsModal').style.display = 'none';
+      if ($('paymentMethodModal')) $('paymentMethodModal').style.display = 'none';
       if ($('bankName')) $('bankName').value = '';
       if ($('accountNumber')) $('accountNumber').value = '';
       if ($('accountHolder')) $('accountHolder').value = '';
@@ -666,31 +808,56 @@
     }
 
     async function submitReview() {
-      const user = JSON.parse(sessionStorage.getItem('user') || 'null');
-      if (!user?.id) {
-        TB.goToLogin('Vui lòng đăng nhập để đánh giá.');
-        return;
-      }
-      if (!currentBooking?.tourId) {
-        alert("Không xác định được tourId để đánh giá (thiếu dữ liệu tour).");
+      const bookingId = $('reviewModal').dataset.bookingId;
+      if (!bookingId) {
+        alert('Không xác định được mã đặt tour. Vui lòng thử lại.');
         return;
       }
 
       const rating = Number($('reviewRating').value || 5);
       const comment = $('reviewComment').value.trim();
 
-      await TB.apiFetch('/api/v1/reviews', {
-        method: 'POST',
-        body: JSON.stringify({
-          tourId: currentBooking.tourId,
-          userId: user.id,
-          rating,
-          comment
-        })
-      });
+      if (!comment) {
+        alert('Vui lòng nhập cảm nhận của bạn trước khi gửi.');
+        return;
+      }
 
-      alert("Cảm ơn bạn đã gửi đánh giá!");
-      closeModals();
+      const submitBtn = document.querySelector('#reviewModal button[onclick="submitReview()"]');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Đang gửi...'; }
+
+      try {
+        await TB.apiFetch('/api/v1/reviews', {
+          method: 'POST',
+          body: JSON.stringify({
+            bookingId: Number(bookingId),
+            rating,
+            comment
+          })
+        });
+
+        // Mark the booking as reviewed in local state
+        const bk = allBookings.find(b => Number(b.id) === Number(bookingId));
+        if (bk) bk.reviewed = true;
+
+        // Update the button in-place without a full reload
+        const reviewBtn = document.getElementById(`review-btn-${bookingId}`);
+        if (reviewBtn) {
+          reviewBtn.disabled = true;
+          reviewBtn.style.background = '#94a3b8';
+          reviewBtn.style.cursor = 'not-allowed';
+          reviewBtn.style.opacity = '0.7';
+          reviewBtn.onclick = null;
+          reviewBtn.innerText = '✅ Đã Đánh Giá';
+        }
+
+        alert('Cảm ơn bạn đã gửi đánh giá!');
+        closeModals();
+      } catch (err) {
+        console.error(err);
+        alert('Gửi đánh giá thất bại: ' + (err.message || 'Vui lòng thử lại sau.'));
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Gửi Đánh Giá'; }
+      }
     }
 
     $('filterAll').onclick = () => applyFilter('all');
@@ -702,6 +869,64 @@
       console.error(err);
       $('bookingList').innerHTML = `<div class="card panel" style="border-color:#fecaca;color:#991b1b;">${(err?.message || 'Không tải được lịch sử đặt tour')}</div>`;
     });
+
+    // Timer cho repayment
+    setInterval(() => {
+        document.querySelectorAll('.repayment-timer').forEach(el => {
+            const expiresAt = parseInt(el.dataset.expires);
+            const now = new Date().getTime();
+            const diff = expiresAt - now;
+            if (diff <= 0) {
+                const container = document.getElementById(`repayment-container-${el.dataset.id}`);
+                if (container) container.style.display = 'none';
+            } else {
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((diff % (1000 * 60)) / 1000);
+                el.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            }
+        });
+    }, 1000);
+
+    async function retryPayment(bookingId) {
+        currentBooking = allBookings.find(b => Number(b.id) === Number(bookingId)) || null;
+        if (!currentBooking) return;
+        $('repayCode').innerText = '#' + currentBooking.id;
+        $('paymentMethodModal').style.display = 'flex';
+    }
+
+    async function confirmRepayment() {
+        if (!currentBooking) return;
+        
+        const gatewayEl = document.querySelector('input[name="paymentGateway"]:checked');
+        const gateway = gatewayEl ? gatewayEl.value : 'PAYOS';
+
+        const btn = $('confirmRepayBtn');
+        const origText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = 'Đang tạo link...';
+        
+        try {
+            // Updated to use the new repay endpoint
+            const res = await TB.apiFetch(`/api/v1/payments/repay?bookingId=${currentBooking.id}&gateway=${gateway}`, {
+                method: 'POST'
+            });
+            if (res.data?.checkoutUrl) {
+                window.location.href = res.data.checkoutUrl;
+            } else if (res.data?.paymentUrl) {
+                window.location.href = res.data.paymentUrl; // VNPay returns paymentUrl usually, but let's check what our wrapper does
+            } else {
+                throw new Error("Không nhận được link thanh toán");
+            }
+        } catch (e) {
+            alert('Lỗi: ' + e.message);
+            btn.disabled = false;
+            btn.innerText = origText;
+            closeModals();
+        }
+    }
+
+    // Khởi tạo
+    loadBookings();
   </script>
 </body>
 

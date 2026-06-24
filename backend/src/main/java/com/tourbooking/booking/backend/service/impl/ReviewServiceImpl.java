@@ -1,12 +1,18 @@
 package com.tourbooking.booking.backend.service.impl;
 
-import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 
 import com.tourbooking.booking.backend.exception.AppException;
 import com.tourbooking.booking.backend.exception.ErrorCode;
+import com.tourbooking.booking.backend.model.entity.Booking;
+import com.tourbooking.booking.backend.model.entity.User;
+import com.tourbooking.booking.backend.model.entity.enums.BookingStatus;
+import com.tourbooking.booking.backend.repository.BookingRepository;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,10 +20,7 @@ import com.tourbooking.booking.backend.mapper.ReviewMapper;
 import com.tourbooking.booking.backend.model.dto.request.ReviewRequest;
 import com.tourbooking.booking.backend.model.dto.response.ReviewResponse;
 import com.tourbooking.booking.backend.model.entity.Review;
-import com.tourbooking.booking.backend.model.entity.Tour;
-import com.tourbooking.booking.backend.model.entity.User;
 import com.tourbooking.booking.backend.repository.ReviewRepository;
-import com.tourbooking.booking.backend.repository.TourRepository;
 import com.tourbooking.booking.backend.repository.UserRepository;
 import com.tourbooking.booking.backend.service.ReviewService;
 
@@ -28,8 +31,25 @@ import lombok.RequiredArgsConstructor;
 public class ReviewServiceImpl implements ReviewService {
 
     private final ReviewRepository reviewRepo;
-    private final TourRepository tourRepo;
+    private final BookingRepository bookingRepo;
     private final UserRepository userRepo;
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Helper: resolve the currently authenticated User from SecurityContext
+    // ──────────────────────────────────────────────────────────────────────────
+    private User resolveCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserDetails)) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+        String email = ((UserDetails) auth.getPrincipal()).getUsername();
+        return userRepo.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Public read methods (unchanged behaviour, repo queries updated)
+    // ──────────────────────────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
@@ -64,35 +84,46 @@ public class ReviewServiceImpl implements ReviewService {
                 .toList();
     }
 
+    // ──────────────────────────────────────────────────────────────────────────
+    // CREATE — core refactored method
+    // ──────────────────────────────────────────────────────────────────────────
+
     @Override
     @Transactional
     public ReviewResponse createReview(ReviewRequest request) {
-        Tour tour = tourRepo.findById(request.getTourId())
-                .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
-        User user = userRepo.findById(request.getUserId())
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // Validation: user must have a COMPLETED booking for this tour
-        boolean hasCompletedBooking = tour.getSchedules().stream()
-                .flatMap(schedule -> schedule.getBookings().stream())
-                .anyMatch(booking -> booking.getUser().getId().equals(user.getId()) 
-                                  && booking.getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.COMPLETED);
+        // 1. Fetch the target Booking
+        Booking booking = bookingRepo.findById(request.getBookingId())
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
-        if (!hasCompletedBooking) {
-            throw new AppException(ErrorCode.INVALID_REQUEST); // Or a specific error
+        // 2. Ownership check — must be the booking's own customer
+        User currentUser = resolveCurrentUser();
+        if (!booking.getUser().getId().equals(currentUser.getId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
         }
 
-        if (reviewRepo.findByUser_IdAndTour_Id(user.getId(), tour.getId()).isPresent()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST); // Prevent duplicate review
+        // 3. Status check — booking must be COMPLETED
+        if (booking.getStatus() != BookingStatus.COMPLETED) {
+            throw new AppException(ErrorCode.TOUR_NOT_COMPLETED_YET);
         }
-        
+
+        // 4. Uniqueness check — one review per booking
+        if (reviewRepo.findByBookingId(booking.getId()).isPresent()) {
+            throw new AppException(ErrorCode.REVIEW_ALREADY_EXISTS);
+        }
+
+        // 5. Build and persist the review
         Review review = ReviewMapper.toEntity(request);
-        review.setTour(tour);
-        review.setUser(user);
+        review.setBooking(booking);
+        review.setUser(currentUser);
         Review savedReview = reviewRepo.save(review);
 
         return ReviewMapper.toResponse(savedReview);
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // UPDATE — only rating/comment can be changed; booking/user are immutable
+    // ──────────────────────────────────────────────────────────────────────────
 
     @Override
     @Transactional
@@ -100,23 +131,21 @@ public class ReviewServiceImpl implements ReviewService {
         Review existingReview = reviewRepo.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.REVIEW_NOT_FOUND));
 
+        // Ownership check before allowing an edit
+        User currentUser = resolveCurrentUser();
+        if (!existingReview.getUser().getId().equals(currentUser.getId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
         ReviewMapper.updateEntityFromRequest(existingReview, request);
-
-        if (request.getTourId() != null && !request.getTourId().equals(existingReview.getTour().getId())) {
-            Tour tour = tourRepo.findById(request.getTourId())
-                    .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
-            existingReview.setTour(tour);
-        }
-
-        if (request.getUserId() != null && !request.getUserId().equals(existingReview.getUser().getId())) {
-            User user = userRepo.findById(request.getUserId())
-                    .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-            existingReview.setUser(user);
-        }
 
         Review updatedReview = reviewRepo.save(existingReview);
         return ReviewMapper.toResponse(updatedReview);
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // READ — admin/staff listing helpers
+    // ──────────────────────────────────────────────────────────────────────────
 
     @Override
     @Transactional(readOnly = true)
@@ -128,7 +157,8 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public com.tourbooking.booking.backend.model.dto.response.PagedResponse<ReviewResponse> getAllReviewsPaged(Long tourId, Integer rating, org.springframework.data.domain.Pageable pageable) {
+    public com.tourbooking.booking.backend.model.dto.response.PagedResponse<ReviewResponse> getAllReviewsPaged(
+            Long tourId, Integer rating, org.springframework.data.domain.Pageable pageable) {
         org.springframework.data.domain.Page<Review> page;
 
         if (tourId != null && rating != null) {
@@ -151,6 +181,10 @@ public class ReviewServiceImpl implements ReviewService {
                 .last(page.isLast())
                 .build();
     }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // DELETE
+    // ──────────────────────────────────────────────────────────────────────────
 
     @Override
     @Transactional

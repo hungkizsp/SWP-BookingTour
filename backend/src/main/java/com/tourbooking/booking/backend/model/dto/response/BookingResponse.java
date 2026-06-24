@@ -37,4 +37,7 @@ public class BookingResponse {
     private String guideGender;
     private java.time.LocalDate guideDateOfBirth;
     private String tourItinerary;
+
+    /** True if a review has already been submitted for this booking. */
+    private boolean reviewed;
 }

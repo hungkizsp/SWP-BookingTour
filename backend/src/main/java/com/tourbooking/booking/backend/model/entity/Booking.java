@@ -54,6 +54,9 @@ public class Booking extends Base {
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Passenger> passengers = new ArrayList<>();
 
+    @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Review review;
+
     @PrePersist
     @Override
     protected void onCreate() {

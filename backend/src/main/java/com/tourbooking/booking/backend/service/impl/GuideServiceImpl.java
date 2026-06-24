@@ -80,7 +80,9 @@ public class GuideServiceImpl implements GuideService {
                 .build();
         tourProgressLogRepository.save(logEntry);
 
-        if (schedule.getStatus() == TourStatus.FULL || schedule.getStatus() == TourStatus.OPEN) {
+        if (schedule.getStatus() == TourStatus.SOLD_OUT
+                || schedule.getStatus() == TourStatus.OPEN
+                || schedule.getStatus() == TourStatus.BOOKING_CLOSED) {
             schedule.setStatus(TourStatus.IN_PROGRESS);
         }
         tourScheduleRepository.save(schedule);
@@ -169,7 +171,11 @@ public class GuideServiceImpl implements GuideService {
                     .guideId(schedule.getGuide() != null ? schedule.getGuide().getId() : null)
                     .startDate(schedule.getStartDate())
                     .endDate(schedule.getEndDate())
+                    .departureTime(schedule.getDepartureTime())
+                    .returnTime(schedule.getReturnTime())
+                    .bookingDeadline(schedule.getEffectiveBookingDeadline())
                     .availableSlots(schedule.getAvailableSlots())
+                    .maxSlots(schedule.getMaxSlots())
                     .status(schedule.getStatus() != null ? schedule.getStatus().name() : null)
                     .currentProgress(schedule.getCurrentProgress())
                     .reportContent(schedule.getReportContent())

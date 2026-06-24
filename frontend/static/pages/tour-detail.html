@@ -321,7 +321,12 @@
             <label style="font-size: 0.85rem; font-weight: 700; color: var(--text-soft); margin-bottom: 10px;">CHỌN NGÀY
               KHỞI HÀNH:</label>
             <select id="schedules"
-              style="margin-top: 10px; height: 50px; border-radius: 12px; font-weight: 600;"></select>
+              style="width: 100%; margin-top: 10px; height: 50px; border-radius: 12px; font-weight: 600; box-sizing: border-box; padding: 0 12px;"></select>
+            <!-- Status badge (injected dynamically by tour-detail.js) -->
+            <div id="scheduleStatusBadge" style="margin-top: 12px; min-height: 28px;"></div>
+
+            <!-- Booking deadline info (injected dynamically) -->
+            <div id="scheduleDeadlineInfo"></div>
           </div>
 
           <button class="btn btn-search" id="bookNowBtn"

@@ -5,7 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "Reviews", uniqueConstraints = { @UniqueConstraint(columnNames = { "UserID", "TourID" }) })
+@Table(name = "Reviews", uniqueConstraints = { @UniqueConstraint(columnNames = { "BookingID" }) })
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,10 +17,9 @@ public class Review extends Base {
     @JoinColumn(name = "UserID", columnDefinition = "BIGINT")
     private User user;
 
-    @com.fasterxml.jackson.annotation.JsonBackReference
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "TourID", columnDefinition = "BIGINT")
-    private Tour tour;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "BookingID", columnDefinition = "BIGINT", unique = true)
+    private Booking booking;
 
     @Column(name = "Rating")
     private Integer rating;

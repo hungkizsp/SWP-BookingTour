@@ -67,7 +67,9 @@ public class TourMapper {
 
         if (tour.getSchedules() != null) {
             response.setSchedules(tour.getSchedules().stream()
-                    .filter(s -> s.getStatus() == null || s.getStatus() != TourStatus.CANCELLED)
+                    .filter(s -> s.getStatus() == null
+                            || (s.getStatus() != TourStatus.CANCELLED
+                                && s.getStatus() != TourStatus.COMPLETED))
                     .map(TourMapper::toScheduleSummary).toList());
         }
 
@@ -85,9 +87,12 @@ public class TourMapper {
         s.setScheduleId(schedule.getId());
         s.setStartDate(schedule.getStartDate());
         s.setEndDate(schedule.getEndDate());
+        s.setDepartureTime(schedule.getDepartureTime());
+        s.setReturnTime(schedule.getReturnTime());
         s.setAvailableSlots(schedule.getAvailableSlots());
         s.setMaxSlots(schedule.getMaxSlots());
         s.setStatus(schedule.getStatus() == null ? null : schedule.getStatus().name());
+        s.setBookingDeadline(schedule.getEffectiveBookingDeadline());
         return s;
     }
 
@@ -105,10 +110,16 @@ public class TourMapper {
         TourSchedule schedule = new TourSchedule();
         schedule.setStartDate(request.getStartDate());
         schedule.setEndDate(request.getEndDate());
+        schedule.setDepartureTime(request.getDepartureTime());
+        schedule.setReturnTime(request.getReturnTime());
         schedule.setMaxSlots(request.getMaxSlots());
         // AvailableSlots should be MaxSlots initially
         schedule.setAvailableSlots(request.getMaxSlots());
         schedule.setStatus(TourStatus.OPEN);
+        // If an explicit deadline is provided, use it; otherwise the entity helper will fall back to departure datetime
+        if (request.getBookingDeadline() != null) {
+            schedule.setBookingDeadline(request.getBookingDeadline());
+        }
         return schedule;
     }
 

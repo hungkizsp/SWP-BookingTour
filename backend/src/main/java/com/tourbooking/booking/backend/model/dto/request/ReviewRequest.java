@@ -5,9 +5,7 @@ import lombok.Data;
 @Data
 public class ReviewRequest {
 
-    private Long tourId;
-
-    private Long userId;
+    private Long bookingId;
 
     private Integer rating;
 

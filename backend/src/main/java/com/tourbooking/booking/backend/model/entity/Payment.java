@@ -16,8 +16,8 @@ import java.util.List;
 @AttributeOverride(name = "id", column = @Column(name = "PaymentID", nullable = false, unique = true))
 public class Payment extends Base {
 
-    @ManyToOne(fetch = FetchType.LAZY) // ✅ FIX
-    @JoinColumn(name = "BookingID")
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "BookingID", unique = true)
     private Booking booking;
 
     @Column(name = "Amount", precision = 10, scale = 2)

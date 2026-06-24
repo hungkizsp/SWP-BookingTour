@@ -126,6 +126,45 @@
     currentPrice = tourData.price;
     tourStartDate = parseTourStartDate(scheduleData.startDate);
 
+    // ── Schedule bookability pre-flight ───────────────────────────────────
+    // This mirrors the backend's authoritative checks to provide instant UX feedback.
+    // The server will ALWAYS re-validate; this is purely a convenience guard.
+    const schedStatus = String(scheduleData.status || '').toUpperCase();
+    const NON_BOOKABLE = ['CANCELLED', 'COMPLETED', 'IN_PROGRESS', 'BOOKING_CLOSED'];
+
+    let blockReason = null;
+    if (NON_BOOKABLE.includes(schedStatus)) {
+      const labels = {
+        CANCELLED:      'Lịch trình này đã bị hủy.',
+        COMPLETED:      'Tour này đã hoàn thành.',
+        IN_PROGRESS:    'Tour đang diễn ra, không thể đặt thêm chỗ.',
+        BOOKING_CLOSED: 'Hạn đặt tour cho lịch trình này đã kết thúc.',
+      };
+      blockReason = labels[schedStatus] || 'Lịch trình này hiện không thể đặt.';
+    } else if (schedStatus === 'SOLD_OUT' || (scheduleData.availableSlots != null && scheduleData.availableSlots <= 0)) {
+      blockReason = 'Tour đã hết chỗ. Vui lòng chọn lịch khác.';
+    } else if (scheduleData.bookingDeadline) {
+      const dl = Array.isArray(scheduleData.bookingDeadline)
+        ? new Date(scheduleData.bookingDeadline[0], scheduleData.bookingDeadline[1] - 1, scheduleData.bookingDeadline[2], scheduleData.bookingDeadline[3] || 0, scheduleData.bookingDeadline[4] || 0)
+        : new Date(scheduleData.bookingDeadline);
+      if (!isNaN(dl) && new Date() >= dl) {
+        blockReason = 'Hạn đặt tour đã kết thúc lúc ' + dl.toLocaleString('vi-VN') + '. Vui lòng chọn lịch khác.';
+      }
+    }
+
+    if (blockReason) {
+      loading.style.display = 'none';
+      document.querySelector('main').innerHTML = `
+        <div style="text-align:center; padding: 100px 20px;">
+          <div style="font-size:3rem; margin-bottom:20px;">🚫</div>
+          <h2 style="color: var(--primary); margin-bottom:15px;">Không thể đặt chỗ</h2>
+          <p style="color: var(--text-soft); font-size: 1.05rem; margin-bottom: 30px;">${blockReason}</p>
+          <a href="javascript:history.back()" class="btn" style="padding: 0 30px; height: 50px; border-radius: 12px;">← Chọn lịch khác</a>
+        </div>`;
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────
+
     policies.forEach(p => {
       if (p.passengerType === 'CHILD' && p.isActive) childRate = p.rate;
       if (p.passengerType === 'INFANT' && p.isActive) infantRate = p.rate;

@@ -11,6 +11,7 @@ public class ReviewResponse {
     private Long reviewId;
     private Long userId;
     private String userName;
+    private Long bookingId;
     private Long tourId;
     private String tourName;
     private Integer rating;

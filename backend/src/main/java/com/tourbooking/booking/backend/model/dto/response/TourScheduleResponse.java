@@ -5,7 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDate;
-
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -19,11 +20,15 @@ public class TourScheduleResponse {
     private Long guideId;
     private LocalDate startDate;
     private LocalDate endDate;
+    private LocalTime departureTime;
+    private LocalTime returnTime;
+    private LocalDateTime bookingDeadline;
     private Integer availableSlots;
+    private Integer maxSlots;
     private String status;
     private String currentProgress;
     private String reportContent;
-    private java.time.LocalDateTime reportSubmittedAt;
+    private LocalDateTime reportSubmittedAt;
     private List<String> imageUrls;
     private List<ProgressLogResponse> progressLogs;
 }

@@ -69,6 +69,31 @@ public class StaffServiceImpl implements StaffService {
             throw new RuntimeException("User selected is not a GUIDE");
         }
 
+        // Validate schedule conflict
+        LocalDateTime targetDeparture = schedule.getDepartureDateTime();
+        LocalDateTime targetReturn = schedule.getReturnDateTime();
+        if (targetDeparture != null && targetReturn != null) {
+            List<TourSchedule> guideSchedules = tourScheduleRepository.findByGuide_Id(guideId);
+            for (TourSchedule existing : guideSchedules) {
+                if (existing.getId().equals(scheduleId)) continue;
+                if (existing.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED ||
+                    existing.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR ||
+                    existing.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.COMPLETED) {
+                    continue;
+                }
+                
+                LocalDateTime existingDeparture = existing.getDepartureDateTime();
+                LocalDateTime existingReturn = existing.getReturnDateTime();
+                
+                if (existingDeparture != null && existingReturn != null) {
+                    // Check overlap: (existingDeparture <= targetReturn) AND (existingReturn >= targetDeparture)
+                    if (!existingDeparture.isAfter(targetReturn) && !existingReturn.isBefore(targetDeparture)) {
+                        throw new RuntimeException("This guide is already assigned to another tour during this period");
+                    }
+                }
+            }
+        }
+
         schedule.setGuide(guide);
         tourScheduleRepository.save(schedule);
         
