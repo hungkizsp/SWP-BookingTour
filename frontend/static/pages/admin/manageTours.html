@@ -48,6 +48,7 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Tour Name</th>
+                                <th>Category</th>
                                 <th>Price</th>
                                 <th>Duration (Days)</th>
                                 <th>Location</th>
@@ -56,7 +57,7 @@
                         </thead>
                         <tbody id="tourTable">
                             <tr>
-                                <td colspan="6" style="text-align: center; padding: 2rem;">Loading tours...</td>
+                                <td colspan="7" style="text-align: center; padding: 2rem;">Loading tours...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -127,8 +128,10 @@
             </div>
 
             <div class="form-group">
-                <label>Category ID (Optional)</label>
-                <input type="number" id="categoryId" class="form-control" placeholder="Category ID" min="1">
+                <label>Category (Optional)</label>
+                <select id="categoryId" class="form-control">
+                    <option value="">-- Select Category --</option>
+                </select>
                 <small>Leave empty if no category</small>
             </div>
 
@@ -237,6 +240,7 @@
                         <tr>
                             <td>${t.id}</td>
                             <td><strong>${escapeHtml(t.tourName)}</strong></td>
+                            <td>${escapeHtml(t.categoryName || '-')}</td>
                             <td>${formatPrice(t.price)}</td>
                             <td>${t.duration || '-'} days</td>
                             <td>${escapeHtml(location)}</td>
@@ -527,7 +531,7 @@
             const row = document.createElement('div');
             row.className = 'schedule-row';
             row.style.display = 'grid';
-            row.style.gridTemplateColumns = '1fr 1fr 80px 40px';
+            row.style.gridTemplateColumns = '1fr 1fr 100px 80px 40px';
             row.style.gap = '10px';
             row.style.marginBottom = '10px';
             row.style.alignItems = 'center';
@@ -536,10 +540,17 @@
             tomorrow.setDate(tomorrow.getDate() + 1);
             const minDate = tomorrow.toISOString().split('T')[0];
 
+            let depTime = '';
+            if (data && data.departureTime) {
+                // Keep only HH:mm
+                depTime = data.departureTime.substring(0, 5);
+            }
+
             row.innerHTML = `
-                <input type="date" class="form-control schedule-start" value="${data ? data.startDate : ''}" min="${minDate}" onchange="updateMinEndDate(this)" placeholder="Start Date">
-                <input type="date" class="form-control schedule-end" value="${data ? data.endDate : ''}" min="${data ? data.startDate : minDate}" placeholder="End Date">
-                <input type="number" class="form-control schedule-max" value="${data ? data.maxSlots || data.availableSlots : ''}" min="1" placeholder="Max Slots">
+                <input type="date" class="form-control schedule-start" value="${data ? data.startDate : ''}" min="${minDate}" onchange="updateMinEndDate(this)" title="Start Date">
+                <input type="date" class="form-control schedule-end" value="${data ? data.endDate : ''}" min="${data ? data.startDate : minDate}" title="End Date">
+                <input type="time" class="form-control schedule-time" value="${depTime}" title="Departure Time">
+                <input type="number" class="form-control schedule-max" value="${data ? data.maxSlots || data.availableSlots : ''}" min="1" placeholder="Slots" title="Max Slots">
                 <button type="button" onclick="this.parentElement.remove()" class="btn btn-danger btn-sm" style="padding: 2px 5px;">&times;</button>
             `;
             container.appendChild(row);
@@ -559,12 +570,14 @@
             rows.forEach(row => {
                 const startDate = row.querySelector('.schedule-start').value;
                 const endDate = row.querySelector('.schedule-end').value;
+                const departureTime = row.querySelector('.schedule-time').value;
                 const maxSlots = parseInt(row.querySelector('.schedule-max').value);
 
                 if (startDate && endDate && !isNaN(maxSlots)) {
                     schedules.push({
                         startDate: startDate,
                         endDate: endDate,
+                        departureTime: departureTime ? departureTime : null,
                         maxSlots: maxSlots
                     });
                 }
@@ -600,8 +613,31 @@
             return div.innerHTML;
         }
 
+        async function loadCategories() {
+            try {
+                const response = await TB.apiFetch(`/api/v1/categories?size=1000`);
+                let cats = [];
+                if (response.data && response.data.content) {
+                    cats = response.data.content;
+                } else if (Array.isArray(response.data)) {
+                    cats = response.data;
+                } else if (Array.isArray(response)) {
+                    cats = response;
+                }
+                const select = document.getElementById('categoryId');
+                let html = '<option value="">-- Select Category --</option>';
+                cats.forEach(c => {
+                    html += `<option value="${c.id}">${escapeHtml(c.categoryName)}</option>`;
+                });
+                select.innerHTML = html;
+            } catch(e) {
+                console.error("Error loading categories", e);
+            }
+        }
+
         // Init
         if (checkAuth()) {
+            loadCategories();
             loadTours();
         }
     </script>

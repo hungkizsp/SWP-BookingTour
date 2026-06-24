@@ -188,12 +188,14 @@
     const btn = el('bookNowBtn');
     const statusBadgeWrap = el('scheduleStatusBadge');
     const deadlineInfo = el('scheduleDeadlineInfo');
+    const departureInfo = el('scheduleDepartureInfo');
     const selectedId = root ? parseInt(root.value) : null;
 
     if (!selectedId || !list) {
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
       if (statusBadgeWrap) statusBadgeWrap.innerHTML = '';
       if (deadlineInfo) deadlineInfo.innerHTML = '';
+      if (departureInfo) departureInfo.innerHTML = '';
       return;
     }
 
@@ -229,6 +231,19 @@
           </div>`;
       } else {
         deadlineInfo.innerHTML = '';
+      }
+    }
+
+    // Departure Info
+    if (departureInfo) {
+      if (schedule.departureTime) {
+        const timeStr = formatTime(schedule.departureTime);
+        departureInfo.innerHTML = `
+          <div style="font-size: 0.82rem; color: #059669; margin-top: 4px; font-weight: 700;">
+            ⏰ Giờ khởi hành: <strong>${timeStr}</strong>
+          </div>`;
+      } else {
+        departureInfo.innerHTML = '';
       }
     }
 

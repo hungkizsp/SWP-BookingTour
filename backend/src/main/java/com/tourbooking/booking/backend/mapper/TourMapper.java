@@ -34,6 +34,11 @@ public class TourMapper {
         }
         response.setExternalId(tour.getExternalId());
 
+        if (tour.getCategory() != null) {
+            response.setCategoryId(tour.getCategory().getId());
+            response.setCategoryName(tour.getCategory().getCategoryName());
+        }
+
         return response;
     }
 
