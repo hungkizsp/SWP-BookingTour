@@ -739,6 +739,90 @@ public class BookingServiceImpl implements BookingService {
         return BookingMapper.toResponse(booking);
     }
 
+    @Override
+    @Transactional
+    public BookingResponse rescheduleBooking(com.tourbooking.booking.backend.model.dto.request.RescheduleRequest request) {
+        Booking booking = bookingRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.PAID) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Chỉ có thể đổi ngày với đơn ở trạng thái CONFIRMED hoặc PAID.");
+        }
+
+        TourSchedule oldSchedule = tourScheduleRepository.findByIdWithLock(booking.getSchedule().getId())
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime oldDeparture = oldSchedule.getDepartureDateTime();
+        if (oldDeparture != null && !now.isBefore(oldDeparture)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Tour cũ đã khởi hành hoặc đã kết thúc, không thể đổi ngày nữa.");
+        }
+
+        TourSchedule newSchedule = tourScheduleRepository.findByIdWithLock(request.getNewScheduleId())
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+        
+        java.time.LocalDateTime newDeparture = newSchedule.getDepartureDateTime();
+        if (newDeparture != null && !now.isBefore(newDeparture)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Lịch trình mới đã bắt đầu, vui lòng chọn lịch khác.");
+        }
+
+        int occupied = resolveOccupiedSlots(booking);
+        if (newSchedule.getAvailableSlots() == null || newSchedule.getAvailableSlots() < occupied) {
+            throw new AppException(ErrorCode.INSUFFICIENT_SLOTS, "Lịch trình mới không đủ chỗ trống.");
+        }
+
+        // Release old
+        oldSchedule.setAvailableSlots(oldSchedule.getAvailableSlots() + occupied);
+        tourScheduleRepository.save(oldSchedule);
+
+        // Deduct new
+        newSchedule.setAvailableSlots(newSchedule.getAvailableSlots() - occupied);
+        if (newSchedule.getAvailableSlots() == 0 && newSchedule.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN) {
+            newSchedule.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT);
+        }
+        tourScheduleRepository.save(newSchedule);
+
+        booking.setSchedule(newSchedule);
+        bookingRepository.save(booking);
+
+        return BookingMapper.toResponse(booking);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse> getRescheduleCandidates(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        if (booking.getSchedule() == null || booking.getSchedule().getTour() == null) {
+            return java.util.Collections.emptyList();
+        }
+
+        Long tourId = booking.getSchedule().getTour().getId();
+        Long currentScheduleId = booking.getSchedule().getId();
+        int requiredSlots = resolveOccupiedSlots(booking);
+
+        // Use VN timezone so the date boundary matches the user's clock, not UTC server time
+        java.time.ZoneId vnZone = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+        java.time.LocalDate today = java.time.LocalDate.now(vnZone);
+        java.time.LocalTime nowTime = java.time.LocalTime.now(vnZone);
+
+        return tourScheduleRepository
+                .findAvailableSchedulesToReschedule(tourId, currentScheduleId, today, nowTime)
+                .stream()
+                // Slot check in Java — avoids CAST(time AS localTime) in SQL
+                .filter(s -> s.getAvailableSlots() != null && s.getAvailableSlots() >= requiredSlots)
+                .map(s -> com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse.builder()
+                        .id(s.getId())
+                        .startDate(s.getStartDate())
+                        .endDate(s.getEndDate())
+                        .departureTime(s.getDepartureTime())
+                        .availableSlots(s.getAvailableSlots())
+                        .status(s.getStatus() != null ? s.getStatus().name() : null)
+                        .build())
+                .toList();
+    }
+
     /**
      * 2.2 — Tính số tiền hoàn trả theo chính sách:
      * <ul>

@@ -379,11 +379,94 @@
   </div>
 
   <script src="../assets/js/api.js"></script>
+
+  <!-- Modal Đổi Ngày Khởi Hành -->
+  <div class="modal-overlay" id="rescheduleModal">
+    <div class="modal-box" style="max-width: 600px;">
+      <h3 style="margin-top:0;">Đổi ngày khởi hành</h3>
+      <p style="font-size:0.9rem; color:var(--text-faint);">Vui lòng chọn lịch trình mới cho chuyến đi của bạn.</p>
+      
+      <div id="rescheduleSchedulesList" style="margin-top:16px; display:flex; flex-direction:column; gap:12px; max-height:300px; overflow-y:auto; padding-right:10px;">
+          <!-- Lịch trình sẽ được load vào đây -->
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeModals()">Đóng</button>
+        <button class="btn" style="background:#8b5cf6; color:white;" onclick="confirmReschedule()">Xác Nhận Đổi Ngày</button>
+      </div>
+    </div>
+  </div>
   <script>
     let allBookings = [];
     let currentBooking = null;
+    let rescheduleBookingId = null;
+    let rescheduleSelectedScheduleId = null;
 
     const $ = (id) => document.getElementById(id);
+
+    async function openRescheduleModal(bookingId, tourId) {
+        rescheduleBookingId = bookingId;
+        rescheduleSelectedScheduleId = null;
+
+        $('rescheduleSchedulesList').innerHTML = '<div style="text-align:center;padding:20px;">Đang tải danh sách lịch trình...</div>';
+        $('rescheduleModal').style.display = 'flex';
+
+        try {
+            // Call the dedicated server-filtered endpoint — VN timezone-aware,
+            // excludes current schedule, already slot-checked.
+            const res = await TB.apiFetch(`/api/v1/bookings/${bookingId}/reschedule-candidates`);
+            const schedules = res?.data || [];
+
+            const listEl = $('rescheduleSchedulesList');
+            if (schedules.length === 0) {
+                listEl.innerHTML = '<div style="padding:10px; color:#ef4444; background:#fef2f2; border:1px solid #fca5a5; border-radius:6px;">Hiện không có lịch trình nào khác phù hợp cho tour này.</div>';
+            } else {
+                listEl.innerHTML = schedules.map(s => `
+                    <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.1); border-radius:8px; cursor:pointer;" onclick="rescheduleSelectedScheduleId = ${s.id}">
+                        <input type="radio" name="newScheduleRadio" value="${s.id}" style="width:18px; height:18px;" />
+                        <div>
+                            <strong style="display:block; color:#0369a1;">Khởi hành: ${s.startDate} ${s.departureTime ? s.departureTime.substring(0,5) : ''}</strong>
+                            <span style="font-size:0.85rem; color:#475569;">Còn trống: ${s.availableSlots} chỗ &nbsp;|&nbsp; Trở về: ${s.endDate || 'N/A'}</span>
+                        </div>
+                    </label>
+                `).join('');
+            }
+        } catch (e) {
+            $('rescheduleSchedulesList').innerHTML = `<div style="color:#ef4444;">Lỗi lấy lịch trình: ${e.message}</div>`;
+        }
+    }
+
+    async function confirmReschedule() {
+        if (!rescheduleSelectedScheduleId) {
+            alert('Vui lòng chọn một lịch trình mới!');
+            return;
+        }
+        if (!confirm('Bạn có chắc chắn muốn đổi sang lịch trình này?')) return;
+
+        try {
+            const btn = document.querySelector('#rescheduleModal .btn:not(.btn-secondary)');
+            btn.innerText = 'Đang xử lý...';
+            btn.disabled = true;
+
+            await TB.apiFetch('/api/v1/bookings/reschedule', {
+                method: 'POST',
+                body: JSON.stringify({
+                    bookingId: rescheduleBookingId,
+                    newScheduleId: rescheduleSelectedScheduleId
+                })
+            });
+
+            alert('Đổi ngày khởi hành thành công!');
+            closeModals();
+            loadBookings();
+        } catch (e) {
+            alert('Đổi ngày thất bại: ' + e.message);
+        } finally {
+            const btn = document.querySelector('#rescheduleModal .btn:not(.btn-secondary)');
+            btn.innerText = 'Xác Nhận Đổi Ngày';
+            btn.disabled = false;
+        }
+    }
 
     function formatCurrency(v) {
       const n = Number(v || 0);
@@ -525,6 +608,7 @@
               <button class="btn btn-secondary" onclick="downloadInvoice(${b.id})">Tải Hóa Đơn PDF</button>
               <button class="btn" style="background:#059669; color:white; border:none;" onclick="openDetailsModal(${b.id})">Xem Chi Tiết</button>
               ${canCancel ? `<button class="btn btn-secondary" style="color:#ef4444; border-color:#fee2e2; background:#fef2f2;" onclick="openCancelModal(${b.id})">Hủy Đặt Tour</button>` : ''}
+              ${(bStatus === 'CONFIRMED' || bStatus === 'PAID') && new Date(b.departureDate || b.schedule?.startDate) > new Date() ? `<button class="btn" style="background:#8b5cf6; color:white; border:none;" onclick="openRescheduleModal(${b.id}, ${b.tourId || (b.schedule && b.schedule.tour ? b.schedule.tour.id : null)})">Đổi ngày khởi hành</button>` : ''}
               ${reviewBtn}
             </div>
             ${repaymentBtn}
@@ -685,11 +769,15 @@
       ].filter(Boolean).join(' • ');
 
       const avatarSize = detailed ? 60 : 50;
+      const DEFAULT_AVATAR = '../assets/images/default-avatar.png';
+      const avatarSrc = (b.guideAvatar && b.guideAvatar.trim()) ? b.guideAvatar : DEFAULT_AVATAR;
 
       return `
     <div style="display:flex; align-items:center; gap: 12px; margin-top:8px; padding:12px; background:#f0fdf4; border-radius:8px; border:1px solid #bbf7d0;">
-      <img src="${b.guideAvatar || 'https://via.placeholder.com/' + avatarSize}" alt="Avatar"
-        style="width:${avatarSize}px; height:${avatarSize}px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+      <img src="${avatarSrc}"
+           alt="Avatar"
+           onerror="this.onerror=null;this.src='${DEFAULT_AVATAR}';"
+           style="width:${avatarSize}px; height:${avatarSize}px; border-radius:50%; object-fit:cover; flex-shrink:0;">
       <div>
         <div style="font-weight:600; color:#0f172a; font-size:${detailed ? '1.05rem' : '1rem'};">${b.guideFullName}</div>
         <div style="font-size:0.85rem; color:#166534; margin-top:2px;">📞 ${b.guidePhone || 'N/A'}</div>
@@ -699,6 +787,7 @@
     </div>
   `;
     }
+
 
     async function openDetailsModal(bookingId) {
       $('detailsModal').style.display = 'flex';
@@ -746,6 +835,7 @@
     function closeModals() {
       $('cancelModal').style.display = 'none';
       $('reviewModal').style.display = 'none';
+      $('rescheduleModal').style.display = 'none';
       if ($('detailsModal')) $('detailsModal').style.display = 'none';
       if ($('paymentMethodModal')) $('paymentMethodModal').style.display = 'none';
       if ($('bankName')) $('bankName').value = '';

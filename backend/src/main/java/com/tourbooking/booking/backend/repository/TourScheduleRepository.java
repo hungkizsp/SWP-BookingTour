@@ -22,12 +22,34 @@ public interface TourScheduleRepository extends JpaRepository<TourSchedule, Long
        long countByTour_Id(Long tourId);
 
        @Query("SELECT s FROM TourSchedule s WHERE s.tour.id = :tourId " +
-                     "AND s.status IN (com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN, com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT) "
-                     +
+                     "AND s.status IN (com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN, com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT) " +
                      "AND (s.startDate > :currentDate OR " +
-                     "(s.startDate = :currentDate AND s.departureTime > :currentTime)) " +
+                     "(s.startDate = :currentDate AND cast(s.departureTime as time) > cast(:currentTime as time))) " +
                      "ORDER BY s.startDate ASC, s.departureTime ASC")
        List<TourSchedule> findFutureSchedules(@Param("tourId") Long tourId,
+                     @Param("currentDate") LocalDate currentDate,
+                     @Param("currentTime") LocalTime currentTime);
+
+       /**
+        * Find all candidate schedules for rescheduling a booking.
+        * - Excludes the booking's current schedule.
+        * - Accepts OPEN or SOLD_OUT (slot check is done separately).
+        * - The departureTime guard is applied ONLY when startDate = today;
+        *   purely future dates bypass the time check entirely so June 28th
+        *   always appears regardless of what time it currently is.
+        * - No per-query slot filter here: the service layer compares
+        *   availableSlots against occupiedSlots after loading, giving us
+        *   a clean JPQL expression without SQL Server casting issues.
+        */
+       @Query("SELECT s FROM TourSchedule s WHERE s.tour.id = :tourId " +
+                     "AND s.id <> :currentScheduleId " +
+                     "AND s.status IN (com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN, com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT) " +
+                     "AND (s.startDate > :currentDate OR " +
+                     "     (s.startDate = :currentDate AND cast(s.departureTime as time) > cast(:currentTime as time))) " +
+                     "ORDER BY s.startDate ASC, s.departureTime ASC")
+       List<TourSchedule> findAvailableSchedulesToReschedule(
+                     @Param("tourId") Long tourId,
+                     @Param("currentScheduleId") Long currentScheduleId,
                      @Param("currentDate") LocalDate currentDate,
                      @Param("currentTime") LocalTime currentTime);
 

@@ -36,4 +36,9 @@ public interface BookingService {
 
     // Admin action
     BookingResponse updateBookingStatus(Long id, String status);
+
+    // Reschedule
+    BookingResponse rescheduleBooking(com.tourbooking.booking.backend.model.dto.request.RescheduleRequest request);
+
+    java.util.List<com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse> getRescheduleCandidates(Long bookingId);
 }
