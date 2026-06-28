@@ -23,6 +23,7 @@ public class DatabaseInitializer {
         initTourProgressLogs();
         initTourActivityImages();
         initTourScheduleColumns();
+        initTourGroupMessages();
         log.info("=== DatabaseInitializer: Done. ===");
     }
 
@@ -86,6 +87,42 @@ public class DatabaseInitializer {
             log.info("  [CREATED] Table TourActivityImages.");
         } catch (Exception e) {
             log.error("  [ERROR] Failed to init TourActivityImages: {}", e.getMessage());
+        }
+    }
+
+    // =========================================================
+    // Bảng TourGroupMessages (Group chat theo TourSchedule)
+    // =========================================================
+    private void initTourGroupMessages() {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TourGroupMessages'",
+                Integer.class);
+
+            if (count != null && count > 0) {
+                log.info("  [OK] Table TourGroupMessages already exists.");
+                return;
+            }
+
+            jdbcTemplate.execute("""
+                CREATE TABLE TourGroupMessages (
+                    MessageID   BIGINT IDENTITY(1,1) PRIMARY KEY,
+                    ScheduleID  BIGINT NOT NULL,
+                    SenderID    BIGINT NOT NULL,
+                    SenderRole  NVARCHAR(20) NULL,
+                    Message     NVARCHAR(MAX) NULL,
+                    SentAt      DATETIME2 NULL,
+                    CreatedAt   DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+                    UpdatedAt   DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+                    CONSTRAINT FK_GroupMessage_Schedule
+                        FOREIGN KEY (ScheduleID) REFERENCES TourSchedules(ScheduleID),
+                    CONSTRAINT FK_GroupMessage_Sender
+                        FOREIGN KEY (SenderID) REFERENCES Users(UserID)
+                )
+            """);
+            log.info("  [CREATED] Table TourGroupMessages.");
+        } catch (Exception e) {
+            log.error("  [ERROR] Failed to init TourGroupMessages: {}", e.getMessage());
         }
     }
 

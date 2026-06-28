@@ -23,6 +23,7 @@
                 <a href="./manageReview.html" class="nav-item active">Reviews</a>
                 <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
                 <a href="./financialReport.html" class="nav-item">Financial Report</a>
+                <a href="./manageDiscounts.html" class="nav-item">Manage Discount</a>
             </nav>
         </aside>
 
@@ -91,12 +92,11 @@
                                 <th>Rating</th>
                                 <th>Comment</th>
                                 <th>Date</th>
-                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="reviewTable">
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 2rem;">Loading reviews...</td>
+                                <td colspan="6" style="text-align: center; padding: 2rem;">Loading reviews...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -151,7 +151,7 @@
                 const reviews = data.content;
 
                 if (!reviews || reviews.length === 0) {
-                    reviewTable.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">No reviews found.</td></tr>';
+                    reviewTable.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">No reviews found.</td></tr>';
                     updateStatsFromPagedData(data);
                     renderPagination(0, 0);
                     return;
@@ -167,9 +167,6 @@
                             <td>${renderStars(r.rating)}</td>
                             <td style="max-width: 300px; font-size: 0.9rem;">${escapeHtml(r.comment || '—')}</td>
                             <td>${formatDate(r.createdAt)}</td>
-                            <td class="action-buttons">
-                                <button onclick="deleteReviewById(${r.reviewId})" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Delete</button>
-                            </td>
                         </tr>
                     `;
                 });
@@ -178,7 +175,7 @@
                 renderPagination(data.totalPages, data.page);
             } catch (error) {
                 console.error('Error loading reviews:', error);
-                reviewTable.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--danger);">Error loading reviews: ${error.message}</td></tr>`;
+                reviewTable.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--danger);">Error loading reviews: ${error.message}</td></tr>`;
             }
         }
 
