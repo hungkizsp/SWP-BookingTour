@@ -48,6 +48,9 @@ public class Booking extends Base {
     @Column(name = "Status", length = 50)
     private BookingStatus status = BookingStatus.PENDING;
 
+    @Column(name = "CancellationReason", length = 500)
+    private String cancellationReason;
+
     @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Payment payment;
 

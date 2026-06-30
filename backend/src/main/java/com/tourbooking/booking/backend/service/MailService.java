@@ -209,5 +209,28 @@ public class MailService {
             log.error("Failed to send operator cancellation refund email for booking {}: {}", bookingId, e.getMessage(), e);
         }
     }
+
+    public void sendTourCancellationEmail(String toEmail, String customerName, Long bookingId, String tourName, String reason) {
+        try {
+            jakarta.mail.internet.MimeMessage mimeMessage = mailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(mimeMessage, "utf-8");
+            
+            helper.setFrom(resolveFromAddress());
+            helper.setTo(toEmail);
+            helper.setSubject("[TourBooking] Thông báo Hủy đặt tour #" + bookingId);
+            
+            String htmlMsg = "<h3>Xin chào " + customerName + ",</h3>" +
+                    "<p>Lịch trình tour <strong>" + tourName + "</strong> của quý khách đã bị hủy bởi ban quản lý.</p>" +
+                    "<p><strong>Lý do hủy:</strong> " + reason + "</p>" +
+                    "<p>Nếu bạn đã thanh toán, hệ thống sẽ tiến hành hoàn tiền 100% trong thời gian sớm nhất.</p>" +
+                    "<br><p>Trân trọng,<br>Đội ngũ TourBooking</p>";
+                    
+            helper.setText(htmlMsg, true);
+            mailSender.send(mimeMessage);
+            log.info("Cancellation email sent to {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send cancellation email to {}: {}", toEmail, e.getMessage(), e);
+        }
+    }
 }
 

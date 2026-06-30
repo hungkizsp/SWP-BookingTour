@@ -78,6 +78,15 @@ public class AdminController {
                 .build();
     }
 
+    @PutMapping("/tour-schedules/{scheduleId}/cancel")
+    public ApiResponse<Void> cancelTourSchedule(@PathVariable Long scheduleId) {
+        tourScheduleService.cancelTourSchedule(scheduleId);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Schedule cancelled and customers refunded successfully")
+                .build();
+    }
+
     @PutMapping("/tours/{id}")
     public ApiResponse<TourResponse> updateTour(@PathVariable Long id, @RequestBody TourRequest request) {
         return ApiResponse.<TourResponse>builder()
@@ -218,6 +227,17 @@ public class AdminController {
                 .code(HttpStatus.OK.value())
                 .message("Test data generated successfully")
                 .data("5 sample successful bookings created.")
+                .build();
+    }
+
+    @PutMapping("/bookings/{id}/cancel")
+    public ApiResponse<com.tourbooking.booking.backend.model.dto.response.BookingResponse> cancelBooking(
+            @PathVariable Long id,
+            @RequestBody(required = false) com.tourbooking.booking.backend.model.dto.request.CancelBookingRequest request) {
+        return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.BookingResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Booking cancelled successfully")
+                .data(bookingService.cancelBooking(id, request))
                 .build();
     }
 }

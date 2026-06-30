@@ -27,6 +27,7 @@ public interface BookingService {
     
     // UC20
     BookingResponse cancelBooking(Long id);
+    BookingResponse cancelBooking(Long id, com.tourbooking.booking.backend.model.dto.request.CancelBookingRequest request);
     
     // UC21
     BookingResponse requestRefund(Long id, com.tourbooking.booking.backend.model.dto.request.RefundRequest request);

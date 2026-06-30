@@ -635,9 +635,31 @@
                 <input type="date" class="form-control schedule-end" value="${data ? data.endDate : ''}" min="${data ? data.startDate : minDate}" title="End Date">
                 <input type="time" class="form-control schedule-time" value="${depTime}" title="Departure Time">
                 <input type="number" class="form-control schedule-max" value="${data ? data.maxSlots || data.availableSlots : ''}" min="1" placeholder="Slots" title="Max Slots">
-                <button type="button" onclick="this.parentElement.remove()" class="btn btn-danger btn-sm" style="padding: 2px 5px;">&times;</button>
+                ${data && data.id 
+                    ? (data.status === 'CANCELLED' || data.status === 'CANCELLED_BY_OPERATOR' 
+                        ? '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">Đã hủy</span>'
+                        : '<button type="button" onclick="cancelSchedule(' + data.id + ', this)" class="btn btn-danger btn-sm" style="padding: 2px 5px;" title="Hủy lịch trình (Hoàn tiền 100%)">Hủy</button>')
+                    : '<button type="button" onclick="this.parentElement.remove()" class="btn btn-danger btn-sm" style="padding: 2px 5px;">&times;</button>'}
             `;
             container.appendChild(row);
+        }
+
+        async function cancelSchedule(scheduleId, btn) {
+            if (!confirm("Bạn có chắc chắn muốn hủy lịch trình này? Toàn bộ booking liên quan sẽ bị hủy và hoàn tiền 100%.")) {
+                return;
+            }
+            try {
+                const response = await TB.apiFetch(`/api/v1/admin/tour-schedules/${scheduleId}/cancel`, {
+                    method: 'PUT'
+                });
+                
+                showToast('Lịch trình đã được hủy và hoàn tiền thành công!', 'success');
+                btn.outerHTML = '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">Đã hủy</span>';
+                
+            } catch (error) {
+                console.error('Error cancelling schedule:', error);
+                showToast(error.message || 'Lỗi khi hủy lịch trình', 'error');
+            }
         }
 
         function updateMinEndDate(startInput) {

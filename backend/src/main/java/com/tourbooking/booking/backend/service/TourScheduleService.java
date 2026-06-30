@@ -14,4 +14,6 @@ public interface TourScheduleService {
     void releaseAvailableSlots(Long scheduleId, int slotsToRelease);
 
     List<TourSchedule> bulkCreateSchedules(TourScheduleBulkRequest request);
+
+    void cancelTourSchedule(Long scheduleId);
 }

@@ -968,13 +968,11 @@
                     </div>` : '';
 
                 const scheduleId = alert.scheduleId;
-                const assignLink = `./manageTours.html?highlight=${scheduleId}`;
-
                 let actionArea = `
                     <div style="margin-top:10px;">
-                        <a href="${assignLink}" class="btn-assign-guide">
+                        <button onclick="openAssignModal(${scheduleId})" class="btn-assign-guide" style="padding:6px 12px; margin:0;">
                             👤 Assign Guide
-                        </a>
+                        </button>
                     </div>`;
                     
                 if (isUrgent) {
@@ -1059,6 +1057,68 @@
         setInterval(loadOperationalData, 60_000);
     </script>
 
+    <!-- Assign Guide Modal -->
+    <div class="modal" id="assignModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+        <div class="modal-content" style="background: white; padding: 2rem; border-radius: 16px; width: 400px; max-width: 95%;">
+            <h2 style="margin-top: 0; margin-bottom: 1rem;">Assign Tour Guide</h2>
+            <p id="targetScheduleId" style="margin-bottom: 1rem; font-weight: 600;"></p>
+            <select id="guideSelect" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 1rem;"></select>
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="action-btn" style="background:#64748b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;" onclick="closeAssignModal()">Close</button>
+                <button class="action-btn" style="background:#0f766e; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;" onclick="submitAssignment()">Assign</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAssignScheduleId = null;
+        window.openAssignModal = async function(scheduleId) {
+            currentAssignScheduleId = scheduleId;
+            document.getElementById('targetScheduleId').innerText = 'Schedule ID: ' + scheduleId;
+            const select = document.getElementById('guideSelect');
+            select.innerHTML = '<option value="">-- Select an Available Guide --</option>';
+            document.getElementById('assignModal').style.display = 'flex';
+            
+            try {
+                const res = await TB.apiFetch('/api/v1/admin/users?size=1000');
+                if (res && res.data && res.data.content) {
+                    res.data.content.forEach(u => {
+                        if (u.role === 'GUIDE' && u.isActive) {
+                            const opt = document.createElement('option');
+                            opt.value = u.id;
+                            opt.textContent = `${u.fullName} (${u.phoneNumber || u.email})`;
+                            select.appendChild(opt);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Lỗi lấy danh sách HDV:", e);
+            }
+        };
+
+        window.closeAssignModal = function() {
+            document.getElementById('assignModal').style.display = 'none';
+        };
+
+        window.submitAssignment = async function() {
+            if (!currentAssignScheduleId) return;
+            const guideId = document.getElementById('guideSelect').value;
+            if (!guideId) {
+                alert('Vui lòng chọn Hướng dẫn viên!');
+                return;
+            }
+            try {
+                const res = await TB.apiFetch('/api/v1/staff/schedules/' + currentAssignScheduleId + '/assign-guide?guideId=' + guideId, { method: 'PATCH' });
+                if (typeof showToast === 'function') showToast('Gán hướng dẫn viên thành công!', 'success');
+                else alert('Gán hướng dẫn viên thành công!');
+                closeAssignModal();
+                loadOperationalData();
+            } catch (e) {
+                if (typeof showToast === 'function') showToast('Lỗi: ' + e.message, 'error');
+                else alert('Lỗi: ' + e.message);
+            }
+        };
+    </script>
 </body>
 
 </html>

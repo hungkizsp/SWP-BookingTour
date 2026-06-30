@@ -14,6 +14,14 @@ import com.tourbooking.booking.backend.service.TourScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.tourbooking.booking.backend.repository.BookingRepository;
+import com.tourbooking.booking.backend.repository.RefundRequestRepository;
+import com.tourbooking.booking.backend.service.MailService;
+import java.util.List;
+import com.tourbooking.booking.backend.model.entity.enums.BookingStatus;
+import com.tourbooking.booking.backend.model.entity.enums.RefundStatus;
+import com.tourbooking.booking.backend.model.entity.RefundRequest;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -21,6 +29,65 @@ public class TourScheduleServiceImpl implements TourScheduleService {
 
     private final TourScheduleRepository tourScheduleRepository;
     private final com.tourbooking.booking.backend.repository.TourRepository tourRepository;
+    private final BookingRepository bookingRepository;
+    private final RefundRequestRepository refundRequestRepository;
+    private final MailService mailService;
+
+    @Override
+    @Transactional
+    public void cancelTourSchedule(Long scheduleId) {
+        // Step 1: Update Schedule Status
+        TourSchedule schedule = tourScheduleRepository.findById(scheduleId)
+            .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+        
+        if (schedule.getStatus() == TourStatus.CANCELLED || schedule.getStatus() == TourStatus.CANCELLED_BY_OPERATOR) {
+            throw new IllegalStateException("Lịch trình này đã bị hủy trước đó.");
+        }
+        schedule.setStatus(TourStatus.CANCELLED);
+        tourScheduleRepository.save(schedule);
+
+        // Step 2: Fetch all active bookings linked to this schedule
+        List<com.tourbooking.booking.backend.model.entity.Booking> activeBookings = bookingRepository.findByScheduleIdAndStatusIn(
+            scheduleId, List.of(BookingStatus.CONFIRMED, BookingStatus.PAID, BookingStatus.PENDING, BookingStatus.PENDING_CASH)
+        );
+
+        // Step 3: Loop through bookings for automated 100% refund & cancellation
+        for (com.tourbooking.booking.backend.model.entity.Booking booking : activeBookings) {
+            BookingStatus originalStatus = booking.getStatus();
+            // Update booking status
+            booking.setStatus(BookingStatus.COMPANY_CANCELED); 
+            
+            // Only refund if they actually paid (CONFIRMED or PAID)
+            if (originalStatus == BookingStatus.CONFIRMED || originalStatus == BookingStatus.PAID) {
+                // Trigger 100% Refund Logic
+                RefundRequest refund = new RefundRequest();
+                refund.setBooking(booking);
+                refund.setAmount(booking.getTotalPrice());
+                refund.setReason("Công ty hủy lịch trình");
+                refund.setStatus(RefundStatus.APPROVED);
+                refund.setOriginalBookingStatus(originalStatus);
+                refund.setProcessedAt(java.time.LocalDateTime.now());
+                refund.setStaffNote("Hoàn tiền 100% do hủy lịch trình");
+                refundRequestRepository.save(refund);
+            }
+            
+            // Queue/Send Notification to Customer
+            try {
+                if (booking.getUser() != null && booking.getUser().getEmail() != null) {
+                    mailService.sendOperatorCancellationRefundEmail(
+                        booking.getUser().getEmail(), 
+                        booking.getUser().getFullName(),
+                        booking.getId(),
+                        booking.getTotalPrice()
+                    );
+                }
+            } catch (Exception e) {
+                log.error("Failed to send cancellation email to user {}", booking.getUser().getEmail(), e);
+            }
+        }
+        bookingRepository.saveAll(activeBookings);
+    }
+
 
     /**
      * Deduct slots atomically using a Pessimistic Write Lock.

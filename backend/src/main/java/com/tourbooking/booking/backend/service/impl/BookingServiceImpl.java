@@ -689,6 +689,48 @@ public class BookingServiceImpl implements BookingService {
         return BookingMapper.toResponse(booking);
     }
 
+    @Override
+    @Transactional
+    public BookingResponse cancelBooking(Long id, com.tourbooking.booking.backend.model.dto.request.CancelBookingRequest request) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.COMPLETED || booking.getStatus() == BookingStatus.COMPANY_CANCELED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        BookingStatus originalStatus = booking.getStatus();
+        booking.setStatus(BookingStatus.COMPANY_CANCELED);
+        booking.setCancellationReason(request != null && request.getReason() != null ? request.getReason() : "Hủy do sự cố khách quan từ phía công ty.");
+
+        // If they paid, process refund request (similar to tour schedule cancel)
+        if (originalStatus == BookingStatus.CONFIRMED || originalStatus == BookingStatus.PAID) {
+            com.tourbooking.booking.backend.model.entity.RefundRequest refund = new com.tourbooking.booking.backend.model.entity.RefundRequest();
+            refund.setBooking(booking);
+            refund.setAmount(booking.getTotalPrice());
+            refund.setReason("Công ty hủy đặt tour. Lý do: " + booking.getCancellationReason());
+            refund.setStatus(com.tourbooking.booking.backend.model.entity.enums.RefundStatus.APPROVED);
+            refund.setOriginalBookingStatus(originalStatus);
+            refund.setProcessedAt(java.time.LocalDateTime.now());
+            refund.setStaffNote("Hoàn tiền 100% do công ty hủy order");
+            refundRequestRepository.save(refund);
+        }
+
+        TourSchedule schedule = booking.getSchedule();
+        if (schedule != null) {
+            tourScheduleService.releaseAvailableSlots(schedule.getId(), resolveOccupiedSlots(booking));
+        }
+
+        bookingRepository.save(booking);
+
+        // Send email
+        String tourName = (schedule != null && schedule.getTour() != null) ? schedule.getTour().getTourName() : "N/A";
+        if (booking.getUser() != null && booking.getUser().getEmail() != null) {
+            mailService.sendTourCancellationEmail(booking.getUser().getEmail(), booking.getUser().getFullName(), booking.getId(), tourName, booking.getCancellationReason());
+        }
+
+        return BookingMapper.toResponse(booking);
+    }
+
     /**
      * 2.1 — Khách hàng gửi yêu cầu hoàn tiền.
      * <ul>

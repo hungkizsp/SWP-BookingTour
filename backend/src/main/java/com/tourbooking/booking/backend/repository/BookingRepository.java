@@ -15,6 +15,7 @@ import java.util.List;
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByUserId(Long userId);
     List<Booking> findByScheduleId(Long scheduleId);
+    List<Booking> findByScheduleIdAndStatusIn(Long scheduleId, List<BookingStatus> statuses);
     List<Booking> findByStatus(BookingStatus status);
     org.springframework.data.domain.Page<Booking> findByStatus(BookingStatus status, org.springframework.data.domain.Pageable pageable);
     List<Booking> findByBookingDateBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);

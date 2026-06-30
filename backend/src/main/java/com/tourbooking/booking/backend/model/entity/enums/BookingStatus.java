@@ -11,5 +11,6 @@ public enum BookingStatus {
     SUCCESS,
     REFUNDED,
     EXPIRED,
-    PAID
+    PAID,
+    COMPANY_CANCELED
 }

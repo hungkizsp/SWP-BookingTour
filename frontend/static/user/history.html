@@ -502,6 +502,7 @@
       const s = String(status || '').toUpperCase();
       if (s === 'CANCELLED') return { cls: 'cancelled', label: 'Đã hủy' };
       if (s === 'EXPIRED') return { cls: 'cancelled', label: 'Hết hạn thanh toán' };
+      if (s === 'COMPANY_CANCELED') return { cls: 'operator-cancelled', label: '🚫 Đã hủy bởi Ban quản lý' };
       if (s === 'CANCELLED_BY_OPERATOR') return { cls: 'operator-cancelled', label: '🚫 Hủy bởi Nhà điều hành' };
       if (s === 'REFUNDED') return { cls: 'refunded', label: '💰 Đã hoàn tiền' };
       if (s === 'REFUND_REQUESTED') return { cls: 'refunded', label: '⏳ Đang chờ hoàn tiền' };
@@ -523,8 +524,9 @@
         const bStatus = String(b.status || '').toUpperCase();
         const canCancel = bStatus === 'PENDING' || bStatus === 'CONFIRMED';
         const isCompleted = bStatus === 'COMPLETED';
-        const isOperatorCancelled = bStatus === 'CANCELLED_BY_OPERATOR';
+        const isOperatorCancelled = bStatus === 'CANCELLED_BY_OPERATOR' || bStatus === 'COMPANY_CANCELED';
         const isRefunded = bStatus === 'REFUNDED';
+        const isCompanyCanceled = bStatus === 'COMPANY_CANCELED';
         // b.reviewed is a boolean flag returned by the backend booking response
         const alreadyReviewed = isCompleted && Boolean(b.reviewed);
 
@@ -540,19 +542,22 @@
           }
         }
 
-        // Operator-Cancellation Banner (MODULE 5 — CANCELLED_BY_OPERATOR)
+        // Operator/Company-Cancellation Banner
+        const cancelReason = b.cancellationReason || 'Hủy do sự cố khách quan từ phía công ty.';
         const operatorCancelBanner = (isOperatorCancelled || isRefunded) ? `
           <div class="operator-cancel-banner">
             <div class="banner-icon">🚨</div>
             <div>
-              <div class="banner-title">Tour Cancelled by Operator</div>
+              <div class="banner-title">${isCompanyCanceled ? 'Đã hủy bởi Ban quản lý' : 'Tour Cancelled by Operator'}</div>
               <div class="banner-body">
-                This tour schedule was automatically cancelled because a tour guide could not be assigned before the scheduled departure.
-                <br><strong>Reason:</strong> Guide Not Assigned
-                <br><strong>Total Paid:</strong> ${formatCurrency(b.totalPrice)}
+                ${isCompanyCanceled
+                  ? `Lịch trình tour của quý khách đã bị hủy bởi ban quản lý.<br><strong>Lý do hủy:</strong> ${cancelReason}`
+                  : `This tour schedule was automatically cancelled because a tour guide could not be assigned before the scheduled departure.<br><strong>Reason:</strong> Guide Not Assigned`
+                }
+                <br><strong>${isCompanyCanceled ? 'Tổng tiền đã thanh toán' : 'Total Paid'}:</strong> ${formatCurrency(b.totalPrice)}
               </div>
               <div style="margin-top:8px;">
-                <span class="refund-chip">💰 Refund Status: ${isRefunded ? 'Refunded' : 'Processing'}</span>
+                <span class="refund-chip">💰 ${isCompanyCanceled ? 'Trạng thái hoàn tiền' : 'Refund Status'}: ${isRefunded ? (isCompanyCanceled ? 'Đã hoàn tiền' : 'Refunded') : (isCompanyCanceled ? 'Đang xử lý' : 'Processing')}</span>
                 ${isRefunded ? `<span class="refund-chip" style="background:#dcfce7;color:#166534;border-color:#86efac;">✅ Full Refund: ${formatCurrency(b.totalPrice)}</span>` : ''}
               </div>
             </div>
@@ -628,7 +633,7 @@
         return;
       }
       if (k === 'cancelled') {
-        render(allBookings.filter(b => ['CANCELLED', 'EXPIRED', 'CANCELLED_BY_OPERATOR', 'REFUNDED', 'REFUND_REQUESTED'].includes(String(b.status || '').toUpperCase())));
+        render(allBookings.filter(b => ['CANCELLED', 'EXPIRED', 'CANCELLED_BY_OPERATOR', 'COMPANY_CANCELED', 'REFUNDED', 'REFUND_REQUESTED'].includes(String(b.status || '').toUpperCase())));
         return;
       }
       render(allBookings);
