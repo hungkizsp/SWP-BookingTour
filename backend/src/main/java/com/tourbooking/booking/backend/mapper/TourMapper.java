@@ -98,6 +98,23 @@ public class TourMapper {
         s.setMaxSlots(schedule.getMaxSlots());
         s.setStatus(schedule.getStatus() == null ? null : schedule.getStatus().name());
         s.setBookingDeadline(schedule.getEffectiveBookingDeadline());
+
+        boolean isExpired = false;
+        if (schedule.getStartDate() != null) {
+            java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+            if (schedule.getStartDate().isBefore(today)) {
+                isExpired = true;
+            } else if (schedule.getStartDate().isEqual(today)) {
+                if (schedule.getDepartureTime() != null) {
+                    java.time.LocalTime now = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+                    if (!schedule.getDepartureTime().isAfter(now)) {
+                        isExpired = true;
+                    }
+                }
+            }
+        }
+        s.setIsExpired(isExpired);
+
         return s;
     }
 

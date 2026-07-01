@@ -20,14 +20,14 @@
   // ── Status helpers ─────────────────────────────────────────────────────────
 
   const STATUS_META = {
-    OPEN:                 { label: 'Đang nhận đặt',        color: '#059669', bg: '#d1fae5', icon: '🟢' },
-    BOOKING_CLOSED:       { label: 'Đã đóng đặt chỗ',      color: '#d97706', bg: '#fef3c7', icon: '🔒' },
-    SOLD_OUT:             { label: 'Hết chỗ',               color: '#dc2626', bg: '#fee2e2', icon: '🔴' },
-    PENDING_GUIDE:        { label: 'Tạm thời không khả dụng', color: '#b45309', bg: '#fef9c3', icon: '⚠️' },
-    IN_PROGRESS:          { label: 'Đang diễn ra',           color: '#2563eb', bg: '#dbeafe', icon: '🚀' },
-    COMPLETED:            { label: 'Đã hoàn thành',          color: '#64748b', bg: '#f1f5f9', icon: '✅' },
-    CANCELLED:            { label: 'Đã hủy',                 color: '#9ca3af', bg: '#f3f4f6', icon: '❌' },
-    CANCELLED_BY_OPERATOR:{ label: 'Đã hủy bởi nhà điều hành', color: '#7c3aed', bg: '#ede9fe', icon: '🚫' },
+    OPEN: { label: 'Đang nhận đặt', color: '#059669', bg: '#d1fae5', icon: '🟢' },
+    BOOKING_CLOSED: { label: 'Đã đóng đặt chỗ', color: '#d97706', bg: '#fef3c7', icon: '🔒' },
+    SOLD_OUT: { label: 'Hết chỗ', color: '#dc2626', bg: '#fee2e2', icon: '🔴' },
+    PENDING_GUIDE: { label: 'Tạm thời không khả dụng', color: '#b45309', bg: '#fef9c3', icon: '⚠️' },
+    IN_PROGRESS: { label: 'Đang diễn ra', color: '#2563eb', bg: '#dbeafe', icon: '🚀' },
+    COMPLETED: { label: 'Đã hoàn thành', color: '#64748b', bg: '#f1f5f9', icon: '✅' },
+    CANCELLED: { label: 'Đã hủy', color: '#9ca3af', bg: '#f3f4f6', icon: '❌' },
+    CANCELLED_BY_OPERATOR: { label: 'Đã hủy bởi nhà điều hành', color: '#7c3aed', bg: '#ede9fe', icon: '🚫' },
   };
 
   function getStatusMeta(status) {
@@ -44,6 +44,7 @@
     const now = new Date();
 
     if (status === 'CANCELLED') return { canBook: false, reason: 'Lịch trình đã bị hủy.', isPendingGuide: false };
+    if (s.isExpired) return { canBook: false, reason: 'Lịch trình này đã khởi hành (Giờ khởi hành đã qua so với giờ hiện tại).', isPendingGuide: false };
     if (status === 'CANCELLED_BY_OPERATOR') return { canBook: false, reason: 'Lịch trình đã bị hủy bởi nhà điều hành.', isPendingGuide: false };
     if (status === 'COMPLETED') return { canBook: false, reason: 'Tour đã hoàn thành.', isPendingGuide: false };
     if (status === 'IN_PROGRESS') return { canBook: false, reason: 'Tour đang diễn ra, không thể đặt thêm.', isPendingGuide: false };
@@ -85,9 +86,9 @@
 
   const formatTime = (t) => {
     if (!t) return '';
-    if (Array.isArray(t)) return `${String(t[0]).padStart(2,'0')}:${String(t[1]).padStart(2,'0')}`;
+    if (Array.isArray(t)) return `${String(t[0]).padStart(2, '0')}:${String(t[1]).padStart(2, '0')}`;
     const d = new Date(t);
-    if (!isNaN(d)) return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    if (!isNaN(d)) return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     // Already a string like "07:00"
     return String(t).substring(0, 5);
   };
@@ -96,7 +97,7 @@
     if (!dt) return '—';
     const d = toDateObj(dt);
     if (!d || isNaN(d)) return String(dt);
-    return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   };
 
   // ── Gallery ──────────────────────────────────────────────────────────────
@@ -164,33 +165,13 @@
       return;
     }
 
-    const now = new Date();
-    const validList = list.filter(s => {
-      if (!s.startDate) return true;
-      const start = new Date(s.startDate);
-      start.setHours(0, 0, 0, 0);
-      const today = new Date(now);
-      today.setHours(0, 0, 0, 0);
-
-      if (start < today) {
-        return false;
-      }
-      if (start.getTime() === today.getTime() && s.departureTime) {
-        const [hours, minutes] = s.departureTime.split(':').map(Number);
-        if (hours < now.getHours() || (hours === now.getHours() && minutes <= now.getMinutes())) {
-          return false;
-        }
-      }
-      return true;
-    });
-
-    if (validList.length === 0) {
+    if (list.length === 0) {
       root.innerHTML = '<option value="">Hiện chưa có lịch khởi hành phù hợp</option>';
       if (btn) { btn.disabled = true; }
       return;
     }
 
-    root.innerHTML = '<option value="">-- Chọn lịch khởi hành --</option>' + validList.map(s => {
+    root.innerHTML = '<option value="">-- Chọn lịch khởi hành --</option>' + list.map(s => {
       const status = String(s.status || '').toUpperCase();
       const { canBook } = getBookabilityState(s);
       const meta = getStatusMeta(status);
@@ -198,15 +179,16 @@
       const timeStr = formatTime(s.departureTime) || formatTime(s.startDate);
       const slotText = (s.availableSlots ?? 0) > 0 ? `Còn ${s.availableSlots} chỗ` : 'Hết chỗ';
 
-      return `<option value="${s.scheduleId}" ${!canBook ? 'disabled' : ''} data-status="${escapeHtml(status)}">
-        ${meta.icon} ${dateStr}${timeStr ? ' lúc ' + timeStr : ''} · ${slotText} · ${meta.label}
+      const expiredText = s.isExpired ? ' (Đã khởi hành)' : '';
+      return `<option value="${s.scheduleId}" ${(!canBook && !s.isExpired) ? 'disabled' : ''} data-status="${escapeHtml(status)}">
+        ${meta.icon} ${dateStr}${timeStr ? ' lúc ' + timeStr : ''} · ${slotText} · ${meta.label}${expiredText}
       </option>`;
     }).join('');
 
     // Trigger initial state render
-    updateBookingState(validList);
+    updateBookingState(list);
 
-    root.onchange = () => updateBookingState(validList);
+    root.onchange = () => updateBookingState(list);
   }
 
   function updateBookingState(list) {
@@ -273,6 +255,42 @@
       }
     }
 
+    // ── Expired Schedule special alert banner ────────────────────────────────
+    let expiredAlert = document.getElementById('expiredScheduleAlert');
+    if (schedule.isExpired) {
+      if (!expiredAlert) {
+        expiredAlert = document.createElement('div');
+        expiredAlert.id = 'expiredScheduleAlert';
+        expiredAlert.style.cssText = [
+          'background: linear-gradient(135deg, #fee2e2, #fecaca)',
+          'border: 2px solid #ef4444',
+          'border-radius: 12px',
+          'padding: 16px 20px',
+          'margin-top: 12px',
+          'display: flex',
+          'align-items: flex-start',
+          'gap: 12px',
+          'box-shadow: 0 2px 8px rgba(239,68,68,0.15)'
+        ].join(';');
+        expiredAlert.innerHTML = `
+          <span style="font-size:1.6rem;flex-shrink:0;">⏳</span>
+          <div>
+            <div style="font-weight:800;color:#991b1b;font-size:0.95rem;margin-bottom:4px;">Đã quá giờ đăng ký</div>
+            <div style="color:#7f1d1d;font-size:0.875rem;line-height:1.5;">
+              Lịch trình này đã khởi hành (Giờ khởi hành đã qua so với giờ hiện tại). Vui lòng chọn ngày khác.
+            </div>
+          </div>
+        `;
+        const anchor = departureInfo || deadlineInfo || statusBadgeWrap;
+        if (anchor && anchor.parentNode) {
+          anchor.parentNode.insertBefore(expiredAlert, anchor.nextSibling);
+        }
+      }
+      expiredAlert.style.display = 'flex';
+    } else {
+      if (expiredAlert) expiredAlert.style.display = 'none';
+    }
+
     // ── PENDING_GUIDE special alert banner ────────────────────────────────
     let pgAlert = document.getElementById('pendingGuideAlert');
     if (bookState.isPendingGuide) {
@@ -328,7 +346,7 @@
         } else {
           btn.style.display = '';
           btn.style.opacity = '0.5';
-          btn.textContent = reason || 'Không thể đặt';
+          btn.textContent = schedule.isExpired ? 'Đã quá giờ đăng ký' : (reason || 'Không thể đặt');
         }
       }
     }
@@ -370,7 +388,12 @@
 
     renderGallery(t.imageUrls);
     renderItinerary(t.itinerary);
-    renderSchedules(t.schedules);
+    const visibleSchedules = (t.schedules || []).filter(s => {
+      const status = String(s.status || '').toUpperCase();
+      return status === 'OPEN' || status === 'IN_PROGRESS';
+    });
+
+    renderSchedules(visibleSchedules);
   }
 
   // ── Reviews ───────────────────────────────────────────────────────────────

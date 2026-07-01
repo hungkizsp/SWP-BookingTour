@@ -41,5 +41,6 @@ public class TourDetailResponse {
         private String status;
         /** ISO-8601 datetime string for the booking deadline. */
         private LocalDateTime bookingDeadline;
+        private Boolean isExpired;
     }
 }
