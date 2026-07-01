@@ -1030,3 +1030,5 @@ USE [master]
 GO
 ALTER DATABASE [TourBookingDB] SET  READ_WRITE 
 GO
+ALTER TABLE Bookings ADD CancellationReason NVARCHAR(500) NULL;
+GO
