@@ -11,7 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.href = '/pages/guide/dashboard.html';
         return;
     }
-    
+
+    const groupChatLink = document.getElementById('groupChatLink');
+    if (groupChatLink) groupChatLink.href = `/pages/client/group-chat.html?scheduleId=${scheduleId}`;
+
     loadScheduleDetails(scheduleId);
 });
 

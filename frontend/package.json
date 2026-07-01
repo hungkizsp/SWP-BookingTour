@@ -4,7 +4,7 @@
   "description": "Premium Tour Booking Frontend - DanaBest",
   "main": "index.html",
   "scripts": {
-    "dev": "npx browser-sync start --server static --files \"static/**/*\" --port 3000",
+    "dev": "npx browser-sync start --server static --files \"static/**/*\" --port 3000 --no-ghost-mode",
     "sync": "powershell -File ./scripts/sync.ps1",
     "start": "npm run dev"
   },

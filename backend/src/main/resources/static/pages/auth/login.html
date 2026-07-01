@@ -89,6 +89,13 @@
         };
 
         window.onload = function () {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('verified') === 'true') {
+                alert("Tài khoản của bạn đã được xác thực thành công! Hãy đăng nhập.");
+            } else if (params.get('verified') === 'false') {
+                alert("Xác thực thất bại hoặc link đã hết hạn.");
+            }
+
             google.accounts.id.initialize({ 
                 client_id: "27844399753-b0u9h8gj7g5rsr9km9mcadt5oc4gcj51.apps.googleusercontent.com", 
                 callback: handleGoogleLogin, 

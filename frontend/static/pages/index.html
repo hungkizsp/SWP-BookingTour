@@ -181,10 +181,18 @@
   </footer>
 
   <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/notification-bell.js"></script>
+  <script src="../assets/js/group-chat-widget.js"></script>
   <script>
     const el = (id) => document.getElementById(id);
     const navRight = el('navRight');
     const user = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
+
+    // Tour guide có dashboard riêng và không có lối quay lại từ trang chủ ->
+    // tự động đẩy về dashboard để tránh bị "mắc kẹt" ở trang khách hàng.
+    if (user && String(user.role || '').toUpperCase() === 'GUIDE') {
+      window.location.href = './guide/dashboard.html';
+    }
 
     // Header Scroll Effect
     window.addEventListener('scroll', () => {

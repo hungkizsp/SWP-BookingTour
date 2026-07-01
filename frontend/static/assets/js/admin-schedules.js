@@ -84,6 +84,7 @@ function renderSchedulesPage() {
                     ? `<button class="action-btn" onclick="openAssignModal(${s.id})">Assign</button>`
                     : `<button class="action-btn" style="background: #cbd5e1; color: #64748b; cursor: not-allowed;" disabled title="Cannot assign: ${statusLabel}">Assign</button>`}
                 <button class="action-btn" style="background: #64748b" onclick="openDetailsModal(${s.id})">Details</button>
+                <button class="action-btn" style="background: #0f766e" onclick="window.open('/pages/client/group-chat.html?scheduleId=${s.id}&readonly=1', '_blank')">💬 Chat</button>
             </td>
         `;
         tbody.appendChild(row);

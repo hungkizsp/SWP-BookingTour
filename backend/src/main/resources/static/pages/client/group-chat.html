@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nhóm chat Tour - TourBooking</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/style.css">
+  <style>
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .topbar .brand-copy strong {
+      color: var(--primary);
+    }
+
+    .topbar .brand-copy span {
+      color: var(--text-faint);
+    }
+
+    .group-chat-layout {
+      max-width: 1100px;
+      margin: 30px auto;
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      height: 78vh;
+      min-height: 520px;
+      box-shadow: var(--shadow-premium);
+    }
+
+    .gc-sidebar {
+      background: var(--bg-section);
+      border-right: 1px solid var(--border);
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .gc-tour-card img {
+      width: 100%;
+      height: 110px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      background: #e2e8f0;
+    }
+
+    .gc-members-title {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      margin: 20px 0 10px;
+    }
+
+    .gc-member {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+    }
+
+    .gc-member img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #cbd5e1;
+    }
+
+    .gc-member .name {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--text-main);
+    }
+
+    .gc-member .role {
+      font-size: 0.72rem;
+      color: var(--text-faint);
+    }
+
+    .gc-main {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .gc-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .gc-box {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      background: #f8fafc;
+    }
+
+    .gc-msg {
+      max-width: 75%;
+      padding: 10px 16px;
+      border-radius: 16px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    .gc-msg .meta {
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 3px;
+      opacity: 0.75;
+    }
+
+    .gc-msg.me {
+      align-self: flex-end;
+      background: var(--primary);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+
+    .gc-msg.other {
+      align-self: flex-start;
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      border-bottom-left-radius: 4px;
+    }
+
+    .gc-msg.other.guide {
+      border-color: #0f766e;
+      background: #f0fdfa;
+    }
+
+    .gc-input-area {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      background: white;
+    }
+
+    .gc-input-area form {
+      display: flex;
+      gap: 12px;
+    }
+
+    .gc-input-area input {
+      flex: 1;
+      height: 48px;
+      padding: 0 18px;
+      border-radius: 99px;
+      border: 1px solid var(--border);
+      font-family: inherit;
+    }
+
+    .gc-readonly-banner {
+      padding: 10px 24px;
+      background: #fef3c7;
+      color: #92400e;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    @media (max-width: 800px) {
+      .group-chat-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .gc-sidebar {
+        max-height: 220px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="page-shell">
+      <div class="content-pad">
+        <div class="topbar">
+          <a class="brand" href="../index.html">
+            <span class="brand-mark">TB</span>
+            <span class="brand-copy">
+              <strong>TourBooking</strong>
+              <span>An tâm tận hưởng</span>
+            </span>
+          </a>
+          <a id="backLink" class="btn btn-secondary" href="../index.html">← Quay lại</a>
+        </div>
+
+        <div class="group-chat-layout">
+          <aside class="gc-sidebar">
+            <div class="gc-tour-card">
+              <img id="tourImage" src="" alt="">
+              <div style="font-weight:800; color:var(--primary); font-size:1.05rem;" id="tourName">Đang tải...</div>
+              <div style="font-size:0.82rem; color:var(--text-faint); margin-top:4px;" id="tourDates"></div>
+            </div>
+
+            <div class="gc-members-title">Thành viên nhóm</div>
+            <div id="memberList"></div>
+          </aside>
+
+          <div class="gc-main">
+            <div class="gc-header">
+              <div>
+                <div style="font-weight:800; color:var(--text-main);">Nhóm chat của chuyến đi</div>
+                <div style="font-size:0.78rem; color:var(--text-faint);" id="memberCount"></div>
+              </div>
+            </div>
+
+            <div id="readonlyBanner" class="gc-readonly-banner" style="display:none;">
+              👁️ Bạn đang xem ở chế độ chỉ đọc (Staff/Admin) — không thể gửi tin nhắn.
+            </div>
+
+            <div id="chatBox" class="gc-box"></div>
+
+            <div class="gc-input-area" id="inputArea">
+              <form id="sendForm">
+                <input id="messageInput" placeholder="Nhập tin nhắn..." autocomplete="off" />
+                <button type="submit" class="btn">Gửi</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../../assets/js/api.js"></script>
+  <script src="../../assets/js/group-chat.js"></script>
+</body>
+
+</html>
