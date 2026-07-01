@@ -24,6 +24,7 @@ public class DatabaseInitializer {
         initTourActivityImages();
         initTourScheduleColumns();
         initTourGroupMessages();
+        initUserNotifications();
         log.info("=== DatabaseInitializer: Done. ===");
     }
 
@@ -141,6 +142,41 @@ public class DatabaseInitializer {
 
         addColumnIfMissing("TourSchedules", "ReportSubmittedAt",
             "ALTER TABLE TourSchedules ADD ReportSubmittedAt DATETIME2 NULL");
+    }
+
+    // =========================================================
+    // Bảng UserNotifications (chuông thông báo cho người dùng)
+    // =========================================================
+    private void initUserNotifications() {
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'UserNotifications'",
+                Integer.class);
+
+            if (count != null && count > 0) {
+                log.info("  [OK] Table UserNotifications already exists.");
+                return;
+            }
+
+            jdbcTemplate.execute("""
+                CREATE TABLE UserNotifications (
+                    NotificationID  BIGINT IDENTITY(1,1) PRIMARY KEY,
+                    UserID          BIGINT NOT NULL,
+                    Title           NVARCHAR(200) NULL,
+                    Message         NVARCHAR(MAX) NULL,
+                    Type            NVARCHAR(50) NULL,
+                    Link            NVARCHAR(500) NULL,
+                    IsRead          BIT NOT NULL DEFAULT 0,
+                    CreatedAt       DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+                    UpdatedAt       DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+                    CONSTRAINT FK_Notification_User
+                        FOREIGN KEY (UserID) REFERENCES Users(UserID)
+                )
+            """);
+            log.info("  [CREATED] Table UserNotifications.");
+        } catch (Exception e) {
+            log.error("  [ERROR] Failed to init UserNotifications: {}", e.getMessage());
+        }
     }
 
     // =========================================================

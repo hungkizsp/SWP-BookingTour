@@ -359,7 +359,7 @@
     <div class="modal-box">
       <h3 style="margin-top:0;">Chọn phương thức thanh toán</h3>
       <p style="font-size:0.9rem; color:var(--text-faint);">Vui lòng chọn cổng thanh toán để tiếp tục giao dịch cho mã tour <strong id="repayCode"></strong>.</p>
-
+      
       <div style="margin-top:16px; display:flex; flex-direction:column; gap:12px;">
         <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.1); border-radius:8px; cursor:pointer;">
           <input type="radio" name="paymentGateway" value="PAYOS" checked style="width:18px; height:18px;" />
@@ -379,6 +379,7 @@
   </div>
 
   <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/notification-bell.js"></script>
   <script>
     let allBookings = [];
     let currentBooking = null;
@@ -896,7 +897,7 @@
 
     async function confirmRepayment() {
         if (!currentBooking) return;
-
+        
         const gatewayEl = document.querySelector('input[name="paymentGateway"]:checked');
         const gateway = gatewayEl ? gatewayEl.value : 'PAYOS';
 
@@ -904,7 +905,7 @@
         const origText = btn.innerText;
         btn.disabled = true;
         btn.innerText = 'Đang tạo link...';
-
+        
         try {
             // Updated to use the new repay endpoint
             const res = await TB.apiFetch(`/api/v1/payments/repay?bookingId=${currentBooking.id}&gateway=${gateway}`, {
