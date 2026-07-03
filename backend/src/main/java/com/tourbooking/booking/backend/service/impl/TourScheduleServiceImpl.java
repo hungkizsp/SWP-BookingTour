@@ -10,6 +10,7 @@ import com.tourbooking.booking.backend.model.entity.TourSchedule;
 import com.tourbooking.booking.backend.model.entity.enums.TourStatus;
 import com.tourbooking.booking.backend.repository.TourScheduleRepository;
 import com.tourbooking.booking.backend.service.TourScheduleService;
+import com.tourbooking.booking.backend.service.TourChatGroupService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +33,7 @@ public class TourScheduleServiceImpl implements TourScheduleService {
     private final BookingRepository bookingRepository;
     private final RefundRequestRepository refundRequestRepository;
     private final MailService mailService;
+    private final TourChatGroupService tourChatGroupService;
 
     @Override
     @Transactional
@@ -45,6 +47,12 @@ public class TourScheduleServiceImpl implements TourScheduleService {
         }
         schedule.setStatus(TourStatus.CANCELLED);
         tourScheduleRepository.save(schedule);
+
+        try {
+            tourChatGroupService.closeGroup(scheduleId);
+        } catch (Exception e) {
+            log.error("Failed to close chat group for schedule {}", scheduleId, e);
+        }
 
         // Step 2: Fetch all active bookings linked to this schedule
         List<com.tourbooking.booking.backend.model.entity.Booking> activeBookings = bookingRepository.findByScheduleIdAndStatusIn(

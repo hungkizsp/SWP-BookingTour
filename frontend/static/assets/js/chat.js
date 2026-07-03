@@ -1,4 +1,4 @@
-(()=>{
+document.addEventListener('DOMContentLoaded', () => {
   const user = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
   if (!user) {
     TB.goToLogin('Vui lòng đăng nhập để có thể sử dụng tính năng Chat.');
@@ -455,4 +455,4 @@
 
   setInterval(load, 10000);
   setInterval(loadSessionStatus, 15000);
-})();
+});

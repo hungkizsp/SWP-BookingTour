@@ -21,6 +21,7 @@ import com.tourbooking.booking.backend.service.LoyaltyService;
 import com.tourbooking.booking.backend.service.MailService;
 import com.tourbooking.booking.backend.service.PayOSService;
 import com.tourbooking.booking.backend.service.PaymentService;
+import com.tourbooking.booking.backend.service.TourChatGroupService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -57,6 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final MailService mailService;
     private final ObjectMapper objectMapper;
     private final DiscountRepository discountRepository;
+    private final TourChatGroupService tourChatGroupService;
 
     @Override
     @Transactional
@@ -560,6 +562,17 @@ public class PaymentServiceImpl implements PaymentService {
                 awardLoyaltyAndSendMail(booking, payment.getAmount());
                 savePaymentLog(payment, "Manual transfer confirmed by operator");
             }
+            // Auto-add to tour group chat
+            try {
+                if (booking.getSchedule() != null && booking.getUser() != null) {
+                    com.tourbooking.booking.backend.model.entity.TourChatGroup group =
+                            tourChatGroupService.getOrCreateGroup(booking.getSchedule().getId());
+                    tourChatGroupService.addMember(group.getId(), booking.getUser().getId());
+                }
+            } catch (Exception e) {
+                log.warn("[GroupChat] Could not add user to tour group chat for booking {}: {}",
+                        booking.getId(), e.getMessage());
+            }
         } else if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.IN_PROGRESS && booking.getStatus() != BookingStatus.COMPLETED) {
             booking.setStatus(BookingStatus.CONFIRMED);
             bookingRepository.save(booking);
@@ -615,6 +628,17 @@ public class PaymentServiceImpl implements PaymentService {
         paymentRepository.save(payment);
         awardLoyaltyAndSendMail(booking, payment.getAmount());
         savePaymentLog(payment, logMessage);
+        // Auto-add to tour group chat
+        try {
+            if (booking.getSchedule() != null && booking.getUser() != null) {
+                com.tourbooking.booking.backend.model.entity.TourChatGroup group =
+                        tourChatGroupService.getOrCreateGroup(booking.getSchedule().getId());
+                tourChatGroupService.addMember(group.getId(), booking.getUser().getId());
+            }
+        } catch (Exception e) {
+            log.warn("[GroupChat] Could not add user to tour group chat for booking {}: {}",
+                    booking.getId(), e.getMessage());
+        }
     }
 
     private static boolean isPayOsPaidFromWebhook(JsonNode root, JsonNode data) {

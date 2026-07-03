@@ -15,8 +15,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(AppException.class)
-    public ResponseEntity<ApiResponse<Void>> handleAppException(AppException e) {
+    public ResponseEntity<?> handleAppException(AppException e, jakarta.servlet.http.HttpServletRequest request) {
         log.error("Handled AppException ({}): {}", e.getErrorCode().getCode(), e.getMessage(), e);
+        
+        String acceptHeader = request.getHeader("Accept");
+        if (acceptHeader != null && acceptHeader.contains("text/event-stream")) {
+            return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .contentType(org.springframework.http.MediaType.TEXT_PLAIN)
+                .body("error: " + e.getMessage());
+        }
+
         ErrorCode errorCode = e.getErrorCode();
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .code(errorCode.getCode())

@@ -1032,3 +1032,40 @@ ALTER DATABASE [TourBookingDB] SET  READ_WRITE
 GO
 ALTER TABLE Bookings ADD CancellationReason NVARCHAR(500) NULL;
 GO
+
+-- ====== TOUR CHAT GROUP ======
+CREATE TABLE [dbo].[TourChatGroups] (
+    [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+    [ScheduleID] BIGINT NOT NULL,
+    [IsActive] BIT NOT NULL DEFAULT 1,
+    [CreatedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT [FK_TourChatGroups_TourSchedules] FOREIGN KEY ([ScheduleID]) REFERENCES [dbo].[TourSchedules]([ScheduleID])
+);
+GO
+
+CREATE TABLE [dbo].[TourChatGroupMembers] (
+    [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+    [GroupID] BIGINT NOT NULL,
+    [UserID] BIGINT NOT NULL,
+    [JoinedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT [FK_TCGM_Group] FOREIGN KEY ([GroupID]) REFERENCES [dbo].[TourChatGroups]([Id]),
+    CONSTRAINT [FK_TCGM_User] FOREIGN KEY ([UserID]) REFERENCES [dbo].[Users]([UserID]),
+    CONSTRAINT [UQ_TCGM_GroupUser] UNIQUE ([GroupID], [UserID])
+);
+GO
+
+CREATE TABLE [dbo].[TourChatGroupMessages] (
+    [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+    [GroupID] BIGINT NOT NULL,
+    [UserID] BIGINT NOT NULL,
+    [Content] NVARCHAR(MAX) NOT NULL,
+    [SentAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT [FK_TCGMsg_Group] FOREIGN KEY ([GroupID]) REFERENCES [dbo].[TourChatGroups]([Id]),
+    CONSTRAINT [FK_TCGMsg_User] FOREIGN KEY ([UserID]) REFERENCES [dbo].[Users]([UserID])
+);
+GO
+
+CREATE INDEX [idx_tcg_schedule] ON [dbo].[TourChatGroups]([ScheduleID]);
+CREATE INDEX [idx_tcgmember_user] ON [dbo].[TourChatGroupMembers]([UserID]);
+CREATE INDEX [idx_tcgm_group_sent] ON [dbo].[TourChatGroupMessages]([GroupID], [SentAt] DESC);
+GO
