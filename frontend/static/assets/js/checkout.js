@@ -19,7 +19,7 @@
     return;
   }
 
-  const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+  const userStr = sessionStorage.getItem('user');
   let user = userStr ? JSON.parse(userStr) : null;
   if (!user) {
     TB.goToLogin('Vui lòng đăng nhập để tiếp tục đặt tour.');

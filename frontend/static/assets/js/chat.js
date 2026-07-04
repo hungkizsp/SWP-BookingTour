@@ -17,10 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const isGuest = !user;
   let guestId = null;
   if (isGuest) {
-    guestId = localStorage.getItem('guestId');
+    guestId = sessionStorage.getItem('guestId');
     if (!guestId) {
       guestId = 'guest_' + Math.random().toString(36).substring(2, 11);
-      localStorage.setItem('guestId', guestId);
+      sessionStorage.setItem('guestId', guestId);
     }
   }
 

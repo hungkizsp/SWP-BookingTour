@@ -209,7 +209,7 @@
     disconnectSse();
     const BACKEND = 'http://localhost:8080';
     const isDev   = window.location.port === '3000' || window.location.port === '5500';
-    const token   = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+    const token   = sessionStorage.getItem('token') || '';
 
     // SSE doesn't support custom headers; pass token as query param if needed
     // (backend must allow ?token= or rely on cookie session)

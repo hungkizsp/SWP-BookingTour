@@ -5,7 +5,6 @@ import com.tourbooking.booking.backend.model.dto.response.ApiResponse;
 import com.tourbooking.booking.backend.model.dto.response.TourChatGroupMemberResponse;
 import com.tourbooking.booking.backend.model.dto.response.TourChatGroupMessageResponse;
 import com.tourbooking.booking.backend.model.dto.response.TourChatGroupResponse;
-import com.tourbooking.booking.backend.model.entity.User;
 import com.tourbooking.booking.backend.service.TourChatGroupService;
 import com.tourbooking.booking.backend.repository.UserRepository;
 import com.tourbooking.booking.backend.exception.AppException;
@@ -19,9 +18,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 @RestController
 @RequestMapping("/api/v1/chat/groups")
@@ -79,10 +75,10 @@ public class TourChatGroupController {
             Authentication authentication) {
         Long userId = getCurrentUserId(authentication);
         TourChatGroupMessageResponse response = tourChatGroupService.sendMessage(groupId, userId, request.getContent());
-        
+
         // Broadcast via registry to correct group
         emitterRegistry.broadcast(groupId, response);
-        
+
         return ApiResponse.<TourChatGroupMessageResponse>builder()
                 .data(response)
                 .build();
@@ -94,16 +90,16 @@ public class TourChatGroupController {
             Long userId = getCurrentUserId(authentication);
             // verify access
             tourChatGroupService.getMembers(groupId, userId);
-            
+
             String emitterKey = userId + "-" + java.util.UUID.randomUUID().toString();
             SseEmitter emitter = emitterRegistry.register(groupId, emitterKey);
-            
+
             try {
                 emitter.send(SseEmitter.event().name("connected").data("ok"));
             } catch (Exception ex) {
                 emitter.completeWithError(ex);
             }
-            
+
             return emitter;
         } catch (AppException e) {
             SseEmitter emitter = new SseEmitter();

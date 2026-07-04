@@ -1,5 +1,5 @@
 (() => {
-  const ids = JSON.parse(localStorage.getItem('compareIds') || '[]');
+  const ids = JSON.parse(sessionStorage.getItem('compareIds') || '[]');
   const gridWrapper = document.getElementById('gridWrapper');
   const tableHead = document.getElementById('tableHead');
   const tableBody = document.getElementById('tableBody');
@@ -29,7 +29,7 @@
       currentTours = res.data || [];
 
       if (currentTours.length === 0) {
-        localStorage.removeItem('compareIds');
+        sessionStorage.removeItem('compareIds');
         empty.style.display = 'block';
         return;
       }
@@ -146,9 +146,9 @@
       document.querySelectorAll('.remove-btn-table').forEach(btn => {
         btn.onclick = () => {
           const idToRemove = String(btn.dataset.id);
-          const currentIds = JSON.parse(localStorage.getItem('compareIds') || '[]');
+          const currentIds = JSON.parse(sessionStorage.getItem('compareIds') || '[]');
           const newIds = currentIds.map(String).filter(id => id !== idToRemove);
-          localStorage.setItem('compareIds', JSON.stringify(newIds));
+          sessionStorage.setItem('compareIds', JSON.stringify(newIds));
           window.location.reload();
         };
       });
