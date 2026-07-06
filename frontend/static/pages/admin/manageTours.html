@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -553,28 +553,142 @@
                     <textarea class="form-control i-desc" rows="2" placeholder="Nhập Chi Tiết Lịch Trình..." required>${dayData?.description || ''}</textarea>
                 </div>
                 <div>
-                    <label>Tải Ảnh</label>
-                    <input type="text" class="form-control i-img" value="${dayData?.imageUrl || ''}" placeholder="URL áº£nh">
+                    <label>&#7843;nh L&#7883;ch tr&#236;nh (T&#249;y ch&#7885;n)</label>
+                    <div class="itinerary-image-upload" style="border:2px dashed #cbd5e1;border-radius:8px;background:#f8fafc;overflow:hidden;">
+                        <input type="file" class="itinerary-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+                        <div class="itinerary-image-preview-box"
+                             style="padding:16px;text-align:center;cursor:pointer;min-height:100px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;">
+                            <img class="itinerary-preview-img"
+                                 src="${dayData?.imageUrl || ''}"
+                                 alt=""
+                                 style="display:${dayData?.imageUrl ? 'block' : 'none'};max-width:180px;max-height:120px;border-radius:6px;object-fit:cover;">
+                            <div class="itinerary-upload-placeholder" style="display:${dayData?.imageUrl ? 'none' : 'flex'};flex-direction:column;align-items:center;gap:4px;">
+                                <span style="font-size:28px;">&#128444;&#65039;</span>
+                                <span style="font-size:0.85rem;">Click &#273;&#7875; ch&#7885;n &#7843;nh</span>
+                                <small style="color:#888;">JPG, PNG, WebP &mdash; t&#7889;i &#273;a 5MB</small>
+                            </div>
+                        </div>
+                        <div class="itinerary-image-actions" style="display:${dayData?.imageUrl ? 'flex' : 'none'};gap:8px;align-items:center;padding:6px 12px;border-top:1px solid #e2e8f0;background:#fff;">
+                            <span class="itinerary-filename" style="font-size:12px;color:#555;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                ${dayData?.imageUrl ? dayData.imageUrl.split('/').pop() : ''}
+                            </span>
+                            <button type="button" class="itinerary-clear-btn"
+                                    style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer;white-space:nowrap;">
+                                &times; X&#243;a
+                            </button>
+                        </div>
+                        <input type="hidden" class="itinerary-image-url-hidden" value="${dayData?.imageUrl || ''}">
+                    </div>
                 </div>
             `;
             container.appendChild(row);
         }
 
-        function getItineraryData() {
+        // ── Itinerary image upload — event delegation (works for dynamically added rows) ──
+        document.addEventListener('click', function(e) {
+            // Click on preview box triggers file picker
+            const box = e.target.closest('.itinerary-image-preview-box');
+            if (box) {
+                box.closest('.itinerary-image-upload').querySelector('.itinerary-file-input').click();
+                return;
+            }
+            // Clear button
+            if (e.target.classList.contains('itinerary-clear-btn')) {
+                const wrapper = e.target.closest('.itinerary-image-upload');
+                wrapper.querySelector('.itinerary-file-input').value = '';
+                wrapper.querySelector('.itinerary-preview-img').style.display = 'none';
+                wrapper.querySelector('.itinerary-upload-placeholder').style.display = 'flex';
+                wrapper.querySelector('.itinerary-image-actions').style.display = 'none';
+                wrapper.querySelector('.itinerary-image-url-hidden').value = '';
+                wrapper.querySelector('.itinerary-filename').textContent = '';
+            }
+        });
+
+        document.addEventListener('change', async function(e) {
+            if (!e.target.classList.contains('itinerary-file-input')) return;
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert('&#7272;nh kh&#244;ng &#273;&#432;&#7907;c v&#432;&#7907;t qu&#225; 5MB');
+                e.target.value = '';
+                return;
+            }
+
+            const wrapper = e.target.closest('.itinerary-image-upload');
+            const previewBox = wrapper.querySelector('.itinerary-image-preview-box');
+            const previewImg = wrapper.querySelector('.itinerary-preview-img');
+            const placeholder = wrapper.querySelector('.itinerary-upload-placeholder');
+            const actions = wrapper.querySelector('.itinerary-image-actions');
+            const filenameEl = wrapper.querySelector('.itinerary-filename');
+            const hiddenUrl = wrapper.querySelector('.itinerary-image-url-hidden');
+
+            // Instant local preview
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                previewImg.src = ev.target.result;
+                previewImg.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+
+            // Upload to server using existing tour upload endpoint
+            try {
+                previewBox.style.opacity = '0.6';
+                hiddenUrl.value = '[[PENDING]]'; // temporary marker
+                const formData = new FormData();
+                formData.append('files', file);
+                const token = sessionStorage.getItem('token');
+                const res = await fetch('/api/v1/admin/tours/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+                if (!res.ok) throw new Error('Upload th&#7845;t b&#7841;i');
+                const resData = await res.json();
+                // Response: { code, message, data: ["url"] }
+                if (resData.code === 200 && resData.data && resData.data.length > 0) {
+                    hiddenUrl.value = resData.data[0];
+                    filenameEl.textContent = file.name;
+                    actions.style.display = 'flex';
+                } else {
+                    throw new Error('Response l&#7895;i');
+                }
+            } catch (err) {
+                console.error('Itinerary image upload error:', err);
+                alert('Upload &#7843;nh th&#7845;t b&#7841;i: ' + err.message);
+                previewImg.style.display = 'none';
+                placeholder.style.display = 'flex';
+                hiddenUrl.value = '';
+                e.target.value = '';
+            } finally {
+                previewBox.style.opacity = '1';
+            }
+        });
+
+        /**
+         * Collect itinerary data. Reads imageUrl from the hidden field
+         * (already uploaded by the change listener above).
+         */
+        async function getItineraryDataAsync() {
             const rows = document.querySelectorAll('.itinerary-row');
             const data = [];
-            rows.forEach(row => {
+            for (const row of rows) {
+                const hiddenUrl = row.querySelector('.itinerary-image-url-hidden');
+                const imageUrl = (hiddenUrl && hiddenUrl.value !== '[[PENDING]]')
+                    ? (hiddenUrl.value.trim() || null)
+                    : null;
                 data.push({
                     dayNumber: parseInt(row.querySelector('.i-day').value) || 1,
                     title: row.querySelector('.i-title').value.trim(),
                     description: row.querySelector('.i-desc').value.trim(),
-                    transportation: row.querySelector('.i-transport').value.trim() || null,
-                    meals: row.querySelector('.i-meals').value.trim() || null,
-                    accommodation: row.querySelector('.i-accommodation').value.trim() || null,
-                    highlights: row.querySelector('.i-highlights').value.trim() || null,
-                    imageUrl: row.querySelector('.i-img').value.trim() || null
+                    transportation: row.querySelector('.i-transport')?.value.trim() || null,
+                    meals: row.querySelector('.i-meals')?.value.trim() || null,
+                    accommodation: row.querySelector('.i-accommodation')?.value.trim() || null,
+                    highlights: row.querySelector('.i-highlights')?.value.trim() || null,
+                    imageUrl: imageUrl
                 });
-            });
+            }
             return data.sort((a, b) => a.dayNumber - b.dayNumber);
         }
 

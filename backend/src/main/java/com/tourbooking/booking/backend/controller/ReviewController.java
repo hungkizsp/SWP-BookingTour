@@ -76,12 +76,13 @@ public class ReviewController {
                 .build();
     }
 
-    // @DeleteMapping("/{id}")
-    // public ApiResponse<Void> deleteReview(@PathVariable Long id) {
-    //     reviewService.deleteReview(id);
-    //     return ApiResponse.<Void>builder()
-    //             .code(HttpStatus.OK.value())
-    //             .message("Review deleted successfully")
-    //             .build();
-    // }
+    @DeleteMapping("/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ApiResponse<Void> deleteReview(@PathVariable Long id) {
+        reviewService.deleteReview(id);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Review deleted successfully")
+                .build();
+    }
 }
