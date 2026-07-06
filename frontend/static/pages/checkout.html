@@ -393,6 +393,18 @@
               </div>
               <div id="voucherMsg" style="font-size: 0.8rem; margin-top: 6px; font-weight: 600;"></div>
             </div>
+            
+            <div class="form-group" style="grid-column: span 2; display: none;" id="loyaltySection">
+              <label>🎁 Đổi điểm thưởng</label>
+              <div style="font-size: 0.85rem; color: var(--text-soft); margin-bottom: 8px;" id="loyaltyInfo">
+                Bạn có <strong id="loyaltyTotalPoints">0</strong> điểm (= <strong id="loyaltyTotalValue">0</strong>đ).
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <input type="number" id="loyaltyPointsInput" placeholder="Số điểm muốn dùng..." min="0" style="flex: 1;">
+                <button class="btn btn-secondary" id="applyLoyaltyBtn" style="white-space: nowrap; height: 50px;">Đổi điểm</button>
+              </div>
+              <div id="loyaltyMsg" style="font-size: 0.8rem; margin-top: 6px; font-weight: 600;"></div>
+            </div>
           </div>
         </div>
 
@@ -474,6 +486,10 @@
           <div class="summary-item" id="discountItem" style="display: none; color: #ffeb3b;">
             <span>Giảm giá (<span id="summaryVoucherCode">...</span>):</span>
             <strong id="summaryDiscountAmount">0</strong>
+          </div>
+          <div class="summary-item" id="loyaltyDiscountItem" style="display: none; color: #ffeb3b;">
+            <span>Đổi điểm (<span id="summaryLoyaltyPoints">0</span> điểm):</span>
+            <strong id="summaryLoyaltyDiscountAmount">0</strong>
           </div>
 
           <div class="summary-total">

@@ -56,4 +56,5 @@ public class BookingRequest {
     private BigDecimal totalPrice;
     private String discountCode;
     private BookingStatus status;
+    private Integer pointsToRedeem;
 }

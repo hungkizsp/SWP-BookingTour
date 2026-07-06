@@ -42,4 +42,11 @@ public class Discount extends Base {
 
     @Column(name = "MinimumBookingAmount", precision = 10, scale = 2)
     private BigDecimal minimumBookingAmount;
+
+    @Column(name = "MaxDiscountAmount", precision = 10, scale = 2)
+    private BigDecimal maxDiscountAmount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ApplicableTourID")
+    private Tour applicableTour;
 }

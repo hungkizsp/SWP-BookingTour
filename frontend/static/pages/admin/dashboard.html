@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -15,7 +15,7 @@
             font-family: 'Inter', sans-serif;
         }
 
-        /* ── Stats Grid ── */
+        /* â”€â”€ Stats Grid â”€â”€ */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -185,7 +185,7 @@
             }
         }
 
-        /* ── Dashboard Sections ── */
+        /* â”€â”€ Dashboard Sections â”€â”€ */
         .dashboard-row {
             display: grid;
             grid-template-columns: 2fr 1fr;
@@ -367,7 +367,7 @@
             font-size: 1.6rem;
         }
 
-        /* ── Operational Alerts ── */
+        /* â”€â”€ Operational Alerts â”€â”€ */
         .ops-metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -526,6 +526,7 @@
                 <a href="./manageNewsletter.html" class="nav-item"> Newsletters</a>
                 <a href="./financialReport.html" class="nav-item"> Financial Report</a>
                 <a href="./manageDiscounts.html" class="nav-item"> Manage Discount</a>
+                <a href="./manageVouchers.html" class="nav-item"> Vouchers</a>
             </nav>
         </aside>
 
@@ -533,26 +534,26 @@
             <header>
                 <div>
                     <h1>Dashboard Overview</h1>
-                    <div class="last-updated" id="lastUpdated">Đang tải dữ liệu...</div>
+                    <div class="last-updated" id="lastUpdated">Äang táº£i dá»¯ liá»‡u...</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:1rem;">
                     <button class="btn-refresh" id="refreshBtn" onclick="refreshStats()">
-                        <span class="icon">🔄</span> Làm mới
+                        <span class="icon">ðŸ”„</span> LÃ m má»›i
                     </button>
                     <span id="userInfo" style="font-weight:600; font-size:0.9rem;"></span>
-                    <button id="logoutBtn" class="btn btn-secondary">Đăng xuất</button>
+                    <button id="logoutBtn" class="btn btn-secondary">ÄÄƒng xuáº¥t</button>
                 </div>
             </header>
 
             <div id="errorMessage" class="error-message" style="display:none;"></div>
 
-            <!-- ── Stats Cards ── -->
+            <!-- â”€â”€ Stats Cards â”€â”€ -->
             <div class="stats-grid">
                 <!-- Total Users -->
                 <div class="stat-card blue" id="card-total-users">
-                    <div class="stat-icon blue">👥</div>
+                    <div class="stat-icon blue">ðŸ‘¥</div>
                     <div class="stat-body">
-                        <div class="stat-label">Tổng người dùng</div>
+                        <div class="stat-label">Tá»•ng ngÆ°á»i dÃ¹ng</div>
                         <div class="stat-value" id="totalUsers">
                             <span class="skeleton skeleton-val"></span>
                         </div>
@@ -566,7 +567,7 @@
                 <div class="stat-card green" id="card-online-users">
                     <div class="stat-icon green"></div>
                     <div class="stat-body">
-                        <div class="stat-label">Đang trực tuyến</div>
+                        <div class="stat-label">Äang trá»±c tuyáº¿n</div>
                         <div class="stat-value" id="onlineUsers">
                             <span class="skeleton skeleton-val"></span>
                         </div>
@@ -580,7 +581,7 @@
                 <div class="stat-card purple" id="card-revenue">
                     <div class="stat-icon purple"></div>
                     <div class="stat-body">
-                        <div class="stat-label">Doanh thu tháng này</div>
+                        <div class="stat-label">Doanh thu thÃ¡ng nÃ y</div>
                         <div class="stat-value" id="totalRevenue">
                             <span class="skeleton skeleton-val"></span>
                         </div>
@@ -594,7 +595,7 @@
                 <div class="stat-card orange" id="card-bookings">
                     <div class="stat-icon orange"></div>
                     <div class="stat-body">
-                        <div class="stat-label">Booking đang hoạt động</div>
+                        <div class="stat-label">Booking Ä‘ang hoáº¡t Ä‘á»™ng</div>
                         <div class="stat-value" id="activeBookings">
                             <span class="skeleton skeleton-val"></span>
                         </div>
@@ -605,7 +606,7 @@
                 </div>
             </div>
 
-            <!-- ── Dashboard Row ── -->
+            <!-- â”€â”€ Dashboard Row â”€â”€ -->
             <div class="dashboard-row">
                 <!-- Revenue snapshot -->
                 <div class="panel">
@@ -615,7 +616,7 @@
                     </div>
                     <div class="revenue-bar-container" id="revenueSnapshot">
                         <div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:1rem 0;">
-                            Đang tải...
+                            Äang táº£i...
                         </div>
                     </div>
                 </div>
@@ -623,40 +624,40 @@
                 <!-- Quick links -->
                 <div class="panel">
                     <div class="panel-header">
-                        <span class="panel-title">⚡ Truy cập nhanh</span>
+                        <span class="panel-title">âš¡ Truy cáº­p nhanh</span>
                     </div>
                     <div class="quick-links">
                         <a href="./manageTours.html" class="quick-link">
-                            <span class="link-icon"></span> Quản lý Tours
-                            <span class="link-arrow">›</span>
+                            <span class="link-icon"></span> Quáº£n lÃ½ Tours
+                            <span class="link-arrow">â€º</span>
                         </a>
                         <a href="./manageUsers.html" class="quick-link">
-                            <span class="link-icon"></span> Quản lý Users
-                            <span class="link-arrow">›</span>
+                            <span class="link-icon"></span> Quáº£n lÃ½ Users
+                            <span class="link-arrow">â€º</span>
                         </a>
                         <a href="./manageDiscounts.html" class="quick-link">
-                            <span class="link-icon"></span> Quản lý Giảm giá
-                            <span class="link-arrow">›</span>
+                            <span class="link-icon"></span> Quáº£n lÃ½ Giáº£m giÃ¡
+                            <span class="link-arrow">â€º</span>
                         </a>
                         <a href="./manageReview.html" class="quick-link">
-                            <span class="link-icon"></span> Xem Đánh giá
-                            <span class="link-arrow">›</span>
+                            <span class="link-icon"></span> Xem ÄÃ¡nh giÃ¡
+                            <span class="link-arrow">â€º</span>
                         </a>
                         <a href="./financialReport.html" class="quick-link">
-                            <span class="link-icon"></span> Báo cáo tài chính
-                            <span class="link-arrow">›</span>
+                            <span class="link-icon"></span> BÃ¡o cÃ¡o tÃ i chÃ­nh
+                            <span class="link-arrow">â€º</span>
                         </a>
                     </div>
                 </div>
             </div>
-            <!-- ── Operational Readiness Section ── -->
+            <!-- â”€â”€ Operational Readiness Section â”€â”€ -->
             <div style="margin-bottom:1rem;">
                 <div class="ops-section-header">
                     <span class="panel-title" style="font-size:1rem;">
-                        <span class="live-dot"></span>🚨 Operational Readiness Center
+                        <span class="live-dot"></span>ðŸš¨ Operational Readiness Center
                     </span>
                     <button class="btn-refresh" id="opsRefreshBtn" onclick="loadOperationalData()">
-                        <span class="icon">🔄</span> Làm mới
+                        <span class="icon">ðŸ”„</span> LÃ m má»›i
                     </button>
                 </div>
 
@@ -664,30 +665,30 @@
                 <div class="ops-metrics-grid" id="opsMetricsGrid">
                     <div class="ops-metric-card amber">
                         <div class="ops-metric-val" id="opsOpenNoGuide"><span class="skeleton skeleton-val"></span></div>
-                        <div class="ops-metric-label">⚠️ Schedules No Guide</div>
+                        <div class="ops-metric-label">âš ï¸ Schedules No Guide</div>
                     </div>
                     <div class="ops-metric-card red">
                         <div class="ops-metric-val" id="opsPendingGuide"><span class="skeleton skeleton-val"></span></div>
-                        <div class="ops-metric-label">🔴 PENDING_GUIDE</div>
+                        <div class="ops-metric-label">ðŸ”´ PENDING_GUIDE</div>
                     </div>
                     <div class="ops-metric-card purple">
                         <div class="ops-metric-val" id="opsCancelledOp"><span class="skeleton skeleton-val"></span></div>
-                        <div class="ops-metric-label">🚫 Cancelled by Operator</div>
+                        <div class="ops-metric-label">ðŸš« Cancelled by Operator</div>
                     </div>
                     <div class="ops-metric-card blue">
                         <div class="ops-metric-val" id="opsAffected"><span class="skeleton skeleton-val"></span></div>
-                        <div class="ops-metric-label">👥 Affected Customers</div>
+                        <div class="ops-metric-label">ðŸ‘¥ Affected Customers</div>
                     </div>
                 </div>
 
                 <!-- Alert Cards -->
                 <div class="panel">
                     <div class="panel-header">
-                        <span class="panel-title">🔔 Live Alert Queue</span>
-                        <span class="panel-badge" id="opsAlertCount">—</span>
+                        <span class="panel-title">ðŸ”” Live Alert Queue</span>
+                        <span class="panel-badge" id="opsAlertCount">â€”</span>
                     </div>
                     <div id="opsAlertList">
-                        <div class="empty-alerts">Đang tải cảnh báo...</div>
+                        <div class="empty-alerts">Äang táº£i cáº£nh bÃ¡o...</div>
                     </div>
                 </div>
             </div>
@@ -697,7 +698,7 @@
     </div>
 
     <script>
-        // ── Helpers ──────────────────────────────────────────────
+        // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         function showError(message) {
             const el = document.getElementById('errorMessage');
             el.textContent = message;
@@ -721,7 +722,7 @@
             return new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
-        // ── Auth guard ──────────────────────────────────────────
+        // â”€â”€ Auth guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         try {
             const userStr = sessionStorage.getItem('user');
             if (!userStr) { window.location.href = '/pages/auth/login.html'; throw new Error(); }
@@ -732,15 +733,15 @@
             setTimeout(() => window.location.href = '/pages/auth/login.html', 1500);
         }
 
-        // ── Month label ─────────────────────────────────────────
+        // â”€â”€ Month label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const now = new Date();
-        const monthNames = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6',
-            'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+        const monthNames = ['ThÃ¡ng 1', 'ThÃ¡ng 2', 'ThÃ¡ng 3', 'ThÃ¡ng 4', 'ThÃ¡ng 5', 'ThÃ¡ng 6',
+            'ThÃ¡ng 7', 'ThÃ¡ng 8', 'ThÃ¡ng 9', 'ThÃ¡ng 10', 'ThÃ¡ng 11', 'ThÃ¡ng 12'];
         document.getElementById('currentMonthLabel').textContent =
             monthNames[now.getMonth()] + ' ' + now.getFullYear();
 
         function handleSessionExpired() {
-            const msg = 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại!';
+            const msg = 'PhiÃªn Ä‘Äƒng nháº­p háº¿t háº¡n, vui lÃ²ng Ä‘Äƒng nháº­p láº¡i!';
             if (typeof showToast === 'function') showToast(msg, 'error');
             else showError(msg);
             sessionStorage.removeItem('token');
@@ -753,7 +754,7 @@
                 && (result.reason?.status === 401 || result.reason?.status === 403);
         }
 
-        // ── Load Stats ──────────────────────────────────────────
+        // â”€â”€ Load Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         async function loadStats() {
             const btn = document.getElementById('refreshBtn');
             btn.classList.add('spinning');
@@ -777,73 +778,73 @@
                     return;
                 }
 
-                // ── Total + Online Users
+                // â”€â”€ Total + Online Users
                 if (usersRes.status === 'fulfilled' && usersRes.value) {
                     const d = usersRes.value.data || usersRes.value;
                     const total = d.total ?? 0;
                     const online = d.online ?? 0;
 
                     document.getElementById('totalUsers').textContent = formatNumber(total);
-                    document.getElementById('totalUsersSub').innerHTML = `<span class="dot orange-dot"></span> ${online} đang hoạt động`;
+                    document.getElementById('totalUsersSub').innerHTML = `<span class="dot orange-dot"></span> ${online} Ä‘ang hoáº¡t Ä‘á»™ng`;
 
                     document.getElementById('onlineUsers').textContent = formatNumber(online);
                     const pct = total > 0 ? Math.round((online / total) * 100) : 0;
                     document.getElementById('onlineUsersSub').innerHTML =
-                        `<span class="dot green-dot"></span> ${pct}% tổng người dùng`;
+                        `<span class="dot green-dot"></span> ${pct}% tá»•ng ngÆ°á»i dÃ¹ng`;
 
                     // Revenue snapshot bars
                     renderSnapshotBars(total, online);
                 } else {
-                    document.getElementById('totalUsers').textContent = '—';
-                    document.getElementById('onlineUsers').textContent = '—';
-                    document.getElementById('totalUsersSub').textContent = 'Không thể tải';
-                    document.getElementById('onlineUsersSub').textContent = 'Không thể tải';
+                    document.getElementById('totalUsers').textContent = 'â€”';
+                    document.getElementById('onlineUsers').textContent = 'â€”';
+                    document.getElementById('totalUsersSub').textContent = 'KhÃ´ng thá»ƒ táº£i';
+                    document.getElementById('onlineUsersSub').textContent = 'KhÃ´ng thá»ƒ táº£i';
                     if (usersRes.status === 'rejected') {
                         console.error('users/count failed:', usersRes.reason);
-                        showError('Không tải được thống kê người dùng: ' + (usersRes.reason?.message || 'Lỗi kết nối'));
+                        showError('KhÃ´ng táº£i Ä‘Æ°á»£c thá»‘ng kÃª ngÆ°á»i dÃ¹ng: ' + (usersRes.reason?.message || 'Lá»—i káº¿t ná»‘i'));
                     }
                 }
 
-                // ── Monthly Revenue
+                // â”€â”€ Monthly Revenue
                 if (revenueRes.status === 'fulfilled' && revenueRes.value) {
                     const d = revenueRes.value.data || revenueRes.value;
                     const rev = d.revenue ?? 0;
                     document.getElementById('totalRevenue').textContent = formatCurrency(rev);
                     document.getElementById('revenueSub').innerHTML =
-                        `<span class="dot green-dot"></span> Bao gồm dữ liệu Test (Local)`;
+                        `<span class="dot green-dot"></span> Bao gá»“m dá»¯ liá»‡u Test (Local)`;
                 } else {
                     document.getElementById('totalRevenue').textContent = '$0';
-                    document.getElementById('revenueSub').textContent = 'Chưa có dữ liệu';
+                    document.getElementById('revenueSub').textContent = 'ChÆ°a cÃ³ dá»¯ liá»‡u';
                     if (revenueRes.status === 'rejected') {
                         console.error('revenue/month failed:', revenueRes.reason);
-                        showError('Không tải được doanh thu tháng: ' + (revenueRes.reason?.message || 'Lỗi kết nối'));
+                        showError('KhÃ´ng táº£i Ä‘Æ°á»£c doanh thu thÃ¡ng: ' + (revenueRes.reason?.message || 'Lá»—i káº¿t ná»‘i'));
                     }
                 }
 
-                // ── Active Bookings
+                // â”€â”€ Active Bookings
                 if (bookingsRes.status === 'fulfilled' && bookingsRes.value) {
                     const d = bookingsRes.value.data || bookingsRes.value;
                     const cnt = d.count ?? 0;
                     document.getElementById('activeBookings').textContent = formatNumber(cnt);
                     document.getElementById('bookingsSub').innerHTML =
-                        `<span class="dot orange-dot"></span> Đang chờ xác nhận hoặc xác nhận`;
+                        `<span class="dot orange-dot"></span> Äang chá» xÃ¡c nháº­n hoáº·c xÃ¡c nháº­n`;
                 } else {
                     document.getElementById('activeBookings').textContent = '0';
-                    document.getElementById('bookingsSub').textContent = 'Chưa có dữ liệu';
+                    document.getElementById('bookingsSub').textContent = 'ChÆ°a cÃ³ dá»¯ liá»‡u';
                     if (bookingsRes.status === 'rejected') {
                         console.error('bookings/active failed:', bookingsRes.reason);
-                        showError('Không tải được booking đang hoạt động: ' + (bookingsRes.reason?.message || 'Lỗi kết nối'));
+                        showError('KhÃ´ng táº£i Ä‘Æ°á»£c booking Ä‘ang hoáº¡t Ä‘á»™ng: ' + (bookingsRes.reason?.message || 'Lá»—i káº¿t ná»‘i'));
                     }
                 }
 
-                document.getElementById('lastUpdated').textContent = `Cập nhật lúc ${getNow()}`;
+                document.getElementById('lastUpdated').textContent = `Cáº­p nháº­t lÃºc ${getNow()}`;
 
             } catch (err) {
                 console.error('loadStats error:', err);
                 if (err?.status === 401 || err?.status === 403) {
                     handleSessionExpired();
                 } else {
-                    const msg = 'Không thể tải dữ liệu thống kê: ' + (err?.message || 'Vui lòng thử lại.');
+                    const msg = 'KhÃ´ng thá»ƒ táº£i dá»¯ liá»‡u thá»‘ng kÃª: ' + (err?.message || 'Vui lÃ²ng thá»­ láº¡i.');
                     showError(msg);
                     if (typeof showToast === 'function') showToast(msg, 'error');
                 }
@@ -857,9 +858,9 @@
             const maxVal = Math.max(total, 1);
 
             const items = [
-                { label: 'Tổng người dùng', value: total, pct: 100, color: '#3b82f6' },
-                { label: 'Đang trực tuyến', value: online, pct: Math.round((online / maxVal) * 100), color: '#10b981' },
-                { label: 'Ngoại tuyến', value: offline, pct: Math.round((offline / maxVal) * 100), color: '#94a3b8' },
+                { label: 'Tá»•ng ngÆ°á»i dÃ¹ng', value: total, pct: 100, color: '#3b82f6' },
+                { label: 'Äang trá»±c tuyáº¿n', value: online, pct: Math.round((online / maxVal) * 100), color: '#10b981' },
+                { label: 'Ngoáº¡i tuyáº¿n', value: offline, pct: Math.round((offline / maxVal) * 100), color: '#94a3b8' },
             ];
 
             const container = document.getElementById('revenueSnapshot');
@@ -880,10 +881,10 @@
 
         loadStats();
 
-        // ── Tự động làm mới mỗi 30 giây
+        // â”€â”€ Tá»± Ä‘á»™ng lÃ m má»›i má»—i 30 giÃ¢y
         setInterval(loadStats, 30_000);
 
-        // ── Logout
+        // â”€â”€ Logout
         document.getElementById('logoutBtn').addEventListener('click', () => {
             if (window.TB && TB.logout) {
                 TB.logout();
@@ -894,7 +895,7 @@
             }
         });
 
-        // ── Operational Readiness Center ─────────────────────────
+        // â”€â”€ Operational Readiness Center â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         async function loadOperationalData() {
             const btn = document.getElementById('opsRefreshBtn');
             if (btn) btn.classList.add('spinning');
@@ -911,13 +912,13 @@
                 // Metrics
                 if (metricsRes.status === 'fulfilled' && metricsRes.value) {
                     const m = metricsRes.value.data || metricsRes.value;
-                    document.getElementById('opsOpenNoGuide').textContent = m.openSchedulesWithNoGuide ?? '—';
-                    document.getElementById('opsPendingGuide').textContent = m.pendingGuideSchedules ?? '—';
-                    document.getElementById('opsCancelledOp').textContent = m.cancelledByOperatorSchedules ?? '—';
-                    document.getElementById('opsAffected').textContent = m.affectedCustomers ?? '—';
+                    document.getElementById('opsOpenNoGuide').textContent = m.openSchedulesWithNoGuide ?? 'â€”';
+                    document.getElementById('opsPendingGuide').textContent = m.pendingGuideSchedules ?? 'â€”';
+                    document.getElementById('opsCancelledOp').textContent = m.cancelledByOperatorSchedules ?? 'â€”';
+                    document.getElementById('opsAffected').textContent = m.affectedCustomers ?? 'â€”';
                 } else {
                     ['opsOpenNoGuide','opsPendingGuide','opsCancelledOp','opsAffected']
-                        .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
+                        .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = 'â€”'; });
                 }
 
                 // Alerts
@@ -928,7 +929,7 @@
                     renderOpsAlerts(alerts);
                 } else {
                     document.getElementById('opsAlertList').innerHTML =
-                        '<div class="empty-alerts" style="color:#dc2626;">⚠️ Không tải được cảnh báo. Kiểm tra kết nối backend.</div>';
+                        '<div class="empty-alerts" style="color:#dc2626;">âš ï¸ KhÃ´ng táº£i Ä‘Æ°á»£c cáº£nh bÃ¡o. Kiá»ƒm tra káº¿t ná»‘i backend.</div>';
                 }
             } catch (err) {
                 console.error('[OPS] loadOperationalData error:', err);
@@ -940,7 +941,7 @@
         function renderOpsAlerts(alerts) {
             const container = document.getElementById('opsAlertList');
             if (!alerts || alerts.length === 0) {
-                container.innerHTML = '<div class="empty-alerts">✅ Không có cảnh báo nào. Tất cả tour đã có hướng dẫn viên!</div>';
+                container.innerHTML = '<div class="empty-alerts">âœ… KhÃ´ng cÃ³ cáº£nh bÃ¡o nÃ o. Táº¥t cáº£ tour Ä‘Ã£ cÃ³ hÆ°á»›ng dáº«n viÃªn!</div>';
                 return;
             }
 
@@ -964,14 +965,14 @@
 
                 const urgentBanner = isPendingGuide ? `
                     <div style="background:#fee2e2;border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:0.78rem;font-weight:700;color:#991b1b;">
-                        🚨 URGENT — Schedule Requires Immediate Action
+                        ðŸš¨ URGENT â€” Schedule Requires Immediate Action
                     </div>` : '';
 
                 const scheduleId = alert.scheduleId;
                 let actionArea = `
                     <div style="margin-top:10px;">
                         <button onclick="openAssignModal(${scheduleId})" class="btn-assign-guide" style="padding:6px 12px; margin:0;">
-                            👤 Assign Guide
+                            ðŸ‘¤ Assign Guide
                         </button>
                     </div>`;
                     
@@ -996,15 +997,15 @@
                     <div class="alert-card-header">
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span class="alert-badge ${badgeClass}">
-                                ${isPendingGuide ? '🔴 PENDING GUIDE' : '⚠️ ' + (alert.alertWindow || 'ALERT')}
+                                ${isPendingGuide ? 'ðŸ”´ PENDING GUIDE' : 'âš ï¸ ' + (alert.alertWindow || 'ALERT')}
                             </span>
                         </div>
-                        <span class="alert-countdown">⏱ ${countdownTxt}</span>
+                        <span class="alert-countdown">â± ${countdownTxt}</span>
                     </div>
                     <div class="alert-tour-name">${alert.tourName || 'Schedule #' + scheduleId}</div>
                     <div class="alert-meta">
                         Schedule ID: #${scheduleId} &nbsp;|&nbsp;
-                        Departure: ${alert.departureDateTime ? new Date(alert.departureDateTime).toLocaleString('vi-VN') : '—'}
+                        Departure: ${alert.departureDateTime ? new Date(alert.departureDateTime).toLocaleString('vi-VN') : 'â€”'}
                         ${alert.alertCreatedAt ? ' &nbsp;|&nbsp; Alert fired: ' + new Date(alert.alertCreatedAt).toLocaleTimeString('vi-VN') : ''}
                     </div>
                     ${actionArea}
@@ -1033,22 +1034,22 @@
                     }
                 });
             } catch (err) {
-                console.error("Lỗi lấy danh sách HDV:", err);
+                console.error("Lá»—i láº¥y danh sÃ¡ch HDV:", err);
             }
         }
 
         window.quickAssign = async function(scheduleId) {
             const el = document.getElementById('quick-assign-' + scheduleId);
-            if(!el || !el.value) { alert('Vui lòng nhập Guide ID hợp lệ.'); return; }
+            if(!el || !el.value) { alert('Vui lÃ²ng nháº­p Guide ID há»£p lá»‡.'); return; }
             try {
                 const res = await TB.apiFetch('/api/v1/staff/schedules/' + scheduleId + '/assign-guide?guideId=' + el.value, { method: 'PATCH' });
-                if (res.status === 'rejected') throw new Error(res.reason?.message || 'Lỗi phân công');
-                if (typeof showToast === 'function') showToast('Gán hướng dẫn viên thành công!', 'success');
-                else alert('Gán hướng dẫn viên thành công!');
+                if (res.status === 'rejected') throw new Error(res.reason?.message || 'Lá»—i phÃ¢n cÃ´ng');
+                if (typeof showToast === 'function') showToast('GÃ¡n hÆ°á»›ng dáº«n viÃªn thÃ nh cÃ´ng!', 'success');
+                else alert('GÃ¡n hÆ°á»›ng dáº«n viÃªn thÃ nh cÃ´ng!');
                 loadOperationalData();
             } catch (e) {
-                if (typeof showToast === 'function') showToast('Lỗi: ' + e.message, 'error');
-                else alert('Lỗi: ' + e.message);
+                if (typeof showToast === 'function') showToast('Lá»—i: ' + e.message, 'error');
+                else alert('Lá»—i: ' + e.message);
             }
         };
 
@@ -1092,7 +1093,7 @@
                     });
                 }
             } catch (e) {
-                console.error("Lỗi lấy danh sách HDV:", e);
+                console.error("Lá»—i láº¥y danh sÃ¡ch HDV:", e);
             }
         };
 
@@ -1104,18 +1105,18 @@
             if (!currentAssignScheduleId) return;
             const guideId = document.getElementById('guideSelect').value;
             if (!guideId) {
-                alert('Vui lòng chọn Hướng dẫn viên!');
+                alert('Vui lÃ²ng chá»n HÆ°á»›ng dáº«n viÃªn!');
                 return;
             }
             try {
                 const res = await TB.apiFetch('/api/v1/staff/schedules/' + currentAssignScheduleId + '/assign-guide?guideId=' + guideId, { method: 'PATCH' });
-                if (typeof showToast === 'function') showToast('Gán hướng dẫn viên thành công!', 'success');
-                else alert('Gán hướng dẫn viên thành công!');
+                if (typeof showToast === 'function') showToast('GÃ¡n hÆ°á»›ng dáº«n viÃªn thÃ nh cÃ´ng!', 'success');
+                else alert('GÃ¡n hÆ°á»›ng dáº«n viÃªn thÃ nh cÃ´ng!');
                 closeAssignModal();
                 loadOperationalData();
             } catch (e) {
-                if (typeof showToast === 'function') showToast('Lỗi: ' + e.message, 'error');
-                else alert('Lỗi: ' + e.message);
+                if (typeof showToast === 'function') showToast('Lá»—i: ' + e.message, 'error');
+                else alert('Lá»—i: ' + e.message);
             }
         };
     </script>

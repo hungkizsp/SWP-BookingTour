@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -24,6 +24,7 @@
                 <a href="./manageNewsletter.html" class="nav-item active">Newsletters</a>
                 <a href="./financialReport.html" class="nav-item">Financial Report</a>
                 <a href="./manageDiscounts.html" class="nav-item">Manage Discount</a>
+                <a href="./manageVouchers.html" class="nav-item"> Vouchers</a>
             </nav>
         </aside>
 
@@ -68,7 +69,7 @@
         async function loadSubscribers() {
             try {
                 const res = await TB.apiFetch('/api/v1/newsletters');
-                const list = res.data || res; // Dự phòng nếu API trả về thẳng mảng
+                const list = res.data || res; // Dá»± phÃ²ng náº¿u API tráº£ vá» tháº³ng máº£ng
                 
                 const table = document.getElementById('newsletterTable');
                 if (!Array.isArray(list) || list.length === 0) {

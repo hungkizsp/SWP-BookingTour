@@ -22,6 +22,8 @@ import com.tourbooking.booking.backend.model.entity.TourImage;
 import com.tourbooking.booking.backend.model.entity.TourSchedule;
 import com.tourbooking.booking.backend.repository.CategoryRepository;
 import com.tourbooking.booking.backend.repository.CityRepository;
+import com.tourbooking.booking.backend.repository.ReviewRepository;
+import com.tourbooking.booking.backend.repository.TourItineraryDayRepository;
 import com.tourbooking.booking.backend.repository.TourRepository;
 import com.tourbooking.booking.backend.service.TourService;
 
@@ -32,13 +34,19 @@ public class TourServiceImpl implements TourService {
     private final CategoryRepository categoryRepo;
     private final CityRepository cityRepository;
     private final com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo;
+    private final ReviewRepository reviewRepo;
+    private final TourItineraryDayRepository itineraryDayRepo;
 
     public TourServiceImpl(TourRepository tourRepo, CategoryRepository categoryRepo, CityRepository cityRepository,
-            com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo) {
+            com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo,
+            ReviewRepository reviewRepo,
+            TourItineraryDayRepository itineraryDayRepo) {
         this.tourRepo = tourRepo;
         this.categoryRepo = categoryRepo;
         this.cityRepository = cityRepository;
         this.tourScheduleRepo = tourScheduleRepo;
+        this.reviewRepo = reviewRepo;
+        this.itineraryDayRepo = itineraryDayRepo;
     }
 
     @Override
@@ -54,7 +62,10 @@ public class TourServiceImpl implements TourService {
     public TourDetailResponse getTourById(Long id) {
         Tour tour = tourRepo.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
-        return TourMapper.toDetailResponse(tour);
+        TourDetailResponse resp = TourMapper.toDetailResponse(tour);
+        resp.setReviewCount((int) reviewRepo.findByTourId(id).size());
+        resp.setItineraryDaysCount((int) itineraryDayRepo.findByTourIdOrderByDayNumberAsc(id).size());
+        return resp;
     }
 
     @Override
@@ -301,7 +312,43 @@ public class TourServiceImpl implements TourService {
             return List.of();
         }
         return tourRepo.findAllById(ids).stream()
-                .map(TourMapper::toDetailResponse)
+                .map(tour -> {
+                    TourDetailResponse resp = TourMapper.toDetailResponse(tour);
+                    resp.setReviewCount(reviewRepo.findByTourId(tour.getId()).size());
+                    
+                    java.util.List<com.tourbooking.booking.backend.model.entity.TourItineraryDay> days = itineraryDayRepo.findByTourIdOrderByDayNumberAsc(tour.getId());
+                    resp.setItineraryDaysCount(days.size());
+                    
+                    if (tour.getPrice() != null && tour.getDuration() != null && tour.getDuration() > 0) {
+                        resp.setPricePerDay(tour.getPrice().divide(java.math.BigDecimal.valueOf(tour.getDuration()), java.math.RoundingMode.HALF_UP));
+                    }
+                    
+                    if (!days.isEmpty()) {
+                        java.util.Set<String> mealSet = new java.util.HashSet<>();
+                        java.util.Set<String> accSet = new java.util.HashSet<>();
+                        for (com.tourbooking.booking.backend.model.entity.TourItineraryDay day : days) {
+                            if (day.getMeals() != null && !day.getMeals().isBlank()) mealSet.add(day.getMeals().trim());
+                            if (day.getAccommodation() != null && !day.getAccommodation().isBlank()) accSet.add(day.getAccommodation().trim());
+                        }
+                        resp.setMeals(mealSet.isEmpty() ? "Tự túc" : String.join(", ", mealSet));
+                        resp.setAccommodation(accSet.isEmpty() ? "Không có" : String.join(", ", accSet));
+                    } else {
+                        resp.setMeals("Đang cập nhật");
+                        resp.setAccommodation("Đang cập nhật");
+                    }
+                    
+                    int maxGroup = 0;
+                    if (tour.getSchedules() != null) {
+                        for (com.tourbooking.booking.backend.model.entity.TourSchedule ts : tour.getSchedules()) {
+                            if (ts.getMaxSlots() != null && ts.getMaxSlots() > maxGroup) {
+                                maxGroup = ts.getMaxSlots();
+                            }
+                        }
+                    }
+                    resp.setMaxGroupSize(maxGroup > 0 ? maxGroup : 30);
+                    
+                    return resp;
+                })
                 .toList();
     }
 

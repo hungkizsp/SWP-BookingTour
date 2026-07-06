@@ -77,6 +77,7 @@ public class BookingServiceImpl implements BookingService {
 
     private final com.tourbooking.booking.backend.repository.DiscountPolicyRepository discountPolicyRepository;
     private final ReviewRepository reviewRepository;
+    private final com.tourbooking.booking.backend.service.LoyaltyService loyaltyService;
 
     @Override
     @Transactional(readOnly = true)
@@ -326,16 +327,27 @@ public class BookingServiceImpl implements BookingService {
             if (discount != null && discount.getIsActive()
                     && (discount.getStartDate() == null || !LocalDateTime.now().isBefore(discount.getStartDate()))
                     && (discount.getEndDate() == null || !LocalDateTime.now().isAfter(discount.getEndDate()))
-                    && (discount.getUsageLimit() == null || discount.getCurrentUsage() < discount.getUsageLimit())) {
+                    && (discount.getUsageLimit() == null || discount.getCurrentUsage() < discount.getUsageLimit())
+                    && (discount.getApplicableTour() == null || discount.getApplicableTour().getId().equals(saved.getSchedule().getTour().getId()))) {
 
                 if (discount.getDiscountType() == DiscountType.PERCENTAGE) {
                     discountAmt = saved.getTotalPrice().multiply(discount.getValue())
                             .divide(new BigDecimal(100), 0, RoundingMode.HALF_UP);
+                    if (discount.getMaxDiscountAmount() != null && discountAmt.compareTo(discount.getMaxDiscountAmount()) > 0) {
+                        discountAmt = discount.getMaxDiscountAmount();
+                    }
                 } else {
                     discountAmt = discount.getValue();
                 }
+                
+                // Track discount ID and Code
+                saved.setDiscount(discount);
                 saved.setDiscountCode(discount.getCode());
                 applied = true;
+                
+                // Tăng usedCount sau khi áp dụng thành công
+                discount.setCurrentUsage(discount.getCurrentUsage() + 1);
+                discountRepository.save(discount);
             }
         }
 
@@ -641,13 +653,19 @@ public class BookingServiceImpl implements BookingService {
                         && request.getCurrentTotal().compareTo(discount.getMinimumBookingAmount()) < 0) {
                     message = "Đơn hàng chưa đạt giá trị tối thiểu " + discount.getMinimumBookingAmount().longValue()
                             + "đ";
+                } else if (discount.getApplicableTour() != null && request.getTourId() != null 
+                        && !discount.getApplicableTour().getId().equals(request.getTourId())) {
+                    message = "Mã giảm giá không áp dụng cho tour này";
                 } else {
                     // Valid!
                     isValid = true;
                     if (discount.getDiscountType() == DiscountType.PERCENTAGE) {
                         discountAmount = request.getCurrentTotal().multiply(discount.getValue())
                                 .divide(new BigDecimal(100), 0, RoundingMode.HALF_UP);
-                        message = "Áp dụng mã thành công (-" + discount.getValue() + "%)";
+                        if (discount.getMaxDiscountAmount() != null && discountAmount.compareTo(discount.getMaxDiscountAmount()) > 0) {
+                            discountAmount = discount.getMaxDiscountAmount();
+                        }
+                        message = "Áp dụng mã thành công (-" + discountAmount.longValue() + "đ)";
                     } else {
                         discountAmount = discount.getValue();
                         message = "Áp dụng mã thành công (-" + discountAmount.longValue() + "đ)";

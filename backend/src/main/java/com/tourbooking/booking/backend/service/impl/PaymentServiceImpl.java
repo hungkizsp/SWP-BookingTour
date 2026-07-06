@@ -123,7 +123,12 @@ public class PaymentServiceImpl implements PaymentService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        BigDecimal payAmount = request.getAmount() != null ? request.getAmount() : booking.getTotalPrice();
+        BigDecimal baseAmount = booking.getTotalPrice();
+        if (booking.getDiscountAmount() != null) baseAmount = baseAmount.subtract(booking.getDiscountAmount());
+        if (booking.getLoyaltyDiscountAmount() != null) baseAmount = baseAmount.subtract(booking.getLoyaltyDiscountAmount());
+        if (baseAmount.compareTo(BigDecimal.ZERO) < 0) baseAmount = BigDecimal.ZERO;
+        
+        BigDecimal payAmount = request.getAmount() != null ? request.getAmount() : baseAmount;
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
@@ -165,7 +170,12 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
         Payment payment = getOrCreatePayment(booking);
-        payment.setAmount(booking.getTotalPrice());
+        BigDecimal payAmount = booking.getTotalPrice();
+        if (booking.getDiscountAmount() != null) payAmount = payAmount.subtract(booking.getDiscountAmount());
+        if (booking.getLoyaltyDiscountAmount() != null) payAmount = payAmount.subtract(booking.getLoyaltyDiscountAmount());
+        if (payAmount.compareTo(BigDecimal.ZERO) < 0) payAmount = BigDecimal.ZERO;
+        
+        payment.setAmount(payAmount);
         payment.setPaymentMethod("CASH");
         payment.setTransactionCode("CASH-" + System.currentTimeMillis());
         payment.setStatus(PaymentStatus.PENDING);
@@ -195,6 +205,9 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         BigDecimal payAmount = booking.getTotalPrice();
+        if (booking.getDiscountAmount() != null) payAmount = payAmount.subtract(booking.getDiscountAmount());
+        if (booking.getLoyaltyDiscountAmount() != null) payAmount = payAmount.subtract(booking.getLoyaltyDiscountAmount());
+        if (payAmount.compareTo(BigDecimal.ZERO) < 0) payAmount = BigDecimal.ZERO;
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }

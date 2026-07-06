@@ -8,17 +8,13 @@ import com.tourbooking.booking.backend.model.entity.enums.TourStatus;
 import com.tourbooking.booking.backend.model.entity.enums.UserRole;
 import com.tourbooking.booking.backend.repository.BookingRepository;
 import com.tourbooking.booking.backend.repository.TourScheduleRepository;
-import com.tourbooking.booking.backend.repository.TourRepository;
 import com.tourbooking.booking.backend.repository.UserRepository;
-import com.tourbooking.booking.backend.service.TourScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -39,10 +35,9 @@ public class ScheduledTaskService {
 
     private final BookingRepository bookingRepository;
     private final TourScheduleRepository tourScheduleRepository;
-    private final TourScheduleService tourScheduleService;  // Task 4: for releaseAvailableSlots
+    private final TourScheduleService tourScheduleService; // Task 4: for releaseAvailableSlots
     private final UserRepository userRepository;
     private final MailService mailService;
-    private final TourRepository tourRepository;
 
     // ================================================================
     // UC46: Tự động cập nhật chỗ trống (AvailableSlots) cho TourSchedule
@@ -56,25 +51,6 @@ public class ScheduledTaskService {
             return;
 
         int updated = 0;
-        for (TourSchedule schedule : openSchedules) {
-            // Đếm số booking CONFIRMED trong schedule
-            long confirmedCount = 0;
-            if (schedule.getBookings() != null) {
-                confirmedCount = schedule.getBookings().stream()
-                        .filter(b -> b.getStatus() == BookingStatus.CONFIRMED)
-                        .mapToLong(b -> b.getOccupiedSlots() != null ? b.getOccupiedSlots() : (b.getNumberOfPeople() != null ? b.getNumberOfPeople() : 0))
-                        .sum();
-            }
-
-            // Lấy tổng slot ban đầu (giả sử được lưu; nếu < 0 thì đặt về 0)
-            // AvailableSlots hiện tại = tổng ban đầu - đã đặt CONFIRMED
-            // Để đơn giản: không cho slot âm và đánh dấu FULL nếu == 0
-            if (schedule.getAvailableSlots() != null && schedule.getAvailableSlots() <= 0) {
-                schedule.setStatus(TourStatus.SOLD_OUT);
-                tourScheduleRepository.save(schedule);
-                updated++;
-            }
-        }
 
         if (updated > 0) {
             log.info("[UC46] Cập nhật {} TourSchedule sang trạng thái SOLD_OUT.", updated);
@@ -88,23 +64,24 @@ public class ScheduledTaskService {
     @Scheduled(fixedRate = 300_000)
     @Transactional
     public void autoUpdateBookingLifecycle() {
-        LocalDateTime now = LocalDateTime.now();
         List<Booking> allBookings = bookingRepository.findAll();
-        
+
         for (Booking booking : allBookings) {
             TourSchedule schedule = booking.getSchedule();
-            if (schedule == null) continue;
-            
+            if (schedule == null)
+                continue;
+
             TourStatus scheduleStatus = schedule.getStatus();
-            if (scheduleStatus == null) continue;
-            
+            if (scheduleStatus == null)
+                continue;
+
             // CONFIRMED -> IN_PROGRESS
             if (booking.getStatus() == BookingStatus.CONFIRMED && scheduleStatus == TourStatus.IN_PROGRESS) {
                 booking.setStatus(BookingStatus.IN_PROGRESS);
                 bookingRepository.save(booking);
                 log.info("Booking #{} changed to IN_PROGRESS via Schedule Sync", booking.getId());
             }
-            
+
             // IN_PROGRESS -> COMPLETED
             if (booking.getStatus() == BookingStatus.IN_PROGRESS && scheduleStatus == TourStatus.COMPLETED) {
                 booking.setStatus(BookingStatus.COMPLETED);
@@ -134,7 +111,8 @@ public class ScheduledTaskService {
         unpaidBookings.addAll(unpaidOnlineBookings);
         unpaidBookings.addAll(unpaidCashBookings);
 
-        if (unpaidBookings.isEmpty()) return;
+        if (unpaidBookings.isEmpty())
+            return;
 
         for (Booking booking : unpaidBookings) {
             // Mark as EXPIRED (not CANCELLED — keeps the audit trail distinct)

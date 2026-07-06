@@ -84,6 +84,22 @@ public class TourMapper {
         response.setWhyChooseUs(tour.getWhyChooseUs());
         response.setExternalId(tour.getExternalId());
 
+        // Comparison metrics — reviewCount set by Service via ReviewRepository
+        response.setReviewCount(0); // default; overridden in Service
+        response.setItineraryDaysCount(tour.getItineraryDays() != null ? tour.getItineraryDays().size() : 0);
+        if (response.getSchedules() != null && !response.getSchedules().isEmpty()) {
+            TourDetailResponse.TourScheduleSummary closest = null;
+            for (TourDetailResponse.TourScheduleSummary s : response.getSchedules()) {
+                if (!Boolean.TRUE.equals(s.getIsExpired())
+                        && (closest == null || s.getStartDate().isBefore(closest.getStartDate()))) {
+                    closest = s;
+                }
+            }
+            response.setClosestScheduleSlots(closest != null ? closest.getAvailableSlots() : 0);
+        } else {
+            response.setClosestScheduleSlots(0);
+        }
+
         return response;
     }
 

@@ -119,35 +119,36 @@
 
   // ── Itinerary ─────────────────────────────────────────────────────────────
 
-  function renderItinerary(itineraryJson) {
+  async function renderItinerary(tourId) {
     const root = el('itinerary');
-    if (!itineraryJson) {
-      root.innerHTML = '<p style="padding: 20px; color: var(--text-faint);">Vui lòng liên hệ để nhận lịch trình chi tiết từ nhân viên tư vấn.</p>';
-      return;
-    }
-
     try {
-      const items = typeof itineraryJson === 'string' && itineraryJson.trim().startsWith('[')
-        ? JSON.parse(itineraryJson)
-        : itineraryJson;
-
-      if (Array.isArray(items)) {
-        root.innerHTML = items.map((item, idx) => `
-          <div class="itinerary-item ${idx === 0 ? 'active' : ''}">
-            <div class="itinerary-header" onclick="this.parentElement.classList.toggle('active')">
-              <strong>${escapeHtml(item.title || item.day || `Ngày ${idx + 1}`)}</strong>
-              <span style="font-size: 0.8rem; opacity: 0.5;">▼</span>
-            </div>
-            <div class="itinerary-content" style="padding: 20px; line-height: 1.8;">
-              ${item.content || item.description || 'Nội dung đang được cập nhật...'}
-            </div>
-          </div>
-        `).join('');
-      } else {
-        root.innerHTML = `<div class="itinerary-content" style="display:block; border:1px solid var(--border); border-radius:12px; background:white; padding:30px; line-height:2;">${itineraryJson}</div>`;
+      const res = await TB.apiFetch(`/api/v1/tours/${tourId}/itinerary`);
+      const items = res.data;
+      if (!items || items.length === 0) {
+        root.innerHTML = '<p style="padding: 20px; color: var(--text-faint);">Chưa có thông tin lịch trình chi tiết.</p>';
+        return;
       }
+      root.innerHTML = items.map((item, idx) => `
+        <div class="itinerary-item ${idx === 0 ? 'active' : ''}">
+          <div class="itinerary-header" onclick="this.parentElement.classList.toggle('active')">
+            <strong>Ngày ${item.dayNumber}: ${escapeHtml(item.title)}</strong>
+            <span style="font-size: 0.8rem; opacity: 0.5;">▼</span>
+          </div>
+          <div class="itinerary-content" style="padding: 25px; line-height: 1.8;">
+            ${item.imageUrl ? `<img src="${TB.normalizeImageUrl(item.imageUrl)}" style="width:100%; max-height:300px; object-fit:cover; border-radius:8px; margin-bottom:15px;" alt="${escapeHtml(item.title)}">` : ''}
+            <div style="margin-bottom: 15px;">
+              ${item.transportation ? `<span style="margin-right: 15px;">🚌 <strong>Di chuyển:</strong> ${escapeHtml(item.transportation)}</span>` : ''}
+              ${item.meals ? `<span style="margin-right: 15px;">🍽️ <strong>Bữa ăn:</strong> ${escapeHtml(item.meals)}</span>` : ''}
+              ${item.accommodation ? `<span style="margin-right: 15px;">🏨 <strong>Lưu trú:</strong> ${escapeHtml(item.accommodation)}</span>` : ''}
+            </div>
+            ${item.highlights ? `<div style="margin-bottom: 15px;">📍 <strong>Điểm tham quan:</strong> ${escapeHtml(item.highlights)}</div>` : ''}
+            <div style="white-space: pre-line;">${escapeHtml(item.description || 'Đang cập nhật...')}</div>
+          </div>
+        </div>
+      `).join('');
     } catch (e) {
-      root.innerHTML = `<div class="itinerary-content" style="display:block; border:1px solid var(--border); border-radius:12px; background:white; padding:30px; line-height:2;">${itineraryJson}</div>`;
+      console.error('Error fetching itinerary:', e);
+      root.innerHTML = '<p style="padding: 20px; color: var(--text-faint);">Vui lòng liên hệ để nhận lịch trình chi tiết.</p>';
     }
   }
 
@@ -387,7 +388,7 @@
     if (el('whyChooseUs')) el('whyChooseUs').textContent = t.whyChooseUs || '';
 
     renderGallery(t.imageUrls);
-    renderItinerary(t.itinerary);
+    renderItinerary(t.id);
     const visibleSchedules = (t.schedules || []).filter(s => {
       const status = String(s.status || '').toUpperCase();
       return status === 'OPEN' || status === 'IN_PROGRESS';

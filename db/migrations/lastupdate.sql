@@ -1069,3 +1069,69 @@ CREATE INDEX [idx_tcg_schedule] ON [dbo].[TourChatGroups]([ScheduleID]);
 CREATE INDEX [idx_tcgmember_user] ON [dbo].[TourChatGroupMembers]([UserID]);
 CREATE INDEX [idx_tcgm_group_sent] ON [dbo].[TourChatGroupMessages]([GroupID], [SentAt] DESC);
 GO
+
+-- ====== VOUCHERS ======
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'MaxDiscountAmount' AND Object_ID = Object_ID(N'dbo.Discounts'))
+BEGIN
+    ALTER TABLE [dbo].[Discounts] ADD [MaxDiscountAmount] DECIMAL(18,2);
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'ApplicableTourID' AND Object_ID = Object_ID(N'dbo.Discounts'))
+BEGIN
+    ALTER TABLE [dbo].[Discounts] ADD [ApplicableTourID] BIGINT;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'DiscountID' AND Object_ID = Object_ID(N'dbo.Bookings'))
+BEGIN
+    ALTER TABLE [dbo].[Bookings] ADD [DiscountID] BIGINT REFERENCES [dbo].[Discounts]([DiscountID]);
+END
+GO
+
+-- ====== LOYALTY POINTS ======
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'LoyaltyPointsUsed' AND Object_ID = Object_ID(N'dbo.Bookings'))
+BEGIN
+    ALTER TABLE [dbo].[Bookings] ADD [LoyaltyPointsUsed] INT DEFAULT 0;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'LoyaltyDiscountAmount' AND Object_ID = Object_ID(N'dbo.Bookings'))
+BEGIN
+    ALTER TABLE [dbo].[Bookings] ADD [LoyaltyDiscountAmount] DECIMAL(10,2) DEFAULT 0;
+END
+GO
+
+CREATE TABLE [dbo].[loyalty_transaction] (
+    [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+    [user_id] BIGINT NOT NULL,
+    [points] INT NOT NULL,
+    [transaction_type] NVARCHAR(10) NOT NULL,
+    [booking_id] BIGINT NULL,
+    [description] NVARCHAR(255) NULL,
+    [created_at] DATETIME2 DEFAULT GETDATE(),
+    CONSTRAINT [FK_LoyaltyTx_User] FOREIGN KEY ([user_id]) REFERENCES [dbo].[Users]([UserID]),
+    CONSTRAINT [FK_LoyaltyTx_Booking] FOREIGN KEY ([booking_id]) REFERENCES [dbo].[Bookings]([BookingID])
+);
+GO
+
+-- ====================================================================
+-- Feature 3: Tour Itinerary Day
+-- ====================================================================
+CREATE TABLE [dbo].[tour_itinerary_day] (
+    [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
+    [tour_id] BIGINT NOT NULL,
+    [day_number] INT NOT NULL,
+    [title] NVARCHAR(255) NOT NULL,
+    [description] NVARCHAR(MAX) NULL,
+    [accommodation] NVARCHAR(255) NULL,
+    [meals] NVARCHAR(100) NULL,
+    [transportation] NVARCHAR(100) NULL,
+    [highlights] NVARCHAR(MAX) NULL,
+    [image_url] NVARCHAR(500) NULL,
+    [created_at] DATETIME2 DEFAULT GETDATE(),
+    [updated_at] DATETIME2 DEFAULT GETDATE(),
+    CONSTRAINT [FK_TourItinerary_Tour] FOREIGN KEY ([tour_id]) REFERENCES [dbo].[Tours]([TourID]),
+    CONSTRAINT [UQ_TourItinerary_TourDay] UNIQUE ([tour_id], [day_number])
+);
+GO

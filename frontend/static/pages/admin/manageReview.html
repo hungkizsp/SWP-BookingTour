@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -24,6 +24,7 @@
                 <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
                 <a href="./financialReport.html" class="nav-item">Financial Report</a>
                 <a href="./manageDiscounts.html" class="nav-item">Manage Discount</a>
+                <a href="./manageVouchers.html" class="nav-item"> Vouchers</a>
             </nav>
         </aside>
 
@@ -162,10 +163,10 @@
                     html += `
                         <tr>
                             <td>${r.reviewId}</td>
-                            <td><strong>${r.userId || '—'}</strong></td>
-                            <td><span style="font-size: 0.8rem;">${r.tourId || '—'}</span><br><strong>${escapeHtml(r.tourName || '—')}</strong></td>
+                            <td><strong>${r.userId || 'â€”'}</strong></td>
+                            <td><span style="font-size: 0.8rem;">${r.tourId || 'â€”'}</span><br><strong>${escapeHtml(r.tourName || 'â€”')}</strong></td>
                             <td>${renderStars(r.rating)}</td>
-                            <td style="max-width: 300px; font-size: 0.9rem;">${escapeHtml(r.comment || '—')}</td>
+                            <td style="max-width: 300px; font-size: 0.9rem;">${escapeHtml(r.comment || 'â€”')}</td>
                             <td>${formatDate(r.createdAt)}</td>
                         </tr>
                     `;
@@ -182,7 +183,7 @@
         function renderStars(rating) {
             let stars = '';
             for (let i = 1; i <= 5; i++) {
-                stars += i <= rating ? '★' : '☆';
+                stars += i <= rating ? 'â˜…' : 'â˜†';
             }
             const colorClass = rating >= 4 ? 'success' : (rating >= 3 ? 'warning' : 'danger');
             return `<span class="badge badge-${colorClass}" style="letter-spacing: 2px;">${stars}</span>`;
@@ -242,7 +243,7 @@
         }
 
         function formatDate(dateString) {
-            if (!dateString) return '—';
+            if (!dateString) return 'â€”';
             return new Date(dateString).toLocaleDateString('vi-VN');
         }
 
@@ -258,3 +259,4 @@
 </body>
 
 </html>
+

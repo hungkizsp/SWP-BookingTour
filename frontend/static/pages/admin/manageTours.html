@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -24,6 +24,7 @@
                 <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
                 <a href="./financialReport.html" class="nav-item">Financial Report</a>
                 <a href="./manageDiscounts.html" class="nav-item">Manage Discount</a>
+                <a href="./manageVouchers.html" class="nav-item"> Vouchers</a>
             </nav>
         </aside>
 
@@ -120,9 +121,13 @@
                     placeholder="Enter tour description"></textarea>
             </div>
 
-            <div class="form-group">
-                <label>Itinerary *</label>
-                <textarea id="itinerary" class="form-control" rows="3" placeholder="Enter tour itinerary"></textarea>
+            <div class="form-group" style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Tour Itinerary (Lá»‹ch trÃ¬nh)</label>
+                <div id="itineraryContainer" style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Itinerary days will be injected here -->
+                </div>
+                <button type="button" onclick="addItineraryRow()" class="btn btn-secondary btn-sm"
+                    style="margin-top: 10px;">+ Add Day (ThÃªm ngÃ y)</button>
             </div>
 
             <div class="form-group">
@@ -170,7 +175,7 @@
                         Date</label>
                     <label style="display: flex; align-items: center; gap: 5px;"><input type="radio"
                             name="recurrenceMode" value="recurring" onchange="toggleRecurrence()"> Recurring Schedule
-                        (Lặp lại)</label>
+                        (Láº·p láº¡i)</label>
                 </div>
             </div>
 
@@ -186,7 +191,7 @@
             <div id="recurringBlock"
                 style="display: none; margin-bottom: 15px; border: 1px solid var(--border); padding: 15px; border-radius: 5px; background: var(--bg-light);">
                 <div class="form-group">
-                    <label>Days of Week (Thứ trong tuần)</label>
+                    <label>Days of Week (Thá»© trong tuáº§n)</label>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
                         <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
                                 name="daysOfWeek" value="MONDAY"> Mon</label>
@@ -206,11 +211,11 @@
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="form-group">
-                        <label>Range Start (Bắt đầu lặp) *</label>
+                        <label>Range Start (Báº¯t Ä‘áº§u láº·p) *</label>
                         <input type="date" id="bulkStartDate" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label>Range End (Kết thúc lặp) *</label>
+                        <label>Range End (Káº¿t thÃºc láº·p) *</label>
                         <input type="date" id="bulkEndDate" class="form-control">
                     </div>
                 </div>
@@ -238,7 +243,7 @@
         const API = "/api/v1/admin/tours";
         const PUBLIC_API = "/api/v1/tours";
 
-        // Kiểm tra quyền ADMIN
+        // Kiá»ƒm tra quyá»n ADMIN
         function checkAuth() {
             try {
                 const userStr = sessionStorage.getItem('user');
@@ -275,7 +280,7 @@
 
         let currentEditId = null;
 
-        // Helper: Lấy Header (bao gồm Token)
+        // Helper: Láº¥y Header (bao gá»“m Token)
         function getHeaders() {
             const token = sessionStorage.getItem('token');
             const headers = {
@@ -409,7 +414,7 @@
             document.getElementById('endLocation').value = '';
             document.getElementById('transportType').value = '';
             document.getElementById('description').value = '';
-            document.getElementById('itinerary').value = '';
+            document.getElementById('itineraryContainer').innerHTML = '';
             document.getElementById('categoryId').value = '';
 
             // Set min check for schedules row to today
@@ -437,8 +442,16 @@
                 document.getElementById('endLocation').value = t.endLocation || '';
                 document.getElementById('transportType').value = t.transportType || '';
                 document.getElementById('description').value = t.description || '';
-                document.getElementById('itinerary').value = t.itinerary || '';
                 document.getElementById('categoryId').value = t.categoryId || '';
+                
+                // Fetch itinerary
+                document.getElementById('itineraryContainer').innerHTML = '';
+                try {
+                    const itineraryRes = await TB.apiFetch(`/api/v1/tours/${id}/itinerary`);
+                    if (itineraryRes.data && itineraryRes.data.length > 0) {
+                        itineraryRes.data.forEach(day => addItineraryRow(day));
+                    }
+                } catch(e) { console.warn("Failed to load itinerary for edit"); }
 
                 document.getElementById('tourImages').value = '';
                 document.getElementById('existingImages').value = (t.imageUrls && t.imageUrls.length > 0) ? JSON.stringify(t.imageUrls) : '';
@@ -497,6 +510,73 @@
             }
         }
 
+        // Itinerary UI functions
+        let itineraryRowIndex = 0;
+        function addItineraryRow(dayData = null) {
+            const container = document.getElementById('itineraryContainer');
+            const row = document.createElement('div');
+            row.className = 'itinerary-row';
+            row.style = 'border: 1px solid var(--border); padding: 15px; border-radius: 8px; background: #f8fafc; position: relative;';
+            row.innerHTML = `
+                <button type="button" onclick="this.parentElement.remove()" style="position: absolute; right: 10px; top: 10px; background: #ef4444; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem;">X</button>
+                <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div>
+                        <label>NgÃ y thá»© *</label>
+                        <input type="number" class="form-control i-day" value="${dayData?.dayNumber || (container.children.length + 1)}" min="1" required>
+                    </div>
+                    <div>
+                        <label>TiÃªu Ä‘á» *</label>
+                        <input type="text" class="form-control i-title" value="${dayData?.title || ''}" placeholder="Vd: Äáº¿n ÄÃ  Náºµng - Nháº­n phÃ²ng" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div>
+                        <label>PhÆ°Æ¡ng tiá»‡n</label>
+                        <input type="text" class="form-control i-transport" value="${dayData?.transportation || ''}" placeholder="Vd: Xe bus">
+                    </div>
+                    <div>
+                        <label>Bá»¯a Äƒn</label>
+                        <input type="text" class="form-control i-meals" value="${dayData?.meals || ''}" placeholder="Vd: SÃ¡ng, TrÆ°a">
+                    </div>
+                    <div>
+                        <label>LÆ°u trÃº</label>
+                        <input type="text" class="form-control i-accommodation" value="${dayData?.accommodation || ''}" placeholder="Vd: KhÃ¡ch sáº¡n 4 sao">
+                    </div>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>Äiá»ƒm tham quan</label>
+                    <input type="text" class="form-control i-highlights" value="${dayData?.highlights || ''}" placeholder="Vd: BÃ  NÃ  Hills, Cáº§u VÃ ng">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>MÃ´ táº£ chi tiáº¿t *</label>
+                    <textarea class="form-control i-desc" rows="2" placeholder="Nháº­p chi tiáº¿t lá»‹ch trÃ¬nh..." required>${dayData?.description || ''}</textarea>
+                </div>
+                <div>
+                    <label>Link áº£nh (TÃ¹y chá»n)</label>
+                    <input type="text" class="form-control i-img" value="${dayData?.imageUrl || ''}" placeholder="URL áº£nh">
+                </div>
+            `;
+            container.appendChild(row);
+        }
+
+        function getItineraryData() {
+            const rows = document.querySelectorAll('.itinerary-row');
+            const data = [];
+            rows.forEach(row => {
+                data.push({
+                    dayNumber: parseInt(row.querySelector('.i-day').value) || 1,
+                    title: row.querySelector('.i-title').value.trim(),
+                    description: row.querySelector('.i-desc').value.trim(),
+                    transportation: row.querySelector('.i-transport').value.trim() || null,
+                    meals: row.querySelector('.i-meals').value.trim() || null,
+                    accommodation: row.querySelector('.i-accommodation').value.trim() || null,
+                    highlights: row.querySelector('.i-highlights').value.trim() || null,
+                    imageUrl: row.querySelector('.i-img').value.trim() || null
+                });
+            });
+            return data.sort((a, b) => a.dayNumber - b.dayNumber);
+        }
+
         // SAVE TOUR (CREATE OR UPDATE)
         async function saveTour() {
             const tourName = document.getElementById('tourName').value.trim();
@@ -506,12 +586,16 @@
             const endLocation = document.getElementById('endLocation').value.trim();
             const transportType = document.getElementById('transportType').value.trim();
             const description = document.getElementById('description').value.trim();
-            const itinerary = document.getElementById('itinerary').value.trim();
             const categoryId = document.getElementById('categoryId').value;
             const fileInput = document.getElementById('tourImages');
 
+            const itineraryData = await getItineraryDataAsync();
+            if (itineraryData.length === 0) {
+                showToast('Please add at least one itinerary day!', 'error');
+                return;
+            }
             // Validation
-            if (!tourName || isNaN(price) || price <= 0 || isNaN(duration) || duration <= 0 || !startLocation || !endLocation || !itinerary || !transportType) {
+            if (!tourName || isNaN(price) || price <= 0 || isNaN(duration) || duration <= 0 || !startLocation || !endLocation || !transportType) {
                 showToast('Please fill all required fields correctly (numbers must be > 0)', 'error');
                 return;
             }
@@ -526,7 +610,7 @@
             const nowTime = new Date().toTimeString().substring(0,5);
             for (const s of schedules) {
                 if (s.startDate === todayStr && s.departureTime && s.departureTime < nowTime) {
-                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
+                    showToast('Giá» khá»Ÿi hÃ nh khÃ´ng Ä‘Æ°á»£c nhá» hÆ¡n giá» hiá»‡n táº¡i Ä‘á»‘i vá»›i lá»‹ch trÃ¬nh hÃ´m nay!', 'error');
                     return;
                 }
             }
@@ -554,7 +638,7 @@
                     });
                     const uploadData = await uploadRes.json();
                     if (!uploadRes.ok) throw new Error(uploadData.message || 'Image upload failed');
-                    // Gắn thêm ảnh mới vào danh sách ảnh cũ (nếu có)
+                    // Gáº¯n thÃªm áº£nh má»›i vÃ o danh sÃ¡ch áº£nh cÅ© (náº¿u cÃ³)
                     finalImageUrls = finalImageUrls.concat(uploadData.data);
                 } catch (error) {
                     console.error('Upload error:', error);
@@ -566,7 +650,7 @@
             const tourData = {
                 tourName: tourName,
                 description: description || null,
-                itinerary: itinerary || null,
+                itinerary: "NEW_API", // legacy field
                 price: price,
                 duration: duration,
                 startLocation: startLocation,
@@ -581,10 +665,34 @@
             let method = currentEditId ? 'PUT' : 'POST';
 
             try {
-                await TB.apiFetch(url, {
+                const res = await TB.apiFetch(url, {
                     method: method,
                     body: JSON.stringify(tourData)
                 });
+                
+                const savedTourId = currentEditId || res.data.id;
+                
+                // Now save itinerary
+                // First delete existing itinerary if updating
+                if (currentEditId) {
+                    try {
+                        const existingRes = await TB.apiFetch(`/api/v1/tours/${savedTourId}/itinerary`);
+                        if (existingRes.data && existingRes.data.length > 0) {
+                            for (const existingDay of existingRes.data) {
+                                await TB.apiFetch(`/api/v1/admin/tours/${savedTourId}/itinerary/${existingDay.id}`, { method: 'DELETE' });
+                            }
+                        }
+                    } catch (e) { console.error("Error clearing old itinerary", e); }
+                }
+                
+                // Then POST new itinerary days
+                for (const day of itineraryData) {
+                    await TB.apiFetch(`/api/v1/admin/tours/${savedTourId}/itinerary`, {
+                        method: 'POST',
+                        body: JSON.stringify(day)
+                    });
+                }
+
                 closeModal();
                 loadTours();
                 showToast(currentEditId ? 'Tour updated successfully!' : 'Tour created successfully!', 'success');
@@ -637,15 +745,15 @@
                 <input type="number" class="form-control schedule-max" value="${data ? data.maxSlots || data.availableSlots : ''}" min="1" placeholder="Slots" title="Max Slots">
                 ${data && data.id 
                     ? (data.status === 'CANCELLED' || data.status === 'CANCELLED_BY_OPERATOR' 
-                        ? '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">Đã hủy</span>'
-                        : '<button type="button" onclick="cancelSchedule(' + data.id + ', this)" class="btn btn-danger btn-sm" style="padding: 2px 5px;" title="Hủy lịch trình (Hoàn tiền 100%)">Hủy</button>')
+                        ? '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">ÄÃ£ há»§y</span>'
+                        : '<button type="button" onclick="cancelSchedule(' + data.id + ', this)" class="btn btn-danger btn-sm" style="padding: 2px 5px;" title="Há»§y lá»‹ch trÃ¬nh (HoÃ n tiá»n 100%)">Há»§y</button>')
                     : '<button type="button" onclick="this.parentElement.remove()" class="btn btn-danger btn-sm" style="padding: 2px 5px;">&times;</button>'}
             `;
             container.appendChild(row);
         }
 
         async function cancelSchedule(scheduleId, btn) {
-            if (!confirm("Bạn có chắc chắn muốn hủy lịch trình này? Toàn bộ booking liên quan sẽ bị hủy và hoàn tiền 100%.")) {
+            if (!confirm("Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n há»§y lá»‹ch trÃ¬nh nÃ y? ToÃ n bá»™ booking liÃªn quan sáº½ bá»‹ há»§y vÃ  hoÃ n tiá»n 100%.")) {
                 return;
             }
             try {
@@ -653,12 +761,12 @@
                     method: 'PUT'
                 });
                 
-                showToast('Lịch trình đã được hủy và hoàn tiền thành công!', 'success');
-                btn.outerHTML = '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">Đã hủy</span>';
+                showToast('Lá»‹ch trÃ¬nh Ä‘Ã£ Ä‘Æ°á»£c há»§y vÃ  hoÃ n tiá»n thÃ nh cÃ´ng!', 'success');
+                btn.outerHTML = '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">ÄÃ£ há»§y</span>';
                 
             } catch (error) {
                 console.error('Error cancelling schedule:', error);
-                showToast(error.message || 'Lỗi khi hủy lịch trình', 'error');
+                showToast(error.message || 'Lá»—i khi há»§y lá»‹ch trÃ¬nh', 'error');
             }
         }
 
@@ -762,15 +870,15 @@
             if (mode === 'single') {
                 const startDate = document.getElementById('singleStartDate').value;
                 if (!startDate) {
-                    showToast('Vui lòng chọn ngày bắt đầu (Please select a start date).', 'error');
+                    showToast('Vui lÃ²ng chá»n ngÃ y báº¯t Ä‘áº§u (Please select a start date).', 'error');
                     return;
                 }
                 if (startDate < todayStr) {
-                    showToast('Ngày bắt đầu không được nằm trong quá khứ (Start date cannot be in the past).', 'error');
+                    showToast('NgÃ y báº¯t Ä‘áº§u khÃ´ng Ä‘Æ°á»£c náº±m trong quÃ¡ khá»© (Start date cannot be in the past).', 'error');
                     return;
                 }
                 if (startDate === todayStr && departureTime.substring(0,5) < nowTime) {
-                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
+                    showToast('Giá» khá»Ÿi hÃ nh khÃ´ng Ä‘Æ°á»£c nhá» hÆ¡n giá» hiá»‡n táº¡i Ä‘á»‘i vá»›i lá»‹ch trÃ¬nh hÃ´m nay!', 'error');
                     return;
                 }
                 payload.rangeStartDate = startDate;
@@ -779,19 +887,19 @@
                 const startDate = document.getElementById('bulkStartDate').value;
                 const endDate = document.getElementById('bulkEndDate').value;
                 if (!startDate || !endDate) {
-                    showToast('Vui lòng chọn cả ngày bắt đầu và ngày kết thúc (Please select both range start and end dates).', 'error');
+                    showToast('Vui lÃ²ng chá»n cáº£ ngÃ y báº¯t Ä‘áº§u vÃ  ngÃ y káº¿t thÃºc (Please select both range start and end dates).', 'error');
                     return;
                 }
                 if (startDate < todayStr || endDate < todayStr) {
-                    showToast('Ngày bắt đầu và kết thúc không được nằm trong quá khứ (Dates cannot be in the past).', 'error');
+                    showToast('NgÃ y báº¯t Ä‘áº§u vÃ  káº¿t thÃºc khÃ´ng Ä‘Æ°á»£c náº±m trong quÃ¡ khá»© (Dates cannot be in the past).', 'error');
                     return;
                 }
                 if (startDate > endDate) {
-                    showToast('Ngày bắt đầu không được lớn hơn ngày kết thúc (Start date cannot be after end date).', 'error');
+                    showToast('NgÃ y báº¯t Ä‘áº§u khÃ´ng Ä‘Æ°á»£c lá»›n hÆ¡n ngÃ y káº¿t thÃºc (Start date cannot be after end date).', 'error');
                     return;
                 }
                 if (startDate === todayStr && departureTime.substring(0,5) < nowTime) {
-                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
+                    showToast('Giá» khá»Ÿi hÃ nh khÃ´ng Ä‘Æ°á»£c nhá» hÆ¡n giá» hiá»‡n táº¡i Ä‘á»‘i vá»›i lá»‹ch trÃ¬nh hÃ´m nay!', 'error');
                     return;
                 }
 
@@ -800,13 +908,13 @@
                 const diffTime = Math.abs(endObj - startObj);
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 if (diffDays > 365) {
-                    showToast('Khoảng thời gian lặp lại không được vượt quá 1 năm (Duration cannot exceed 365 days).', 'error');
+                    showToast('Khoáº£ng thá»i gian láº·p láº¡i khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 1 nÄƒm (Duration cannot exceed 365 days).', 'error');
                     return;
                 }
 
                 const checkboxes = document.querySelectorAll('input[name="daysOfWeek"]:checked');
                 if (checkboxes.length === 0) {
-                    showToast('Vui lòng chọn ít nhất một thứ trong tuần để lặp lại (Please select at least one day).', 'error');
+                    showToast('Vui lÃ²ng chá»n Ã­t nháº¥t má»™t thá»© trong tuáº§n Ä‘á»ƒ láº·p láº¡i (Please select at least one day).', 'error');
                     return;
                 }
                 checkboxes.forEach(cb => payload.daysOfWeek.push(cb.value));
