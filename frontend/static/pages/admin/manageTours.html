@@ -122,12 +122,13 @@
             </div>
 
             <div class="form-group" style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">
-                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Tour Itinerary (Lá»‹ch trÃ¬nh)</label>
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Tour Itinerary (Lịch Trình Tham
+                    Quan)</label>
                 <div id="itineraryContainer" style="display: flex; flex-direction: column; gap: 15px;">
                     <!-- Itinerary days will be injected here -->
                 </div>
                 <button type="button" onclick="addItineraryRow()" class="btn btn-secondary btn-sm"
-                    style="margin-top: 10px;">+ Add Day (ThÃªm ngÃ y)</button>
+                    style="margin-top: 10px;">+ Add Day (Thêm Ngày)</button>
             </div>
 
             <div class="form-group">
@@ -443,7 +444,7 @@
                 document.getElementById('transportType').value = t.transportType || '';
                 document.getElementById('description').value = t.description || '';
                 document.getElementById('categoryId').value = t.categoryId || '';
-                
+
                 // Fetch itinerary
                 document.getElementById('itineraryContainer').innerHTML = '';
                 try {
@@ -451,7 +452,7 @@
                     if (itineraryRes.data && itineraryRes.data.length > 0) {
                         itineraryRes.data.forEach(day => addItineraryRow(day));
                     }
-                } catch(e) { console.warn("Failed to load itinerary for edit"); }
+                } catch (e) { console.warn("Failed to load itinerary for edit"); }
 
                 document.getElementById('tourImages').value = '';
                 document.getElementById('existingImages').value = (t.imageUrls && t.imageUrls.length > 0) ? JSON.stringify(t.imageUrls) : '';
@@ -521,38 +522,38 @@
                 <button type="button" onclick="this.parentElement.remove()" style="position: absolute; right: 10px; top: 10px; background: #ef4444; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem;">X</button>
                 <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; margin-bottom: 10px;">
                     <div>
-                        <label>NgÃ y thá»© *</label>
+                        <label>Ngày Tháng</label>
                         <input type="number" class="form-control i-day" value="${dayData?.dayNumber || (container.children.length + 1)}" min="1" required>
                     </div>
                     <div>
-                        <label>TiÃªu Ä‘á» *</label>
-                        <input type="text" class="form-control i-title" value="${dayData?.title || ''}" placeholder="Vd: Äáº¿n ÄÃ  Náºµng - Nháº­n phÃ²ng" required>
+                        <label>Tiêu Đề</label>
+                        <input type="text" class="form-control i-title" value="${dayData?.title || ''}" placeholder="Vd: Vui Chơi Tham Quan" required>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                     <div>
-                        <label>PhÆ°Æ¡ng tiá»‡n</label>
+                        <label>Phương Tiện</label>
                         <input type="text" class="form-control i-transport" value="${dayData?.transportation || ''}" placeholder="Vd: Xe bus">
                     </div>
                     <div>
-                        <label>Bá»¯a Äƒn</label>
-                        <input type="text" class="form-control i-meals" value="${dayData?.meals || ''}" placeholder="Vd: SÃ¡ng, TrÆ°a">
+                        <label>Bữa Ăn</label>
+                        <input type="text" class="form-control i-meals" value="${dayData?.meals || ''}" placeholder="Vd: Sáng, Trưa">
                     </div>
                     <div>
-                        <label>LÆ°u trÃº</label>
-                        <input type="text" class="form-control i-accommodation" value="${dayData?.accommodation || ''}" placeholder="Vd: KhÃ¡ch sáº¡n 4 sao">
+                        <label>Nơi Ăn</label>
+                        <input type="text" class="form-control i-accommodation" value="${dayData?.accommodation || ''}" placeholder="Vd: Khách Sạn 4 sao">
                     </div>
                 </div>
                 <div style="margin-bottom: 10px;">
-                    <label>Äiá»ƒm tham quan</label>
-                    <input type="text" class="form-control i-highlights" value="${dayData?.highlights || ''}" placeholder="Vd: BÃ  NÃ  Hills, Cáº§u VÃ ng">
+                    <label>Phương Tiện Tham Quan</label>
+                    <input type="text" class="form-control i-highlights" value="${dayData?.highlights || ''}" placeholder="Vd: Bà Nà Hills, Cầu Vàng...">
                 </div>
                 <div style="margin-bottom: 10px;">
-                    <label>MÃ´ táº£ chi tiáº¿t *</label>
-                    <textarea class="form-control i-desc" rows="2" placeholder="Nháº­p chi tiáº¿t lá»‹ch trÃ¬nh..." required>${dayData?.description || ''}</textarea>
+                    <label>Mô Tả Chi Tiết</label>
+                    <textarea class="form-control i-desc" rows="2" placeholder="Nhập Chi Tiết Lịch Trình..." required>${dayData?.description || ''}</textarea>
                 </div>
                 <div>
-                    <label>Link áº£nh (TÃ¹y chá»n)</label>
+                    <label>Tải Ảnh</label>
                     <input type="text" class="form-control i-img" value="${dayData?.imageUrl || ''}" placeholder="URL áº£nh">
                 </div>
             `;
@@ -607,7 +608,7 @@
             }
 
             const todayStr = new Date().toISOString().split('T')[0];
-            const nowTime = new Date().toTimeString().substring(0,5);
+            const nowTime = new Date().toTimeString().substring(0, 5);
             for (const s of schedules) {
                 if (s.startDate === todayStr && s.departureTime && s.departureTime < nowTime) {
                     showToast('Giá» khá»Ÿi hÃ nh khÃ´ng Ä‘Æ°á»£c nhá» hÆ¡n giá» hiá»‡n táº¡i Ä‘á»‘i vá»›i lá»‹ch trÃ¬nh hÃ´m nay!', 'error');
@@ -669,9 +670,9 @@
                     method: method,
                     body: JSON.stringify(tourData)
                 });
-                
+
                 const savedTourId = currentEditId || res.data.id;
-                
+
                 // Now save itinerary
                 // First delete existing itinerary if updating
                 if (currentEditId) {
@@ -684,7 +685,7 @@
                         }
                     } catch (e) { console.error("Error clearing old itinerary", e); }
                 }
-                
+
                 // Then POST new itinerary days
                 for (const day of itineraryData) {
                     await TB.apiFetch(`/api/v1/admin/tours/${savedTourId}/itinerary`, {
@@ -743,8 +744,8 @@
                 <input type="date" class="form-control schedule-end" value="${data ? data.endDate : ''}" min="${data ? data.startDate : minDate}" title="End Date">
                 <input type="time" class="form-control schedule-time" value="${depTime}" title="Departure Time">
                 <input type="number" class="form-control schedule-max" value="${data ? data.maxSlots || data.availableSlots : ''}" min="1" placeholder="Slots" title="Max Slots">
-                ${data && data.id 
-                    ? (data.status === 'CANCELLED' || data.status === 'CANCELLED_BY_OPERATOR' 
+                ${data && data.id
+                    ? (data.status === 'CANCELLED' || data.status === 'CANCELLED_BY_OPERATOR'
                         ? '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">ÄÃ£ há»§y</span>'
                         : '<button type="button" onclick="cancelSchedule(' + data.id + ', this)" class="btn btn-danger btn-sm" style="padding: 2px 5px;" title="Há»§y lá»‹ch trÃ¬nh (HoÃ n tiá»n 100%)">Há»§y</button>')
                     : '<button type="button" onclick="this.parentElement.remove()" class="btn btn-danger btn-sm" style="padding: 2px 5px;">&times;</button>'}
@@ -760,10 +761,10 @@
                 const response = await TB.apiFetch(`/api/v1/admin/tour-schedules/${scheduleId}/cancel`, {
                     method: 'PUT'
                 });
-                
+
                 showToast('Lá»‹ch trÃ¬nh Ä‘Ã£ Ä‘Æ°á»£c há»§y vÃ  hoÃ n tiá»n thÃ nh cÃ´ng!', 'success');
                 btn.outerHTML = '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">ÄÃ£ há»§y</span>';
-                
+
             } catch (error) {
                 console.error('Error cancelling schedule:', error);
                 showToast(error.message || 'Lá»—i khi há»§y lá»‹ch trÃ¬nh', 'error');
@@ -865,7 +866,7 @@
             };
 
             const todayStr = new Date().toISOString().split('T')[0];
-            const nowTime = new Date().toTimeString().substring(0,5);
+            const nowTime = new Date().toTimeString().substring(0, 5);
 
             if (mode === 'single') {
                 const startDate = document.getElementById('singleStartDate').value;
@@ -877,7 +878,7 @@
                     showToast('NgÃ y báº¯t Ä‘áº§u khÃ´ng Ä‘Æ°á»£c náº±m trong quÃ¡ khá»© (Start date cannot be in the past).', 'error');
                     return;
                 }
-                if (startDate === todayStr && departureTime.substring(0,5) < nowTime) {
+                if (startDate === todayStr && departureTime.substring(0, 5) < nowTime) {
                     showToast('Giá» khá»Ÿi hÃ nh khÃ´ng Ä‘Æ°á»£c nhá» hÆ¡n giá» hiá»‡n táº¡i Ä‘á»‘i vá»›i lá»‹ch trÃ¬nh hÃ´m nay!', 'error');
                     return;
                 }
@@ -898,7 +899,7 @@
                     showToast('NgÃ y báº¯t Ä‘áº§u khÃ´ng Ä‘Æ°á»£c lá»›n hÆ¡n ngÃ y káº¿t thÃºc (Start date cannot be after end date).', 'error');
                     return;
                 }
-                if (startDate === todayStr && departureTime.substring(0,5) < nowTime) {
+                if (startDate === todayStr && departureTime.substring(0, 5) < nowTime) {
                     showToast('Giá» khá»Ÿi hÃ nh khÃ´ng Ä‘Æ°á»£c nhá» hÆ¡n giá» hiá»‡n táº¡i Ä‘á»‘i vá»›i lá»‹ch trÃ¬nh hÃ´m nay!', 'error');
                     return;
                 }
