@@ -156,7 +156,7 @@
 
                 if (!reviews || reviews.length === 0) {
                     reviewTable.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">Kh&#244;ng c&#243; review n&#224;o.</td></tr>';
-                    updateStats(data);
+                    updateStats(tourId);
                     renderPagination(0, 0);
                     return;
                 }
@@ -187,7 +187,7 @@
                         </tr>`;
                 });
                 reviewTable.innerHTML = html;
-                updateStats(data);
+                updateStats(tourId);
                 renderPagination(data.totalPages, data.page);
 
             } catch (error) {
@@ -210,13 +210,44 @@
             return `<span class="badge badge-${colorClass}" style="letter-spacing:2px;font-size:1rem;">${stars} ${r}/5</span>`;
         }
 
-        function updateStats(data) {
-            document.getElementById('totalReviews').innerText = data.totalElements ?? 0;
-            // avgRating and per-star breakdown require a separate summary API
-            document.getElementById('avgRating').innerText = '&mdash;';
-            document.getElementById('rating5').innerText = '&mdash;';
-            document.getElementById('rating4').innerText = '&mdash;';
-            document.getElementById('rating3').innerText = '&mdash;';
+        async function updateStats(tourId = '') {
+            try {
+                // Fetch max 10000 reviews to calculate stats accurately across pages
+                let url = `${API}?page=0&size=10000`;
+                if (tourId) url += `&tourId=${tourId}`;
+                
+                const response = await TB.apiFetch(url);
+                const reviews = response.data?.content || [];
+                
+                document.getElementById('totalReviews').innerText = response.data?.totalElements ?? 0;
+                
+                if (reviews.length === 0) {
+                    document.getElementById('avgRating').innerText = '&mdash;';
+                    document.getElementById('rating5').innerText = '0';
+                    document.getElementById('rating4').innerText = '0';
+                    document.getElementById('rating3').innerText = '0';
+                    return;
+                }
+
+                let sum = 0;
+                let count5 = 0, count4 = 0, count3 = 0;
+                
+                reviews.forEach(r => {
+                    const rating = r.rating || 0;
+                    sum += rating;
+                    if (rating === 5) count5++;
+                    else if (rating === 4) count4++;
+                    else if (rating === 3) count3++;
+                });
+
+                const avg = sum / reviews.length;
+                document.getElementById('avgRating').innerText = avg.toFixed(1);
+                document.getElementById('rating5').innerText = count5.toString();
+                document.getElementById('rating4').innerText = count4.toString();
+                document.getElementById('rating3').innerText = count3.toString();
+            } catch (err) {
+                console.error('L&#7895;i t&#7843;i th&#7889;ng k&#234;:', err);
+            }
         }
 
         function renderPagination(totalPages, page) {

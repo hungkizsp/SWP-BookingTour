@@ -633,19 +633,19 @@
             reader.readAsDataURL(file);
 
             // Upload to server using existing tour upload endpoint
+            // Use TB.apiFetch so the URL is correctly routed to the backend (port 8080)
             try {
                 previewBox.style.opacity = '0.6';
                 hiddenUrl.value = '[[PENDING]]'; // temporary marker
                 const formData = new FormData();
                 formData.append('files', file);
-                const token = sessionStorage.getItem('token');
-                const res = await fetch('/api/v1/admin/tours/upload', {
+                // TB.apiFetch auto-prepends http://localhost:8080 when on dev port,
+                // and injects the Bearer token — no need to set headers manually.
+                const resData = await TB.apiFetch('/api/v1/admin/tours/upload', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
                     body: formData
+                    // Do NOT set Content-Type — browser sets it with multipart boundary
                 });
-                if (!res.ok) throw new Error('Upload th&#7845;t b&#7841;i');
-                const resData = await res.json();
                 // Response: { code, message, data: ["url"] }
                 if (resData.code === 200 && resData.data && resData.data.length > 0) {
                     hiddenUrl.value = resData.data[0];
