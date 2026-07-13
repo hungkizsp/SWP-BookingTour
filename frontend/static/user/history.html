@@ -344,7 +344,7 @@
       if (s === 'COMPLETED' || s === 'SUCCESS') return { cls: 'success', label: 'Đã hoàn thành' };
       if (s === 'CONFIRMED') return { cls: 'pending', label: 'Đã xác nhận' };
       if (s === 'IN_PROGRESS') return { cls: 'pending', label: 'Đang diễn ra' };
-      if (s === 'REFUND_REQUESTED') return { cls: 'pending', label: 'Đang chờ hoàn tiền' };
+      if (s === 'REFUND_REQUESTED') return { cls: 'pending', label: 'Chờ duyệt hủy/hoàn tiền' };
       return { cls: 'pending', label: 'Đang chờ' };
     }
 
@@ -357,7 +357,7 @@
 
       root.innerHTML = list.map(b => {
         const badge = statusBadge(b.status);
-        const canCancel = String(b.status || '').toUpperCase() === 'PENDING' || String(b.status || '').toUpperCase() === 'CONFIRMED';
+        const canCancel = ['PENDING', 'CONFIRMED', 'SUCCESS'].includes(String(b.status || '').toUpperCase());
         const canReview = String(b.status || '').toUpperCase() === 'COMPLETED';
 
         return `
@@ -641,18 +641,18 @@
       btn.innerText = "Đang xử lý...";
 
       try {
-        if (isPaid) {
-          // Nếu đã thanh toán -> Gửi yêu cầu hoàn tiền (Service sẽ đổi status sang REFUND_REQUESTED)
-          await TB.apiFetch(`/api/v1/bookings/${encodeURIComponent(currentBooking.id)}/refund`, {
-            method: 'POST',
-            body: JSON.stringify({ bookingId: currentBooking.id, reason: reason, refundInfo: refundInfoStr })
-          });
-          alert("Đã gửi yêu cầu hoàn tiền thành công. Admin sẽ kiểm tra và xác nhận sớm nhất.");
-        } else {
-          // Nếu chưa thanh toán (PENDING) -> Hủy trực tiếp
-          await TB.apiFetch(`/api/v1/bookings/${encodeURIComponent(currentBooking.id)}/cancel?reason=${encodeURIComponent(reason)}`, { method: 'POST' });
-          alert("Đã hủy đặt tour thành công.");
-        }
+        // Gửi yêu cầu hủy / hoàn tiền (Service sẽ đổi status sang REFUND_REQUESTED)
+        await TB.apiFetch(`/api/v1/bookings/${encodeURIComponent(currentBooking.id)}/refund`, {
+          method: 'POST',
+          body: JSON.stringify({
+            bookingId: currentBooking.id,
+            bankName: isPaid ? bank : "N/A (Chưa thanh toán)",
+            accountNumber: isPaid ? accNum : "N/A",
+            accountHolderName: isPaid ? accHolder : "N/A",
+            reason: reason
+          })
+        });
+        alert("Đã gửi yêu cầu hủy đặt tour thành công. Vui lòng đợi Admin kiểm tra và xác nhận.");
 
         closeModals();
         await loadBookings();
