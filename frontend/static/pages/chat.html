@@ -155,75 +155,7 @@
         display: none;
       }
     }
-    /* ── Tab buttons in sidebar ── */
-    .chat-tab-btn {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
-      padding: 12px 16px;
-      border-radius: 10px;
-      border: 1.5px solid var(--border);
-      background: white;
-      font-family: inherit;
-      font-size: 0.88rem;
-      font-weight: 700;
-      color: var(--text-soft);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .chat-tab-btn.active, .chat-tab-btn:hover {
-      background: var(--primary);
-      color: white;
-      border-color: var(--primary);
-    }
-    /* ── Group list ── */
-    .group-list-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 14px 18px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      cursor: pointer;
-      transition: background 0.15s;
-      background: white;
-    }
-    .group-list-item:hover { background: var(--bg-section); }
-    .group-list-item .g-name { font-weight: 800; color: var(--primary); font-size: 0.9rem; }
-    .group-list-item .g-meta { font-size: 0.78rem; color: var(--text-faint); font-weight: 600; }
-    /* ── Group bubble messages ── */
-    .gmsg-wrap {
-      display: flex;
-      flex-direction: column;
-      max-width: 75%;
-      gap: 2px;
-    }
-    .gmsg-wrap.me { align-self: flex-end; align-items: flex-end; }
-    .gmsg-wrap.other { align-self: flex-start; align-items: flex-start; }
-    .gmsg-name { font-size: 0.72rem; font-weight: 700; color: var(--text-faint); margin-bottom: 2px; }
-    .gmsg-bubble {
-      padding: 10px 16px;
-      border-radius: 16px;
-      font-size: 0.92rem;
-      font-weight: 500;
-      line-height: 1.55;
-      word-wrap: break-word;
-    }
-    .gmsg-wrap.me .gmsg-bubble   { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
-    .gmsg-wrap.other .gmsg-bubble { background: var(--bg-section); color: var(--text-main); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-    .gmsg-time { font-size: 0.68rem; color: var(--text-faint); font-weight: 600; margin-top: 2px; }
-    /* ── Closed banner ── */
-    .group-closed-banner {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #991b1b;
-      border-radius: 8px;
-      padding: 10px 18px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      text-align: center;
-    }
+    /* ── End of Chat CSS ── */
   </style>
 </head>
 
@@ -280,11 +212,7 @@
             tuyến của Dana. Hãy đặt câu hỏi về tour, lịch trình hoặc giá cả.</p>
         </div>
 
-        <!-- Tab switcher -->
-        <div style="display:flex; flex-direction:column; gap:8px; margin-top:10px;">
-          <button class="chat-tab-btn active" id="tabAiBtn" onclick="switchTab('ai')">🤖 Tư vấn AI / Nhân viên</button>
-          <button class="chat-tab-btn" id="tabGroupBtn" onclick="switchTab('group')">🚌 Nhóm tour của tôi</button>
-        </div>
+        <!-- Chat tabs removed in favor of standalone group chat -->
 
         <div style="margin-top: auto;">
           <div
@@ -334,40 +262,7 @@
         </div>
       </div>
 
-      <!-- ═══════════ PANEL: Group chat ═══════════ -->
-      <div class="chat-main" id="panelGroup" style="display:none;">
-
-        <!-- SUB-VIEW: group list -->
-        <div id="groupListView">
-          <div class="chat-header">
-            <div style="font-weight:800; color:var(--primary); font-size:1rem;">🚌 Nhóm tour của tôi</div>
-          </div>
-          <div id="groupListBox" class="chat-box" style="padding:20px; gap:12px;"></div>
-        </div>
-
-        <!-- SUB-VIEW: group messages -->
-        <div id="groupMsgView" style="display:none; flex-direction:column; height:100%;">
-          <div class="chat-header" style="gap:12px;">
-            <button id="groupBackBtn" onclick="showGroupList()"
-              style="background:none;border:none;cursor:pointer;font-size:1.2rem;color:var(--primary);">←</button>
-            <div>
-              <div id="groupMsgTitle" style="font-weight:800; color:var(--primary); font-size:0.95rem;"></div>
-              <div id="groupMsgMeta" style="font-size:0.75rem; color:var(--text-faint); font-weight:600;"></div>
-            </div>
-          </div>
-          <div id="groupClosedBanner" class="group-closed-banner" style="display:none; margin:12px 20px 0;">
-            🔒 Nhóm chat này đã đóng — chỉ xem lịch sử, không gửi được tin mới.
-          </div>
-          <div id="groupChatBox" class="chat-box"></div>
-          <div class="chat-input-area" id="groupInputArea">
-            <form id="groupForm" class="chat-form">
-              <input id="groupText" placeholder="Nhập tin nhắn..." autocomplete="off">
-              <button type="submit" class="btn btn-search btn-send" id="groupSendBtn">✈</button>
-            </form>
-          </div>
-        </div>
-
-      </div>
+      <!-- Group chat panel removed in favor of standalone group chat -->
     </div>
   </main>
 
@@ -402,7 +297,7 @@
 
   <script src="../assets/js/api.js?v=5"></script>
   <script src="../assets/js/chat.js?v=5"></script>
-  <script src="../assets/js/group-chat.js?v=1"></script>
+  <script src="../assets/js/group-chat-widget.js"></script>
   <script>
     const el = (id) => document.getElementById(id);
     const header = el('siteHeader');
@@ -445,30 +340,7 @@
       }
     }
 
-    /* ── Tab switcher (called by onclick attributes in HTML) ── */
-    function switchTab(tab) {
-      const panelAi     = el('panelAi');
-      const panelGroup  = el('panelGroup');
-      const tabAiBtn    = el('tabAiBtn');
-      const tabGroupBtn = el('tabGroupBtn');
-      if (tab === 'ai') {
-        panelAi.style.display    = '';
-        panelGroup.style.display = 'none';
-        tabAiBtn.classList.add('active');
-        tabGroupBtn.classList.remove('active');
-      } else {
-        panelAi.style.display    = 'none';
-        panelGroup.style.display = '';
-        tabAiBtn.classList.remove('active');
-        tabGroupBtn.classList.add('active');
-        if (window.groupChat) window.groupChat.loadGroups();
-      }
-    }
-
-    /* showGroupList delegates to group-chat.js */
-    function showGroupList() {
-      if (window.groupChat) window.groupChat.showGroupList();
-    }
+    /* Tab switcher removed */
   </script>
 </body>
 
