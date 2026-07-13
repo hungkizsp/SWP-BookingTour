@@ -624,9 +624,12 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
-        if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.SUCCESS) {
+        if (booking.getStatus() != BookingStatus.CONFIRMED 
+                && booking.getStatus() != BookingStatus.SUCCESS
+                && booking.getStatus() != BookingStatus.PENDING
+                && booking.getStatus() != BookingStatus.PENDING_CASH) {
             throw new AppException(ErrorCode.INVALID_REQUEST,
-                    "Chỉ có thể yêu cầu hoàn tiền với đơn ở trạng thái CONFIRMED hoặc SUCCESS.");
+                    "Chỉ có thể yêu cầu hủy với đơn ở trạng thái chưa hoàn thành.");
         }
 
         // ── Tính số tiền hoàn theo chính sách ngày khởi hành ─────────────────
@@ -659,83 +662,6 @@ public class BookingServiceImpl implements BookingService {
                 id, refundAmount, originalStatus, fullReason);
         return BookingMapper.toResponse(booking);
     }
-    
-    /**
-     * UC21: Request refund with enhanced validation and response
-     */
-    @Override
-    @Transactional
-    public com.tourbooking.booking.backend.model.dto.response.RefundRequestResponse requestRefundEnhanced(
-            Long bookingId, Long customerId, RefundRequest request) {
-        
-        log.info("[UC21] Processing refund request for booking {} by customer {}", bookingId, customerId);
-        
-        // Fetch and authorize
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
-        
-        if (!booking.getUser().getId().equals(customerId)) {
-            log.warn("[UC21] Authorization failed: Customer {} cannot request refund for booking {} owned by {}", 
-                     customerId, bookingId, booking.getUser().getId());
-            throw new AppException(ErrorCode.FORBIDDEN);
-        }
-        
-        // Business rule: Can only request refund for CANCELLED bookings
-        if (booking.getStatus() != BookingStatus.CANCELLED) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, 
-                    "Refund can only be requested for cancelled bookings. Please cancel the booking first.");
-        }
-        
-        // Check if refund already exists (prevent duplicate)
-        boolean refundExists = refundRequestRepository.findTopByBooking_IdOrderByCreatedAtDesc(bookingId).isPresent();
-        if (refundExists) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Refund request already exists for this booking");
-        }
-        
-        // Validate bank account information
-        if (request.getBankName() == null || request.getBankName().trim().isEmpty() ||
-            request.getAccountNumber() == null || request.getAccountNumber().trim().isEmpty() ||
-            request.getAccountHolderName() == null || request.getAccountHolderName().trim().isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, "Complete bank account information is required");
-        }
-        
-        // Calculate refund amount
-        BigDecimal refundAmount = calculateRefundAmount(booking);
-        
-        // Create refund request entity
-        String bankInfo = String.format("Bank: %s | Account: %s | Holder: %s",
-                request.getBankName(), request.getAccountNumber(), request.getAccountHolderName());
-        String fullReason = bankInfo + " | Reason: " + (request.getReason() != null ? request.getReason() : "No reason provided");
-        
-        com.tourbooking.booking.backend.model.entity.RefundRequest refundEntity = 
-                new com.tourbooking.booking.backend.model.entity.RefundRequest();
-        refundEntity.setBooking(booking);
-        refundEntity.setAmount(refundAmount);
-        refundEntity.setReason(fullReason);
-        refundEntity.setStatus(com.tourbooking.booking.backend.model.entity.enums.RefundStatus.PENDING);
-        refundEntity.setOriginalBookingStatus(booking.getStatus());
-        
-        com.tourbooking.booking.backend.model.entity.RefundRequest saved = refundRequestRepository.save(refundEntity);
-        
-        // Update booking status
-        booking.setStatus(BookingStatus.REFUND_REQUESTED);
-        bookingRepository.save(booking);
-        
-        LocalDateTime requestedAt = saved.getCreatedAt();
-        String refundReference = "REF-" + saved.getId();
-        
-        log.info("[UC21] Refund request created: {} | Amount: {} | Status: PENDING", refundReference, refundAmount);
-        
-        return com.tourbooking.booking.backend.model.dto.response.RefundRequestResponse.builder()
-                .success(true)
-                .message("Refund request submitted successfully")
-                .refundReference(refundReference)
-                .refundAmount(refundAmount)
-                .refundStatus("PENDING")
-                .expectedProcessingDays(7) // 5-7 business days
-                .requestedAt(requestedAt)
-                .build();
-    }
 
     /**
      * 2.2 — Tính số tiền hoàn trả theo chính sách:
@@ -750,6 +676,11 @@ public class BookingServiceImpl implements BookingService {
     private BigDecimal calculateRefundAmount(Booking booking) {
         if (booking.getTotalPrice() == null)
             return BigDecimal.ZERO;
+
+        // Nếu là đơn hàng chưa thanh toán -> Hoàn 0đ
+        if (booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.PENDING_CASH) {
+            return BigDecimal.ZERO;
+        }
 
         java.time.LocalDate startDate = (booking.getSchedule() != null)
                 ? booking.getSchedule().getStartDate()
@@ -832,6 +763,350 @@ public class BookingServiceImpl implements BookingService {
         } catch (Exception e) {
             log.error("Error generating PDF", e);
             throw new RuntimeException("Could not generate invoice PDF", e);
+        }
+    }
+    
+    /**
+     * UC22: Generate invoice PDF with validation and authorization
+     */
+    @Override
+    public byte[] generateInvoice(Long bookingId, Long customerId) {
+        log.info("[UC22] Generating invoice for booking {} requested by customer {}", bookingId, customerId);
+        
+        // Fetch booking
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        
+        // Authorization check
+        if (!booking.getUser().getId().equals(customerId)) {
+            log.warn("[UC22] Authorization failed: Customer {} cannot download invoice for booking {} owned by {}", 
+                     customerId, bookingId, booking.getUser().getId());
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
+        // Business rule: Can only download invoice for CONFIRMED or COMPLETED bookings
+        if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.COMPLETED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, 
+                    "Invoice is only available for confirmed or completed bookings. Current status: " + booking.getStatus());
+        }
+        
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            doc.addPage(page);
+            
+            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+                // Page limits: width = 595, height = 842
+                float leftMargin = 50;
+                float rightMargin = 545;
+                float contentWidth = rightMargin - leftMargin; // 495
+                
+                // 1. HEADER BANNER (Slate 900 Background)
+                cs.setNonStrokingColor(new java.awt.Color(15, 23, 42)); // #0F172A
+                cs.addRect(0, 720, 595, 122);
+                cs.fill();
+                
+                // Header Text
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+                cs.setNonStrokingColor(java.awt.Color.WHITE);
+                cs.newLineAtOffset(leftMargin, 785);
+                cs.showText("DANA DIGITAL");
+                cs.endText();
+                
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
+                cs.setNonStrokingColor(new java.awt.Color(148, 163, 184)); // White-blue slate
+                cs.newLineAtOffset(leftMargin, 770);
+                cs.showText("PREMIUM TOUR BOOKING PLATFORM");
+                cs.endText();
+                
+                // Header "INVOICE" Title
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 22);
+                cs.setNonStrokingColor(java.awt.Color.WHITE);
+                cs.newLineAtOffset(rightMargin - 110, 775);
+                cs.showText("INVOICE");
+                cs.endText();
+                
+                // 2. METADATA SECTION (y = 660 to 700)
+                float yMeta = 690;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10);
+                cs.setNonStrokingColor(new java.awt.Color(71, 85, 105)); // Slate 600
+                cs.newLineAtOffset(leftMargin, yMeta);
+                cs.showText("Invoice Ref:");
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
+                cs.setNonStrokingColor(new java.awt.Color(15, 23, 42));
+                cs.newLineAtOffset(70, 0);
+                cs.showText("INV-BK-" + booking.getId());
+                cs.endText();
+                
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10);
+                cs.setNonStrokingColor(new java.awt.Color(71, 85, 105));
+                cs.newLineAtOffset(leftMargin, yMeta - 18);
+                cs.showText("Issue Date:");
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
+                cs.setNonStrokingColor(new java.awt.Color(15, 23, 42));
+                cs.newLineAtOffset(70, 0);
+                cs.showText(java.time.LocalDate.now().toString());
+                cs.endText();
+                
+                // Status Badge Box
+                String statusStr = booking.getStatus().name();
+                boolean isCompleted = "COMPLETED".equals(statusStr);
+                if (isCompleted) {
+                    cs.setNonStrokingColor(new java.awt.Color(220, 252, 231)); // Light Green #DCFCE7
+                } else {
+                    cs.setNonStrokingColor(new java.awt.Color(224, 242, 254)); // Light Blue #E0F2FE
+                }
+                cs.addRect(rightMargin - 110, yMeta - 15, 110, 20);
+                cs.fill();
+                
+                // Status Badge Text
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 8);
+                if (isCompleted) {
+                    cs.setNonStrokingColor(new java.awt.Color(21, 128, 61)); // Dark Green #15803D
+                    cs.newLineAtOffset(rightMargin - 85, yMeta - 8);
+                } else {
+                    cs.setNonStrokingColor(new java.awt.Color(3, 105, 161)); // Dark Blue #0369A1
+                    cs.newLineAtOffset(rightMargin - 85, yMeta - 8);
+                }
+                cs.showText(statusStr);
+                cs.endText();
+                
+                // Divider Line
+                cs.setStrokingColor(new java.awt.Color(226, 232, 240)); // Slate 200
+                cs.setLineWidth(1f);
+                cs.moveTo(leftMargin, 645);
+                cs.lineTo(rightMargin, 645);
+                cs.stroke();
+                
+                // 3. BILL TO & TOUR DETAILS GRID (y = 520 to 625)
+                float yGrid = 620;
+                
+                // Left Column: Bill To
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 9);
+                cs.setNonStrokingColor(new java.awt.Color(100, 116, 139)); // Slate 500
+                cs.newLineAtOffset(leftMargin, yGrid);
+                cs.showText("BILL TO:");
+                cs.endText();
+                
+                User customer = booking.getUser();
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 11);
+                cs.setNonStrokingColor(new java.awt.Color(15, 23, 42)); // Slate 900
+                cs.newLineAtOffset(leftMargin, yGrid - 18);
+                cs.showText(normalizeForPdf(customer.getFullName()));
+                cs.endText();
+                
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
+                cs.setNonStrokingColor(new java.awt.Color(71, 85, 105)); // Slate 600
+                cs.newLineAtOffset(leftMargin, yGrid - 32);
+                cs.showText("Email: " + customer.getEmail());
+                cs.newLineAtOffset(0, -12);
+                cs.showText("Phone: " + (customer.getPhoneNumber() != null ? customer.getPhoneNumber() : "N/A"));
+                cs.endText();
+                
+                // Right Column: Tour Details
+                float xRightCol = 300;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 9);
+                cs.setNonStrokingColor(new java.awt.Color(100, 116, 139));
+                cs.newLineAtOffset(xRightCol, yGrid);
+                cs.showText("TOUR DETAILS:");
+                cs.endText();
+                
+                TourSchedule schedule = booking.getSchedule();
+                if (schedule != null && schedule.getTour() != null) {
+                    cs.beginText();
+                    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 11);
+                    cs.setNonStrokingColor(new java.awt.Color(15, 23, 42));
+                    cs.newLineAtOffset(xRightCol, yGrid - 18);
+                    cs.showText(normalizeForPdf(schedule.getTour().getTourName()));
+                    cs.endText();
+                    
+                    cs.beginText();
+                    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
+                    cs.setNonStrokingColor(new java.awt.Color(71, 85, 105));
+                    cs.newLineAtOffset(xRightCol, yGrid - 32);
+                    cs.showText("Destination: " + normalizeForPdf(schedule.getTour().getEndLocation()));
+                    cs.newLineAtOffset(0, -12);
+                    cs.showText("Departure: " + schedule.getStartDate().toString());
+                    cs.newLineAtOffset(0, -12);
+                    cs.showText("Duration: " + schedule.getTour().getDuration() + " days");
+                    cs.endText();
+                }
+                
+                // 4. ITEM TABLE (y = 350 to 480)
+                float yTable = 490;
+                float tableHeaderHeight = 24;
+                
+                // Table Header Background
+                cs.setNonStrokingColor(new java.awt.Color(248, 250, 252)); // Slate 50
+                cs.addRect(leftMargin, yTable - tableHeaderHeight, contentWidth, tableHeaderHeight);
+                cs.fill();
+                
+                // Table Header Borders
+                cs.setStrokingColor(new java.awt.Color(226, 232, 240)); // Slate 200
+                cs.setLineWidth(1f);
+                cs.addRect(leftMargin, yTable - tableHeaderHeight, contentWidth, tableHeaderHeight);
+                cs.stroke();
+                
+                // Table Header Labels
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 9);
+                cs.setNonStrokingColor(new java.awt.Color(71, 85, 105));
+                cs.newLineAtOffset(leftMargin + 10, yTable - 16);
+                cs.showText("Item Description");
+                cs.newLineAtOffset(240, 0); // x = 300
+                cs.showText("Qty");
+                cs.newLineAtOffset(60, 0);  // x = 360
+                cs.showText("Unit Price");
+                cs.newLineAtOffset(110, 0); // x = 470
+                cs.showText("Amount");
+                cs.endText();
+                
+                // Table Row Data
+                float yRow = yTable - 50;
+                if (schedule != null && schedule.getTour() != null) {
+                    // Description
+                    cs.beginText();
+                    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 10);
+                    cs.setNonStrokingColor(new java.awt.Color(15, 23, 42));
+                    cs.newLineAtOffset(leftMargin + 10, yRow);
+                    cs.showText(normalizeForPdf(schedule.getTour().getTourName()));
+                    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
+                    cs.setNonStrokingColor(new java.awt.Color(100, 116, 139));
+                    cs.newLineAtOffset(0, -14);
+                    cs.showText("Destination: " + normalizeForPdf(schedule.getTour().getEndLocation()));
+                    cs.endText();
+                    
+                    // Calculation of unit price
+                    BigDecimal total = booking.getTotalPrice();
+                    BigDecimal discount = booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO;
+                    BigDecimal subtotal = total.add(discount);
+                    int qty = booking.getNumberOfPeople() != null ? booking.getNumberOfPeople() : 1;
+                    BigDecimal unitPrice = subtotal.divide(BigDecimal.valueOf(qty), 2, java.math.RoundingMode.HALF_UP);
+                    
+                    // Qty, Unit Price, Amount
+                    cs.beginText();
+                    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
+                    cs.setNonStrokingColor(new java.awt.Color(15, 23, 42));
+                    cs.newLineAtOffset(leftMargin + 250, yRow); // x = 300
+                    cs.showText(String.valueOf(qty));
+                    cs.newLineAtOffset(60, 0); // x = 360
+                    cs.showText(unitPrice.intValue() + " VND");
+                    cs.newLineAtOffset(110, 0); // x = 470
+                    cs.showText(subtotal.intValue() + " VND");
+                    cs.endText();
+                }
+                
+                // Row Bottom Border Line
+                cs.setStrokingColor(new java.awt.Color(241, 245, 249)); // Slate 100
+                cs.setLineWidth(1f);
+                cs.moveTo(leftMargin, yTable - 70);
+                cs.lineTo(rightMargin, yTable - 70);
+                cs.stroke();
+                
+                // 5. SUMMARY BLOCK (y = 200 to 320)
+                float ySummary = yTable - 100;
+                BigDecimal discount = booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO;
+                BigDecimal grandTotal = booking.getTotalPrice();
+                BigDecimal subtotal = grandTotal.add(discount);
+                
+                // Subtotal
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
+                cs.setNonStrokingColor(new java.awt.Color(100, 116, 139));
+                cs.newLineAtOffset(rightMargin - 180, ySummary);
+                cs.showText("Subtotal:");
+                cs.newLineAtOffset(100, 0);
+                cs.setNonStrokingColor(new java.awt.Color(15, 23, 42));
+                cs.showText(subtotal.intValue() + " VND");
+                cs.endText();
+                
+                // Discount (if any)
+                if (discount.compareTo(BigDecimal.ZERO) > 0) {
+                    ySummary -= 18;
+                    cs.beginText();
+                    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
+                    cs.setNonStrokingColor(new java.awt.Color(100, 116, 139));
+                    cs.newLineAtOffset(rightMargin - 180, ySummary);
+                    cs.showText("Discount:");
+                    cs.newLineAtOffset(100, 0);
+                    cs.setNonStrokingColor(new java.awt.Color(220, 38, 38)); // Red for discount
+                    cs.showText("-" + discount.intValue() + " VND");
+                    cs.endText();
+                }
+                
+                // Grand Total
+                ySummary -= 24;
+                // Highlight box for Grand Total
+                cs.setNonStrokingColor(new java.awt.Color(240, 249, 255)); // Sky 50 #F0F9FF
+                cs.addRect(rightMargin - 190, ySummary - 8, 190, 26);
+                cs.fill();
+                cs.setStrokingColor(new java.awt.Color(186, 230, 253)); // Sky 200
+                cs.addRect(rightMargin - 190, ySummary - 8, 190, 26);
+                cs.stroke();
+                
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                cs.setNonStrokingColor(new java.awt.Color(2, 132, 199)); // Sky 600 #0284C7
+                cs.newLineAtOffset(rightMargin - 180, ySummary);
+                cs.showText("Total Amount:");
+                cs.newLineAtOffset(100, 0);
+                cs.showText(grandTotal.intValue() + " VND");
+                cs.endText();
+                
+                // 6. TERMS & T&C (y = 120 to 180)
+                float yTerms = 160;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 9);
+                cs.setNonStrokingColor(new java.awt.Color(71, 85, 105));
+                cs.newLineAtOffset(leftMargin, yTerms);
+                cs.showText("TERMS & CONDITIONS");
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 8);
+                cs.setNonStrokingColor(new java.awt.Color(100, 116, 139));
+                cs.newLineAtOffset(0, -14);
+                cs.showText("1. This invoice is electronically generated and serves as official proof of payment.");
+                cs.newLineAtOffset(0, -10);
+                cs.showText("2. Refund policies apply according to the standard cancellation terms of DANA Digital.");
+                cs.newLineAtOffset(0, -10);
+                cs.showText("3. For disputes or support requests, please contact us within 7 days of the tour completion date.");
+                cs.endText();
+                
+                // Footer Line
+                cs.setStrokingColor(new java.awt.Color(226, 232, 240));
+                cs.moveTo(leftMargin, 90);
+                cs.lineTo(rightMargin, 90);
+                cs.stroke();
+                
+                // 7. FOOTER
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 9);
+                cs.setNonStrokingColor(new java.awt.Color(2, 132, 199));
+                cs.newLineAtOffset(leftMargin, 70);
+                cs.showText("Thank you for choosing DANA Digital! Have a wonderful trip.");
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 8);
+                cs.setNonStrokingColor(new java.awt.Color(148, 163, 184));
+                cs.newLineAtOffset(0, -12);
+                cs.showText("For any support, email: support@danadigital.com | Hotline: +84 123 456 789");
+                cs.endText();
+            }
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            doc.save(baos);
+            
+            log.info("[UC22] Invoice generated successfully for booking {}", bookingId);
+            return baos.toByteArray();
+            
+        } catch (Exception e) {
+            log.error("[UC22] Error generating PDF for booking {}", bookingId, e);
+            throw new RuntimeException("Could not generate invoice PDF: " + e.getMessage(), e);
         }
     }
 
