@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.tourbooking.booking.backend.exception.AppException;
 import com.tourbooking.booking.backend.exception.ErrorCode;
 import com.tourbooking.booking.backend.mapper.UserMapper;
-import com.tourbooking.booking.backend.model.dto.request.ChangePasswordRequest;
 import com.tourbooking.booking.backend.model.dto.request.UserRequest;
 import com.tourbooking.booking.backend.model.dto.response.UserResponse;
 import com.tourbooking.booking.backend.model.entity.Document;
@@ -132,61 +131,6 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public UserResponse getProfile(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        return UserMapper.toResponse(user);
-    }
-
-    @Override
-    @Transactional
-    public UserResponse updateProfile(String email, UserRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-
-        if (request.getFullName() == null || request.getFullName().trim().isEmpty()) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isBlank()
-                && !request.getPhoneNumber().matches("^[0-9+()\\-\\s]{8,20}$")) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-        if (request.getAddress() != null && request.getAddress().trim().length() > 255) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        user.setFullName(request.getFullName().trim());
-        user.setPhoneNumber(request.getPhoneNumber() == null ? null : request.getPhoneNumber().trim());
-        user.setAddress(request.getAddress() == null ? null : request.getAddress().trim());
-        user.setAvatarUrl(request.getAvatarUrl());
-        user.setDateOfBirth(request.getDateOfBirth());
-        user.setGender(request.getGender());
-
-        return UserMapper.toResponse(userRepository.save(user));
-    }
-
-    @Override
-    @Transactional
-    public void changePassword(String email, ChangePasswordRequest request) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
-        }
-        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-        if (request.getCurrentPassword().equals(request.getNewPassword())) {
-            throw new AppException(ErrorCode.INVALID_REQUEST);
-        }
-
-        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
-    }
-
-    @Override
     @Transactional
     public void saveVerificationToken(String email, String tokenValue) {
         Token token = new Token();
@@ -246,6 +190,20 @@ public class UserServiceImpl implements UserService {
         tokenRepository.delete(token);
 
         return true;
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Mật khẩu cũ không chính xác.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     @Override
