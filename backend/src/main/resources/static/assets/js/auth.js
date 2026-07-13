@@ -65,6 +65,9 @@
         role: document.getElementById('regRole') ? document.getElementById('regRole').value : 'CUSTOMER'
       };
       const msgEl = document.getElementById('registerMessage');
+      const submitBtn = registerForm.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+
       msgEl.style.color = '#333';
       msgEl.textContent = 'Registering...';
       try {
@@ -77,6 +80,8 @@
       } catch (err) {
         msgEl.style.color = 'red';
         msgEl.textContent = err.message || 'Registration failed';
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
       }
     });
   }

@@ -13,6 +13,7 @@ import com.tourbooking.booking.backend.repository.RefundRequestRepository;
 import com.tourbooking.booking.backend.repository.TourScheduleRepository;
 import com.tourbooking.booking.backend.repository.UserRepository;
 import com.tourbooking.booking.backend.service.StaffService;
+import com.tourbooking.booking.backend.service.UserNotificationService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,7 @@ public class StaffServiceImpl implements StaffService {
     private final TourProgressLogRepository tourProgressLogRepository;
     private final ProgressLogService progressLogService;
     private final com.tourbooking.booking.backend.service.MailService mailService;
+    private final UserNotificationService userNotificationService;
 
     @Override
     @Transactional
@@ -50,10 +52,22 @@ public class StaffServiceImpl implements StaffService {
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
-        
+
         try {
             mailService.sendBookingConfirmedEmail(booking.getUser().getEmail(), booking.getUser().getFullName(), booking.getId(), booking.getTotalPrice());
         } catch (Exception e) {}
+
+        try {
+            String tourName = booking.getSchedule() != null && booking.getSchedule().getTour() != null
+                    ? booking.getSchedule().getTour().getTourName() : "Tour";
+            userNotificationService.notify(
+                    booking.getUser().getId(),
+                    "Booking đã được xác nhận ✅",
+                    "Booking #" + booking.getId() + " của tour \"" + tourName + "\" đã được xác nhận.",
+                    "BOOKING_CONFIRMED",
+                    "/user/history.html"
+            );
+        } catch (Exception e) { log.warn("Failed to push booking-confirmed notification: {}", e.getMessage()); }
     }
 
     @Override
@@ -96,13 +110,38 @@ public class StaffServiceImpl implements StaffService {
 
         schedule.setGuide(guide);
         tourScheduleRepository.save(schedule);
-        
-        // Notify all users in this schedule
-        List<Booking> bookings = bookingRepository.findAll().stream().filter(b -> b.getSchedule() != null && b.getSchedule().getId().equals(scheduleId) && (b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.SUCCESS)).collect(Collectors.toList());
+
+        String tourName = schedule.getTour() != null ? schedule.getTour().getTourName() : "Tour";
+
+        // Notify guide about assignment
+        try {
+            userNotificationService.notify(
+                    guide.getId(),
+                    "Bạn được phân công dẫn tour 🧭",
+                    "Bạn được phân công làm hướng dẫn viên cho tour \"" + tourName + "\".",
+                    "GUIDE_ASSIGNED",
+                    "/pages/guide/dashboard.html"
+            );
+        } catch (Exception e) { log.warn("Failed to push guide-assigned notification: {}", e.getMessage()); }
+
+        // Notify confirmed customers
+        List<Booking> bookings = bookingRepository.findAll().stream()
+                .filter(b -> b.getSchedule() != null && b.getSchedule().getId().equals(scheduleId)
+                        && (b.getStatus() == BookingStatus.CONFIRMED || b.getStatus() == BookingStatus.SUCCESS))
+                .collect(Collectors.toList());
         for (Booking b : bookings) {
             try {
-                mailService.sendGuideAssignedEmail(b.getUser().getEmail(), b.getUser().getFullName(), schedule.getTour().getTourName(), guide.getFullName());
+                mailService.sendGuideAssignedEmail(b.getUser().getEmail(), b.getUser().getFullName(), tourName, guide.getFullName());
             } catch (Exception e) {}
+            try {
+                userNotificationService.notify(
+                        b.getUser().getId(),
+                        "Hướng dẫn viên đã được phân công 🧭",
+                        "Tour \"" + tourName + "\" của bạn đã có hướng dẫn viên: " + guide.getFullName() + ".",
+                        "GUIDE_ASSIGNED",
+                        "/pages/client/group-chat.html?scheduleId=" + scheduleId
+                );
+            } catch (Exception e) { log.warn("Failed to push guide-assigned customer notification: {}", e.getMessage()); }
         }
     }
 
@@ -181,10 +220,31 @@ public class StaffServiceImpl implements StaffService {
         }
 
         refundRequestRepository.save(refund);
-        
+
         try {
             mailService.sendRefundProcessedEmail(booking.getUser().getEmail(), booking.getUser().getFullName(), booking.getId(), status.name());
         } catch (Exception e) {}
+
+        try {
+            if (status == RefundStatus.APPROVED) {
+                userNotificationService.notify(
+                        booking.getUser().getId(),
+                        "Yêu cầu hoàn tiền được phê duyệt 💰",
+                        "Yêu cầu hoàn tiền cho booking #" + booking.getId() + " đã được phê duyệt.",
+                        "REFUND_APPROVED",
+                        "/user/history.html"
+                );
+            } else if (status == RefundStatus.REJECTED) {
+                userNotificationService.notify(
+                        booking.getUser().getId(),
+                        "Yêu cầu hoàn tiền bị từ chối",
+                        "Yêu cầu hoàn tiền cho booking #" + booking.getId() + " đã bị từ chối." +
+                                (staffNote != null && !staffNote.isBlank() ? " Lý do: " + staffNote : ""),
+                        "REFUND_REJECTED",
+                        "/user/history.html"
+                );
+            }
+        } catch (Exception e) { log.warn("Failed to push refund notification: {}", e.getMessage()); }
     }
 
     @Override

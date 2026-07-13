@@ -32,6 +32,10 @@ async function loadRefunds() {
         data = mockRefunds; // Fallback to stateful mock array
     }
 
+    // Latest-first Pagination logic (10 items per page)
+    data.sort((a, b) => b.id - a.id);
+    data = data.slice(0, 10);
+
     tbody.innerHTML = '';
     data.forEach(r => {
         const row = document.createElement('tr');

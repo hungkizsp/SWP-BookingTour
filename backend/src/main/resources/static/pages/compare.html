@@ -366,6 +366,7 @@
   </footer>
 
   <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/notification-bell.js"></script>
   <script src="../assets/js/compare.js"></script>
   <script>
     const el = (id) => document.getElementById(id);
@@ -384,7 +385,7 @@
         ? '<a class="btn" href="./admin/manageUsers.html" style="font-size: 0.8rem; height: 40px; min-height: 40px; border-radius: 10px;">QUẢN TRỊ</a>'
         : '';
       const userLinks = !isAdmin
-        ? `<a href="../user/bookings.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem;">TOUR ĐÃ ĐẶT</a>
+        ? `<a href="../user/history.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem;">TOUR ĐÃ ĐẶT</a>
            <a href="../user/personal-info.html" style="color: var(--primary); font-weight: 700; text-decoration: none; font-size: 0.85rem; margin-left:15px;">CÁ NHÂN</a>`
         : '';
 

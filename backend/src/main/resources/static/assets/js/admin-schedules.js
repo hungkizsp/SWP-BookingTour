@@ -16,36 +16,102 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSchedules();
 });
 
+const PAGE_SIZE = 10;
 let currentScheduleId = null;
 let allSchedules = [];
+let currentPage = 0;
 
 async function loadSchedules() {
     const tbody = document.querySelector('#schedulesTable tbody');
     try {
         const res = await TB.apiFetch('/api/v1/staff/schedules'); 
-        allSchedules = res.data || [];
-        tbody.innerHTML = '';
-        allSchedules.forEach(s => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>SD-${s.id}</td>
-                <td>${s.tourName || 'Basic Tour'}</td>
-                <td>${s.startDate} - ${s.endDate}</td>
-                <td>${s.guideId ? 'Guide #' + s.guideId : '<span style="color:#d97706">Unassigned</span>'}</td>
-                <td>${s.status}</td>
-                <td>
-                    ${s.status === 'COMPLETED'
-                        ? '<button class="action-btn" style="background: #cbd5e1; color: #64748b; cursor: not-allowed;" disabled title="Schedule completed - cannot re-assign guide">Assign</button>'
-                        : '<button class="action-btn" onclick="openAssignModal(' + s.id + ')">Assign</button>'}
-                    <button class="action-btn" style="background: #64748b" onclick="openDetailsModal(${s.id})">Details</button>
-                </td>
-            `;
-            tbody.appendChild(row);
-        });
+        let data = res.data?.content || res.data || [];
+        
+        // Latest-first sort
+        data.sort((a, b) => b.id - a.id);
+        allSchedules = data;
+        renderSchedulesPage();
     } catch (e) {
         tbody.innerHTML = `<tr><td colspan="6" style="color:red">Error: ${e.message}</td></tr>`;
     }
 }
+
+function renderSchedulesPage() {
+    const tbody = document.querySelector('#schedulesTable tbody');
+    const container = document.getElementById('pagination');
+    
+    const totalPages = Math.ceil(allSchedules.length / PAGE_SIZE) || 1;
+    if (currentPage >= totalPages) currentPage = Math.max(0, totalPages - 1);
+    
+    const start = currentPage * PAGE_SIZE;
+    const pageItems = allSchedules.slice(start, start + PAGE_SIZE);
+    
+    tbody.innerHTML = '';
+    if (pageItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6">No schedules found.</td></tr>';
+        if(container) container.innerHTML = '';
+        return;
+    }
+
+    pageItems.forEach(s => {
+        const STATUS_STYLE = {
+            OPEN:           'background:#d1fae5; color:#059669;',
+            BOOKING_CLOSED: 'background:#fef3c7; color:#d97706;',
+            SOLD_OUT:       'background:#fee2e2; color:#dc2626;',
+            IN_PROGRESS:    'background:#dbeafe; color:#2563eb;',
+            COMPLETED:      'background:#f1f5f9; color:#64748b;',
+            CANCELLED:      'background:#f3f4f6; color:#9ca3af;',
+        };
+        const statusKey = String(s.status || '').toUpperCase();
+        const statusStyle = STATUS_STYLE[statusKey] || 'background:#f3f4f6; color:#6b7280;';
+        const STATUS_LABELS = {
+            OPEN: 'Mở đặt', BOOKING_CLOSED: 'Đóng đặt', SOLD_OUT: 'Hết chỗ',
+            IN_PROGRESS: 'Đang diễn ra', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy',
+        };
+        const statusLabel = STATUS_LABELS[statusKey] || s.status;
+        const NON_ASSIGNABLE = ['COMPLETED', 'IN_PROGRESS', 'CANCELLED'];
+        const canAssign = !NON_ASSIGNABLE.includes(statusKey);
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>SD-${s.id}</td>
+            <td>${s.tourName || 'Basic Tour'}</td>
+            <td>${s.startDate} - ${s.endDate}</td>
+            <td>${s.guideId ? 'Guide #' + s.guideId : '<span style="color:#d97706">Unassigned</span>'}</td>
+            <td><span style="display:inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; ${statusStyle}">${statusLabel}</span></td>
+            <td>
+                ${canAssign
+                    ? `<button class="action-btn" onclick="openAssignModal(${s.id})">Assign</button>`
+                    : `<button class="action-btn" style="background: #cbd5e1; color: #64748b; cursor: not-allowed;" disabled title="Cannot assign: ${statusLabel}">Assign</button>`}
+                <button class="action-btn" style="background: #64748b" onclick="openDetailsModal(${s.id})">Details</button>
+                <button class="action-btn" style="background: #0f766e" onclick="window.open('/pages/client/group-chat.html?scheduleId=${s.id}&readonly=1', '_blank')">💬 Chat</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+    const container = document.getElementById('pagination');
+    if (!container) return;
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    let html = `<button class="action-btn" style="background:#cbd5e1; color:#1e293b;" ${currentPage === 0 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">Prev</button>`;
+    html += `<span style="display:flex; align-items:center; font-weight:bold; margin: 0 10px;">Page ${currentPage + 1} of ${totalPages}</span>`;
+    html += `<button class="action-btn" style="background:#cbd5e1; color:#1e293b;" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next</button>`;
+    container.innerHTML = html;
+}
+
+window.goToPage = function(page) {
+    const totalPages = Math.ceil(allSchedules.length / PAGE_SIZE);
+    if (page < 0 || page >= totalPages) return;
+    currentPage = page;
+    renderSchedulesPage();
+};
 
 window.openDetailsModal = async function(scheduleId) {
     document.getElementById('detailsTitle').innerText = `Details for SD-${scheduleId}`;
@@ -153,4 +219,31 @@ window.submitAssignment = async function() {
         alert('Mocked: Error -> ' + err.message + '. But Guide ID ' + guideId + ' assigned in UI.');
         closeModal();
     }
+};
+
+window.searchSchedule = async function() {
+    const inputId = document.getElementById('scheduleSearchId').value.trim();
+    if (!inputId) {
+        return loadSchedules();
+    }
+    
+    const tbody = document.querySelector('#schedulesTable tbody');
+    try {
+        const res = await TB.apiFetch(`/api/v1/staff/schedules/${inputId}`);
+        const schedule = res.data;
+        if (!schedule) throw new Error('Not found');
+        allSchedules = [schedule];
+        currentPage = 0;
+        renderSchedulesPage();
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Không tìm thấy lịch trình với ID này.</td></tr>`;
+        const container = document.getElementById('pagination');
+        if(container) container.innerHTML = '';
+    }
+};
+
+window.resetScheduleSearch = function() {
+    document.getElementById('scheduleSearchId').value = '';
+    currentPage = 0;
+    loadSchedules();
 };

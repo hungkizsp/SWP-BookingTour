@@ -1,32 +1,115 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src * data: blob:; connect-src 'self' http://localhost:8080 ws://localhost:8080;">
   <title>Thông Tin Cá Nhân - TourBooking</title>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
   <style>
-    .layout { display:grid; grid-template-columns: 240px 1fr; gap: 24px; align-items:start; margin-top: 20px; }
-    .sidebar-menu { display: flex; flex-direction: column; gap: 8px; }
-    .sidebar-menu a { padding: 12px 16px; border-radius: 8px; text-decoration: none; color: var(--text-base); font-weight: 600; }
-    .sidebar-menu a:hover { background: rgba(0,0,0,0.05); }
-    .sidebar-menu a.active { background: var(--primary); color: white; }
-    .info-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
-    .info-item { padding: 12px 14px; border: 1px solid rgba(0,0,0,0.08); border-radius: 10px; }
-    .info-item span { display:block; color:var(--text-faint); font-size: 0.85rem; margin-bottom:4px; }
-    .info-item strong { word-break: break-word; }
-    .kpis { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-top: 16px; }
-    .kpi { padding: 14px; border-radius: 10px; background: #f8fafc; border: 1px solid rgba(0,0,0,0.06); }
-    .kpi .v { font-size: 1.4rem; font-weight: 800; }
-    .actions { display:flex; gap:10px; flex-wrap: wrap; margin-top:16px; }
+    .layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      gap: 24px;
+      align-items: start;
+      margin-top: 20px;
+    }
+
+    .sidebar-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-menu a {
+      padding: 12px 16px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text-base);
+      font-weight: 600;
+    }
+
+    .sidebar-menu a:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .sidebar-menu a.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .info-item {
+      padding: 12px 14px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 10px;
+    }
+
+    .info-item span {
+      display: block;
+      color: var(--text-faint);
+      font-size: 0.85rem;
+      margin-bottom: 4px;
+    }
+
+    .info-item strong {
+      word-break: break-word;
+    }
+
+    .kpis {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .kpi {
+      padding: 14px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    .kpi .v {
+      font-size: 1.4rem;
+      font-weight: 800;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
     @media (max-width: 768px) {
-      .layout { grid-template-columns: 1fr; }
-      .sidebar-menu { flex-direction: row; overflow-x: auto; }
-      .info-grid, .kpis { grid-template-columns: 1fr; }
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar-menu {
+        flex-direction: row;
+        overflow-x: auto;
+      }
+
+      .info-grid,
+      .kpis {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="page-shell">
@@ -47,12 +130,12 @@
               <a href="personal-info.html" class="active">Thông tin cá nhân</a>
               <a href="profile.html">Cập nhật hồ sơ</a>
               <a href="history.html">Lịch sử đặt tour</a>
+              <a href="wishlist.html">WishList</a>
             </nav>
           </div>
 
           <div class="card panel">
             <h2 class="section-title">Trang Khách Hàng</h2>
-            <p style="margin-top:-6px; color:var(--text-faint);">Tổng quan các chức năng đã hoàn thành: UC19, UC20, UC21, UC22, UC23, UC25, UC26.</p>
 
             <div class="info-grid" style="margin-top:14px;">
               <div class="info-item"><span>Họ và tên</span><strong id="fullName">-</strong></div>
@@ -63,32 +146,23 @@
 
             <div class="kpis">
               <div class="kpi">
-                <div style="color:var(--text-faint); font-size:0.85rem;">Điểm tích lũy (UC26)</div>
+                <div style="color:var(--text-faint); font-size:0.85rem;">Điểm tích lũy</div>
                 <div class="v" id="points">0</div>
               </div>
               <div class="kpi">
-                <div style="color:var(--text-faint); font-size:0.85rem;">Tổng booking</div>
+                <div style="color:var(--text-faint); font-size:0.85rem;">Tổng lượt đặt tour</div>
                 <div class="v" id="totalBookings">0</div>
               </div>
               <div class="kpi">
-                <div style="color:var(--text-faint); font-size:0.85rem;">Booking đã hoàn thành</div>
+                <div style="color:var(--text-faint); font-size:0.85rem;">Lượt đặt tour thành công</div>
                 <div class="v" id="doneBookings">0</div>
               </div>
             </div>
 
             <div class="actions">
-              <a class="btn" href="profile.html">Cập nhật hồ sơ (UC25)</a>
-              <a class="btn btn-secondary" href="history.html">Xem lịch sử/đánh giá/hóa đơn (UC19-23)</a>
+              <a class="btn" href="profile.html">Cập nhật hồ sơ</a>
+              <a class="btn btn-secondary" href="history.html">Xem lịch sử/đánh giá/hóa đơn</a>
             </div>
-
-            <!-- Wishlist Integration Task 2 -->
-            <div style="margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
-              <h3 style="font-size: 1.1rem; color: var(--primary);">My Wishlist</h3>
-              <div id="wishlist-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
-                <p style="color: #666; font-size: 0.9rem;">Đang tải wishlist...</p>
-              </div>
-            </div>
-
           </div>
         </div>
       </div>
@@ -96,11 +170,12 @@
   </div>
 
   <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/notification-bell.js"></script>
   <script>
     const $ = (id) => document.getElementById(id);
 
     async function loadPersonalInfo() {
-      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      const user = JSON.parse(sessionStorage.getItem('user') || 'null');
       if (!user?.id) {
         TB.goToLogin('Vui lòng đăng nhập để xem thông tin cá nhân.');
         return;
@@ -115,7 +190,11 @@
       const u = uRes?.data || {};
       const points = Number(pRes?.data || 0);
       const bookings = Array.isArray(bRes?.data) ? bRes.data : [];
-      const done = bookings.filter(b => ['COMPLETED', 'SUCCESS'].includes(String(b?.status || '').toUpperCase())).length;
+      const done = bookings.filter(b => {
+        const s = String(b?.status || '').toUpperCase();
+        return (s === 'CONFIRMED' || s === 'COMPLETED' || s === 'SUCCESS') && 
+               (!b.refundStatus || b.refundStatus === 'NONE' || b.refundStatus === 'null');
+      }).length;
 
       $('fullName').textContent = u.fullName || '-';
       $('email').textContent = u.email || '-';
@@ -124,54 +203,6 @@
       $('points').textContent = points.toLocaleString('vi-VN');
       $('totalBookings').textContent = String(bookings.length);
       $('doneBookings').textContent = String(done);
-
-      // Load Wishlist
-      await loadWishlist(user.id);
-    }
-
-    async function loadWishlist(userId) {
-      const container = $('wishlist-container');
-      try {
-        const res = await fetch(`http://localhost:8080/api/v1/wishlist?userId=${userId}&page=0&size=10`);
-        const pageData = await res.json();
-        
-        if (!pageData.content || pageData.content.length === 0) {
-            container.innerHTML = "<p style='color: #666; font-size: 0.9rem;'>Bạn chưa lưu tour nào.</p>";
-            return;
-        }
-        
-        let html = "";
-        pageData.content.forEach(tour => {
-            const imageUrl = tour.images && tour.images.length > 0 ? tour.images[0].imageUrl : '/assets/images/default-tour.jpg';
-            html += `
-            <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; position: relative;">
-                <img src="${imageUrl}" style="width: 100%; height: 120px; object-fit: cover;">
-                <div style="padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-                    <h4 style="font-size: 0.9rem; margin-bottom: 5px; color: #1e293b;">${tour.tourName}</h4>
-                    <div>
-                      <span style="font-weight: bold; color: var(--accent); font-size: 0.9rem;">${tour.price.toLocaleString()} đ</span>
-                      <button onclick="removeWishlist(${userId}, ${tour.id}, this)" style="margin-top: 8px; width: 100%; padding: 5px; font-size: 0.8rem; background: #fee2e2; color: #991b1b; border: none; border-radius: 4px; cursor: pointer;">Remove</button>
-                    </div>
-                </div>
-            </div>`;
-        });
-        container.innerHTML = html;
-      } catch(e) {
-        console.error(e);
-        container.innerHTML = "<p style='color: red; font-size: 0.9rem;'>Lỗi tải wishlist.</p>";
-      }
-    }
-
-    async function removeWishlist(userId, tourId, btnElement) {
-      try {
-          const res = await fetch(`http://localhost:8080/api/v1/wishlist/toggle?userId=${userId}&tourId=${tourId}`, { method: 'POST' });
-          const data = await res.json();
-          if (data.success && !data.isAdded) {
-              btnElement.closest('div[style*="border-radius: 8px"]').remove();
-          }
-      } catch (e) {
-          console.error(e);
-      }
     }
 
     loadPersonalInfo().catch(err => {
@@ -180,4 +211,5 @@
     });
   </script>
 </body>
+
 </html>

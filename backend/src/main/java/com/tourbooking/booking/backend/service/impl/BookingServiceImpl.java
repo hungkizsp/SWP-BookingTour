@@ -7,6 +7,7 @@ import com.tourbooking.booking.backend.model.dto.request.BookingRequest;
 import com.tourbooking.booking.backend.model.dto.response.BookingResponse;
 import com.tourbooking.booking.backend.model.entity.Booking;
 import com.tourbooking.booking.backend.model.entity.Payment;
+import com.tourbooking.booking.backend.model.entity.Tour;
 import com.tourbooking.booking.backend.model.entity.TourSchedule;
 import com.tourbooking.booking.backend.model.entity.User;
 import com.tourbooking.booking.backend.model.entity.enums.BookingStatus;
@@ -114,13 +115,92 @@ public class BookingServiceImpl implements BookingService {
     @Transactional(readOnly = true)
     public List<BookingResponse> getBookingsByUserId(Long userId) {
         return bookingRepository.findByUserId(userId).stream()
-                .map(booking -> {
-                    BookingResponse response = BookingMapper.toResponse(booking);
-                    // Populate the 'reviewed' flag so the frontend can show correct button state
-                    response.setReviewed(reviewRepository.findByBookingId(booking.getId()).isPresent());
-                    return response;
-                })
+                .map(BookingMapper::toResponse)
                 .toList();
+    }
+    
+    /**
+     * UC18: Get booking history with filters, search, and statistics
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public com.tourbooking.booking.backend.model.dto.response.BookingHistoryResponse getBookingHistory(
+            Long customerId,
+            String search,
+            List<String> statusStrings,
+            java.time.LocalDate dateFrom,
+            java.time.LocalDate dateTo,
+            java.math.BigDecimal priceMin,
+            java.math.BigDecimal priceMax,
+            int page,
+            int size) {
+        
+        log.info("[UC18] Fetching booking history for customer: {}, search: {}, page: {}, size: {}", 
+                 customerId, search, page, size);
+        
+        // Convert status strings to enums
+        List<BookingStatus> statuses = null;
+        if (statusStrings != null && !statusStrings.isEmpty()) {
+            statuses = statusStrings.stream()
+                    .map(s -> {
+                        try {
+                            return BookingStatus.valueOf(s.toUpperCase());
+                        } catch (IllegalArgumentException e) {
+                            log.warn("Invalid booking status: {}", s);
+                            return null;
+                        }
+                    })
+                    .filter(s -> s != null)
+                    .toList();
+        }
+        
+        // Create pageable with sorting by booking date descending (most recent first)
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+                page, size, 
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "bookingDate")
+        );
+        
+        // Fetch bookings with filters
+        org.springframework.data.domain.Page<Booking> bookingPage = bookingRepository.findBookingHistoryWithFilters(
+                customerId, search, statuses, dateFrom, dateTo, priceMin, priceMax, pageable
+        );
+        
+        // Convert to DTOs
+        org.springframework.data.domain.Page<com.tourbooking.booking.backend.model.dto.response.BookingResponse> responsePage = 
+                bookingPage.map(BookingMapper::toResponse);
+        
+        // Calculate statistics
+        com.tourbooking.booking.backend.model.dto.response.BookingStatistics statistics = calculateStatistics(customerId);
+        
+        log.info("[UC18] Found {} bookings for customer {}", bookingPage.getTotalElements(), customerId);
+        
+        return com.tourbooking.booking.backend.model.dto.response.BookingHistoryResponse.from(responsePage, statistics);
+    }
+    
+    /**
+     * Calculate booking statistics for a customer
+     */
+    private com.tourbooking.booking.backend.model.dto.response.BookingStatistics calculateStatistics(Long customerId) {
+        long totalBookings = bookingRepository.countByUserId(customerId);
+        long confirmedBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.CONFIRMED);
+        long pendingBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.PENDING);
+        long cancelledBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.CANCELLED);
+        long completedBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.COMPLETED);
+        
+        // Calculate total spent (confirmed + completed bookings only)
+        BigDecimal totalSpent = bookingRepository.sumTotalPriceByUserIdAndStatusIn(
+                customerId, 
+                List.of(BookingStatus.CONFIRMED, BookingStatus.COMPLETED)
+        );
+        
+        return com.tourbooking.booking.backend.model.dto.response.BookingStatistics.builder()
+                .totalBookings(totalBookings)
+                .confirmedBookings(confirmedBookings)
+                .pendingBookings(pendingBookings)
+                .cancelledBookings(cancelledBookings)
+                .completedBookings(completedBookings)
+                .totalSpent(totalSpent != null ? totalSpent : BigDecimal.ZERO)
+                .build();
     }
 
     @Override
@@ -149,39 +229,125 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse getBookingDetail(Long bookingId, Long customerId) {
+        // Fetch booking with all relationships
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        
+        // Authorization check: verify customer owns this booking
+        if (!booking.getUser().getId().equals(customerId)) {
+            log.warn("[UC19] Authorization failed: Customer {} tried to access booking {} owned by customer {}", 
+                     customerId, bookingId, booking.getUser().getId());
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
+        log.info("[UC19] Fetching booking detail for booking: {}, customer: {}", bookingId, customerId);
+        
+        // Build tour info
+        TourSchedule schedule = booking.getSchedule();
+        com.tourbooking.booking.backend.model.entity.Tour tour = schedule != null ? schedule.getTour() : null;
+        
+        com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.TourInfo tourInfo = null;
+        if (tour != null) {
+            tourInfo = com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.TourInfo.builder()
+                    .tourId(tour.getId())
+                    .tourName(tour.getTourName())
+                    .destination(resolveTourDestination(tour))
+                    .description(tour.getDescription())
+                    .departureDate(schedule.getStartDate())
+                    .returnDate(schedule.getEndDate())
+                    .duration(tour.getDuration())
+                    .numberOfParticipants(booking.getNumberOfPeople())
+                    .includedServices(List.of()) // TODO: implement if tour has services
+                    .imageUrl(resolveTourImageUrl(tour))
+                    .build();
+        }
+        
+        // Build customer info
+        User user = booking.getUser();
+        List<Passenger> passengers = passengerRepository.findByBookingId(bookingId);
+        List<com.tourbooking.booking.backend.model.dto.response.PassengerResponse> passengerResponses = 
+                passengers.stream()
+                        .map(p -> {
+                            com.tourbooking.booking.backend.model.dto.response.PassengerResponse pr = 
+                                    new com.tourbooking.booking.backend.model.dto.response.PassengerResponse();
+                            pr.setFullName(p.getFullName());
+                            pr.setDateOfBirth(p.getDateOfBirth());
+                            pr.setIdNumber(p.getIdNumber());
+                            pr.setPassengerType(p.getPassengerType());
+                            return pr;
+                        })
+                        .toList();
+        
+        com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.CustomerInfo customerInfo = 
+                com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.CustomerInfo.builder()
+                        .customerId(user.getId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .phone(user.getPhoneNumber())
+                        .numberOfParticipants(booking.getNumberOfPeople())
+                        .passengers(passengerResponses)
+                        .build();
+        
+        // Build payment info
+        Payment payment = booking.getPayment();
+        com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.PaymentInfo paymentInfo = null;
+        if (payment != null) {
+            BigDecimal subtotal = booking.getTotalPrice().add(booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO);
+            paymentInfo = com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.PaymentInfo.builder()
+                    .paymentStatus(payment.getStatus() != null ? payment.getStatus().name() : "PENDING")
+                    .transactionReference(payment.getTransactionCode())
+                    .paymentMethod(payment.getPaymentMethod())
+                    .paymentDate(payment.getPaymentDate())
+                    .subtotal(subtotal)
+                    .serviceFee(BigDecimal.ZERO) // TODO: implement if service fee exists
+                    .tax(BigDecimal.ZERO) // TODO: implement if tax exists
+                    .discount(booking.getDiscountAmount())
+                    .totalAmount(booking.getTotalPrice())
+                    .build();
+        }
+
+        List<com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.StatusHistoryItem> statusHistory =
+                List.of(com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.StatusHistoryItem.builder()
+                        .status(booking.getStatus())
+                        .description("Trạng thái hiện tại")
+                        .timestamp(booking.getUpdatedAt())
+                        .isCurrent(true)
+                        .build());
+
+        return com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.builder()
+                .bookingId(booking.getId())
+                .bookingReference("#" + booking.getId())
+                .status(booking.getStatus())
+                .createdAt(booking.getCreatedAt())
+                .bookingDate(booking.getBookingDate())
+                .tourInfo(tourInfo)
+                .customerInfo(customerInfo)
+                .paymentInfo(paymentInfo)
+                .statusHistory(statusHistory)
+                .build();
+    }
+
+    @Override
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        // ── 1. Acquire Pessimistic Write Lock on the schedule row ──────────────
-        // This is the ONLY place we load the schedule; the lock is held for the
-        // entire transaction, preventing concurrent slot deductions.
         TourSchedule schedule = tourScheduleRepository.findByIdWithLock(request.getScheduleId())
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
 
-        // ── 2. Status guard: reject CANCELLED / COMPLETED schedules ───────────
+        LocalDateTime now = LocalDateTime.now();
         com.tourbooking.booking.backend.model.entity.enums.TourStatus currentStatus = schedule.getStatus();
+
         if (currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED
-                || currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.COMPLETED
-                || currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR) {
+                || currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR
+                || currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.COMPLETED) {
             throw new AppException(ErrorCode.SCHEDULE_NOT_BOOKABLE);
         }
-
-        // ── 2b. PENDING_GUIDE guard: strict rejection ──────────────────────────
-        // Departure is < 1 hour away and no guide has been assigned yet.
-        // Booking is blocked until the operational requirement is resolved.
         if (currentStatus == com.tourbooking.booking.backend.model.entity.enums.TourStatus.PENDING_GUIDE) {
-            throw new AppException(ErrorCode.SCHEDULE_PENDING_GUIDE,
-                    "This schedule is temporarily unavailable because operational requirements are not completed.");
-        }
-
-        // ── 3. Not-started check: current time must be BEFORE departure ────────
-        java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        java.time.LocalDateTime departureDateTime = schedule.getDepartureDateTime();
-        if (departureDateTime != null && !now.isBefore(departureDateTime)) {
-            throw new AppException(ErrorCode.TOUR_ALREADY_STARTED,
-                    "Tour đã bắt đầu vào " + departureDateTime + ". Không thể đặt chỗ.");
+            throw new AppException(ErrorCode.SCHEDULE_PENDING_GUIDE);
         }
 
         // ── 4. Booking-deadline check ──────────────────────────────────────────
@@ -933,6 +1099,26 @@ public class BookingServiceImpl implements BookingService {
         return normalized.replaceAll("\\p{M}", "").replace("đ", "d").replace("Đ", "D");
     }
 
+    private String resolveTourDestination(Tour tour) {
+        if (tour == null) {
+            return null;
+        }
+        if (tour.getEndLocation() != null && !tour.getEndLocation().isBlank()) {
+            return tour.getEndLocation();
+        }
+        if (tour.getCity() != null && tour.getCity().getCityName() != null) {
+            return tour.getCity().getCityName();
+        }
+        return tour.getStartLocation();
+    }
+
+    private String resolveTourImageUrl(Tour tour) {
+        if (tour == null || tour.getImages() == null || tour.getImages().isEmpty()) {
+            return null;
+        }
+        return tour.getImages().get(0).getImageUrl();
+    }
+
     @Override
     public byte[] downloadInvoice(Long id) {
         Booking booking = bookingRepository.findById(id)
@@ -978,6 +1164,177 @@ public class BookingServiceImpl implements BookingService {
         } catch (Exception e) {
             log.error("Error generating PDF", e);
             throw new RuntimeException("Could not generate invoice PDF", e);
+        }
+    }
+    
+    /**
+     * UC22: Generate invoice PDF with validation and authorization
+     */
+    @Override
+    public byte[] generateInvoice(Long bookingId, Long customerId) {
+        log.info("[UC22] Generating invoice for booking {} requested by customer {}", bookingId, customerId);
+        
+        // Fetch booking
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        
+        // Authorization check
+        if (!booking.getUser().getId().equals(customerId)) {
+            log.warn("[UC22] Authorization failed: Customer {} cannot download invoice for booking {} owned by {}", 
+                     customerId, bookingId, booking.getUser().getId());
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+        
+        // Business rule: Can only download invoice for CONFIRMED or COMPLETED bookings
+        if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.COMPLETED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, 
+                    "Invoice is only available for confirmed or completed bookings. Current status: " + booking.getStatus());
+        }
+        
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            doc.addPage(page);
+            
+            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+                float yPosition = 770;
+                float leftMargin = 50;
+                float rightMargin = 545;
+                
+                // Header - Company Name
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 24);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("TOURBOOKING");
+                cs.endText();
+                yPosition -= 20;
+                
+                // Invoice Title
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("INVOICE");
+                cs.endText();
+                yPosition -= 30;
+                
+                // Invoice metadata
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("Invoice Number: INV-" + booking.getId());
+                cs.newLineAtOffset(0, -15);
+                cs.showText("Booking Reference: BK-" + booking.getId());
+                cs.newLineAtOffset(0, -15);
+                cs.showText("Issue Date: " + java.time.LocalDate.now().toString());
+                cs.newLineAtOffset(0, -15);
+                cs.showText("Status: " + normalizeForPdf(booking.getStatus().name()));
+                cs.endText();
+                yPosition -= 60;
+                
+                // Bill To section
+                yPosition -= 10;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("BILL TO:");
+                cs.endText();
+                yPosition -= 18;
+                
+                User customer = booking.getUser();
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText(normalizeForPdf(customer.getFullName()));
+                cs.newLineAtOffset(0, -15);
+                cs.showText("Email: " + customer.getEmail());
+                cs.newLineAtOffset(0, -15);
+                cs.showText("Phone: " + (customer.getPhoneNumber() != null ? customer.getPhoneNumber() : "N/A"));
+                cs.endText();
+                yPosition -= 60;
+                
+                // Tour Details section
+                yPosition -= 10;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("TOUR DETAILS:");
+                cs.endText();
+                yPosition -= 18;
+                
+                TourSchedule schedule = booking.getSchedule();
+                if (schedule != null && schedule.getTour() != null) {
+                    cs.beginText();
+                    cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
+                    cs.newLineAtOffset(leftMargin, yPosition);
+                    cs.showText("Tour: " + normalizeForPdf(schedule.getTour().getTourName()));
+                    cs.newLineAtOffset(0, -15);
+                    cs.showText("Destination: " + normalizeForPdf(resolveTourDestination(schedule.getTour())));
+                    cs.newLineAtOffset(0, -15);
+                    cs.showText("Departure: " + schedule.getStartDate().toString());
+                    cs.newLineAtOffset(0, -15);
+                    cs.showText("Duration: " + schedule.getTour().getDuration() + " days");
+                    cs.newLineAtOffset(0, -15);
+                    cs.showText("Participants: " + booking.getNumberOfPeople());
+                    cs.endText();
+                    yPosition -= 90;
+                }
+                
+                // Payment Details
+                yPosition -= 10;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("PAYMENT DETAILS:");
+                cs.endText();
+                yPosition -= 18;
+                
+                BigDecimal subtotal = booking.getTotalPrice();
+                BigDecimal discount = booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO;
+                if (discount.compareTo(BigDecimal.ZERO) > 0) {
+                    subtotal = subtotal.add(discount);
+                }
+                
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("Subtotal:");
+                cs.newLineAtOffset(rightMargin - leftMargin - 100, 0);
+                cs.showText(subtotal.toString() + " VND");
+                cs.newLineAtOffset(-(rightMargin - leftMargin - 100), -15);
+                
+                if (discount.compareTo(BigDecimal.ZERO) > 0) {
+                    cs.showText("Discount:");
+                    cs.newLineAtOffset(rightMargin - leftMargin - 100, 0);
+                    cs.showText("-" + discount.toString() + " VND");
+                    cs.newLineAtOffset(-(rightMargin - leftMargin - 100), -15);
+                }
+                
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+                cs.showText("Total:");
+                cs.newLineAtOffset(rightMargin - leftMargin - 100, 0);
+                cs.showText(booking.getTotalPrice().toString() + " VND");
+                cs.endText();
+                yPosition -= 50;
+                
+                // Footer
+                yPosition = 50;
+                cs.beginText();
+                cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 9);
+                cs.newLineAtOffset(leftMargin, yPosition);
+                cs.showText("Thank you for booking with TourBooking!");
+                cs.newLineAtOffset(0, -12);
+                cs.showText("For any questions, please contact support@tourbooking.com");
+                cs.endText();
+            }
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            doc.save(baos);
+            
+            log.info("[UC22] Invoice generated successfully for booking {}", bookingId);
+            return baos.toByteArray();
+            
+        } catch (Exception e) {
+            log.error("[UC22] Error generating PDF for booking {}", bookingId, e);
+            throw new RuntimeException("Could not generate invoice PDF: " + e.getMessage(), e);
         }
     }
 

@@ -23,6 +23,37 @@
         .stat-label { color: var(--text-muted); font-size: 0.875rem; font-weight: 500; }
         .stat-value { font-size: 1.875rem; font-weight: 700; margin-top: 0.5rem; color: var(--text-main); }
         .btn-logout { background: #ef4444; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem; }
+
+        /* ── Operational Alerts ── */
+        .ops-metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem; margin-top: 2rem;}
+        .ops-metric-card { background: white; border-radius: 1rem; padding: 1.25rem; border: 1px solid var(--border); box-shadow: var(--shadow-sm); text-align: center; }
+        .ops-metric-card .ops-metric-val { font-size: 2rem; font-weight: 800; line-height: 1; }
+        .ops-metric-card .ops-metric-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-top: 0.4rem; }
+        .ops-metric-card.red .ops-metric-val { color: #dc2626; }
+        .ops-metric-card.amber .ops-metric-val { color: #d97706; }
+        .ops-metric-card.blue .ops-metric-val { color: #2563eb; }
+        .ops-metric-card.purple .ops-metric-val { color: #7c3aed; }
+        
+        .alert-card { border-radius: 0.875rem; border: 1.5px solid var(--border); padding: 1rem 1.25rem; margin-bottom: 0.75rem; background: white; }
+        .alert-card.urgent { border-color: #f87171; background: linear-gradient(135deg, #fff5f5, #fff); }
+        .alert-card.warning { border-color: #fbbf24; background: linear-gradient(135deg, #fffbeb, #fff); }
+        .alert-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .alert-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+        .alert-badge.urgent { background:#fee2e2; color:#991b1b; }
+        .alert-badge.warning { background:#fef3c7; color:#92400e; }
+        .alert-badge.early { background:#ede9fe; color:#5b21b6; }
+        .alert-countdown { font-size: 0.8rem; font-weight: 700; color: #dc2626; }
+        .alert-tour-name { font-weight: 700; font-size: 0.95rem; color: var(--text-main); }
+        .alert-meta { font-size: 0.8rem; color: var(--text-muted); margin-top: 3px; }
+        .btn-assign-guide { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; border: none; border-radius: 0.5rem; padding: 0.4rem 0.9rem; font-size: 0.78rem; font-weight: 700; cursor: pointer; text-decoration: none; display: inline-block; }
+        .empty-alerts { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.875rem; }
+        .ops-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; margin-top: 1.5rem; }
+        .panel { background: white; border-radius: 1rem; border: 1px solid var(--border); padding: 1.5rem; box-shadow: var(--shadow-sm); margin-bottom: 1.5rem; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .panel-title { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+        .btn-refresh { background: none; border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.4rem 0.75rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--text-muted); }
+        .live-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; margin-right: 6px; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
     </style>
 </head>
 
@@ -51,21 +82,65 @@
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-label">Pending Bookings</div>
-                    <div class="stat-value">12</div>
+                    <div class="stat-value" id="stat-pending-bookings">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Unassigned Schedules</div>
-                    <div class="stat-value">4</div>
+                    <div class="stat-value" id="stat-unassigned-schedules">0</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Open Refunds</div>
-                    <div class="stat-value">2</div>
+                    <div class="stat-value" id="stat-open-refunds">0</div>
+                </div>
+            </div>
+
+            <!-- ── Operational Readiness Section ── -->
+            <div style="margin-bottom:1rem;">
+                <div class="ops-section-header">
+                    <span class="panel-title" style="font-size:1rem;">
+                        <span class="live-dot"></span>🚨 Operational Readiness Center
+                    </span>
+                    <button class="btn-refresh" id="opsRefreshBtn" onclick="loadOperationalData()">
+                        <span class="icon">🔄</span> Làm mới
+                    </button>
+                </div>
+
+                <!-- Metrics Row -->
+                <div class="ops-metrics-grid" id="opsMetricsGrid">
+                    <div class="ops-metric-card amber">
+                        <div class="ops-metric-val" id="opsOpenNoGuide">0</div>
+                        <div class="ops-metric-label">⚠️ Schedules No Guide</div>
+                    </div>
+                    <div class="ops-metric-card red">
+                        <div class="ops-metric-val" id="opsPendingGuide">0</div>
+                        <div class="ops-metric-label">🔴 PENDING_GUIDE</div>
+                    </div>
+                    <div class="ops-metric-card purple">
+                        <div class="ops-metric-val" id="opsCancelledOp">0</div>
+                        <div class="ops-metric-label">🚫 Cancelled by Operator</div>
+                    </div>
+                    <div class="ops-metric-card blue">
+                        <div class="ops-metric-val" id="opsAffected">0</div>
+                        <div class="ops-metric-label">👥 Affected Customers</div>
+                    </div>
+                </div>
+
+                <!-- Alert Cards -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">🔔 Live Alert Queue</span>
+                        <span class="panel-badge" id="opsAlertCount" style="background:#f1f5f9; padding:4px 10px; border-radius:20px; font-weight:bold; font-size:0.85rem;">—</span>
+                    </div>
+                    <div id="opsAlertList">
+                        <div class="empty-alerts">Đang tải cảnh báo...</div>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
     <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/notification-bell.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const userStr = sessionStorage.getItem('user');
@@ -84,7 +159,183 @@
                 return;
             }
             document.getElementById('userInfo').innerText = user.fullName || user.email || 'Staff';
+            
+            loadDashboardStats();
         });
+
+        async function loadDashboardStats() {
+            try {
+                // Fetch bookings
+                const bookingsRes = await TB.apiFetch('/api/v1/staff/bookings');
+                const bookings = bookingsRes.data?.content || bookingsRes.data || [];
+                const pendingCount = bookings.filter(b => b.status === 'PENDING').length;
+                
+                // Fetch schedules
+                const schedulesRes = await TB.apiFetch('/api/v1/staff/schedules');
+                const schedules = schedulesRes.data?.content || schedulesRes.data || [];
+                const unassignedCount = schedules.filter(s => !s.guideId).length;
+                
+                // Fetch refunds
+                const refundsRes = await TB.apiFetch('/api/v1/staff/refunds');
+                const refunds = refundsRes.data?.content || refundsRes.data || [];
+                const openRefundsCount = refunds.filter(r => r.status === 'PENDING').length;
+                
+                document.getElementById('stat-pending-bookings').innerText = pendingCount;
+                document.getElementById('stat-unassigned-schedules').innerText = unassignedCount;
+                document.getElementById('stat-open-refunds').innerText = openRefundsCount;
+            } catch (err) {
+                console.error('Error fetching dashboard stats:', err);
+            }
+            loadOperationalData();
+        }
+
+        // ── Operational Readiness Center ─────────────────────────
+        async function loadOperationalData() {
+            const btn = document.getElementById('opsRefreshBtn');
+            if (btn) btn.classList.add('spinning');
+
+            const token = sessionStorage.getItem('token');
+            if (!token) { if (btn) btn.classList.remove('spinning'); return; }
+
+            try {
+                const [metricsRes, alertsRes] = await Promise.allSettled([
+                    TB.apiFetch('/api/v1/admin/operational-metrics'), // Staff also can access these, maybe need to check backend mapping for Staff?
+                    TB.apiFetch('/api/v1/admin/operational-alerts')
+                ]);
+
+                // Metrics
+                if (metricsRes.status === 'fulfilled' && metricsRes.value) {
+                    const m = metricsRes.value.data || metricsRes.value;
+                    document.getElementById('opsOpenNoGuide').textContent = m.openSchedulesWithNoGuide ?? '—';
+                    document.getElementById('opsPendingGuide').textContent = m.pendingGuideSchedules ?? '—';
+                    document.getElementById('opsCancelledOp').textContent = m.cancelledByOperatorSchedules ?? '—';
+                    document.getElementById('opsAffected').textContent = m.affectedCustomers ?? '—';
+                }
+
+                // Alerts
+                if (alertsRes.status === 'fulfilled' && alertsRes.value) {
+                    const d = alertsRes.value.data || alertsRes.value;
+                    const alerts = d.alerts || [];
+                    document.getElementById('opsAlertCount').textContent = alerts.length;
+                    renderOpsAlerts(alerts);
+                } else {
+                    document.getElementById('opsAlertList').innerHTML =
+                        '<div class="empty-alerts" style="color:#dc2626;">⚠️ Không tải được cảnh báo. Kiểm tra kết nối backend.</div>';
+                }
+            } catch (err) {
+                console.error('[OPS] loadOperationalData error:', err);
+            } finally {
+                if (btn) btn.classList.remove('spinning');
+            }
+        }
+
+        function renderOpsAlerts(alerts) {
+            const container = document.getElementById('opsAlertList');
+            if (!alerts || alerts.length === 0) {
+                container.innerHTML = '<div class="empty-alerts">✅ Không có cảnh báo nào. Tất cả tour đã có hướng dẫn viên!</div>';
+                return;
+            }
+
+            const sorted = [...alerts].sort((a, b) => {
+                if (a.type === 'PENDING_GUIDE' && b.type !== 'PENDING_GUIDE') return -1;
+                if (b.type === 'PENDING_GUIDE' && a.type !== 'PENDING_GUIDE') return 1;
+                return (a.minutesRemaining ?? 9999) - (b.minutesRemaining ?? 9999);
+            });
+
+            container.innerHTML = sorted.map(alert => {
+                const mins = alert.minutesRemaining ?? 0;
+                const isPendingGuide = alert.type === 'PENDING_GUIDE';
+                const isUrgent = alert.isUrgent || isPendingGuide;
+                const cardClass = isPendingGuide ? 'urgent' : (isUrgent ? 'warning' : '');
+                const badgeClass = isPendingGuide ? 'urgent' : (alert.alertWindow === '2H' || alert.alertWindow === '6H' ? 'warning' : 'early');
+
+                const countdownTxt = mins > 0
+                    ? `${Math.floor(mins / 60)}h ${mins % 60}m remaining`
+                    : `<span style="color:#7c3aed;">Departure reached!</span>`;
+
+                const scheduleId = alert.scheduleId;
+                let actionArea = `
+                    <div style="margin-top:10px;">
+                        <a href="./manageSchedules.html?highlight=${scheduleId}" class="btn-assign-guide">
+                            👤 Assign Guide
+                        </a>
+                    </div>`;
+                    
+                if (isUrgent) {
+                    actionArea = `
+                    <div style="margin-top:12px; background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
+                        <div style="font-size:0.85rem; font-weight:600; color:#1e293b; margin-bottom:8px;">
+                            Action Required: Tour Guide missing for ${alert.tourName} - Departure in ${mins} minutes.
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <select id="quick-assign-${scheduleId}" class="guide-select-dropdown" style="flex:1; padding:6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.8rem; max-width: 250px;">
+                                <option value="">-- Select a Guide --</option>
+                            </select>
+                            <button onclick="quickAssign(${scheduleId})" class="btn-assign-guide" style="padding:6px 12px; margin:0;">Assign</button>
+                        </div>
+                    </div>`;
+                }
+
+                return `
+                <div class="alert-card ${cardClass}" id="ops-alert-${scheduleId}">
+                    <div class="alert-card-header">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="alert-badge ${badgeClass}">
+                                ${isPendingGuide ? '🔴 PENDING GUIDE' : '⚠️ ' + (alert.alertWindow || 'ALERT')}
+                            </span>
+                        </div>
+                        <span class="alert-countdown">⏱ ${countdownTxt}</span>
+                    </div>
+                    <div class="alert-tour-name">${alert.tourName || 'Schedule #' + scheduleId}</div>
+                    <div class="alert-meta">
+                        Schedule ID: #${scheduleId} &nbsp;|&nbsp;
+                        Departure: ${alert.departureDateTime ? new Date(alert.departureDateTime).toLocaleString('vi-VN') : '—'}
+                    </div>
+                    ${actionArea}
+                </div>`;
+            }).join('');
+            
+            populateGuideDropdowns();
+        }
+
+        async function populateGuideDropdowns() {
+            try {
+                const res = await TB.apiFetch('/api/v1/staff/guides');
+                const guides = res.data || [];
+                const dropdowns = document.querySelectorAll('.guide-select-dropdown');
+                dropdowns.forEach(select => {
+                    if (select.options.length <= 1) { // Only populate if not already populated
+                        guides.forEach(g => {
+                            if (g.isActive !== false) {
+                                const opt = document.createElement('option');
+                                opt.value = g.id;
+                                opt.textContent = `${g.fullName} (${g.phoneNumber || g.email})`;
+                                select.appendChild(opt);
+                            }
+                        });
+                    }
+                });
+            } catch (err) {
+                console.error("Lỗi lấy danh sách HDV:", err);
+            }
+        }
+
+        window.quickAssign = async function(scheduleId) {
+            const el = document.getElementById('quick-assign-' + scheduleId);
+            if(!el || !el.value) { alert('Vui lòng chọn Guide.'); return; }
+            try {
+                const res = await TB.apiFetch('/api/v1/staff/schedules/' + scheduleId + '/assign-guide?guideId=' + el.value, { method: 'PATCH' });
+                if (res.status === 'rejected') throw new Error(res.reason?.message || 'Lỗi phân công');
+                alert('Gán hướng dẫn viên thành công!');
+                loadOperationalData();
+                loadDashboardStats();
+            } catch (err) {
+                alert('Lỗi: ' + (err.message || 'Không thể gán'));
+            }
+        };
+
+        // Auto refresh alerts every 60s
+        setInterval(loadOperationalData, 60_000);
     </script>
 </body>
 </html>

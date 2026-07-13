@@ -19,6 +19,7 @@
     sortBy: 'price',
     selected: new Set(JSON.parse(localStorage.getItem('compareIds') || '[]'))
   };
+  let wishlistIds = new Set();
 
   const pRange = params.get('price');
   if (pRange && pRange !== 'all') {
@@ -81,22 +82,26 @@
       card.className = 'tour-card reveal';
       card.style.animationDelay = `${(idx % 6) * 0.1}s`;
 
-      const priceHtml = t.price
-        ? `<span class="price-value">${Number(t.price).toLocaleString()}đ</span>`
-        : '<span class="price-value">Liên hệ</span>';
+      const isWished = wishlistIds.has(t.id);
 
       card.innerHTML = `
-        <div class="tour-card-img-wrapper">
+        <div class="tour-card-img-wrapper" style="position:relative;">
           <img src="${TB.normalizeImageUrl(t.imageUrl || (t.imageUrls && t.imageUrls[0]) || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg')}" class="tour-card-img" alt="${t.tourName}">
           <div class="tour-card-badge">✨ ${t.categoryName || 'Sản phẩm nổi bật'}</div>
+          <button
+            class="wishlist-btn"
+            data-tour-id="${t.id}"
+            title="${isWished ? 'Bỏ khỏi yêu thích' : 'Lưu vào yêu thích'}"
+            style="position:absolute; top:10px; right:10px; background:white; border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.15); font-size:1.1rem; display:flex; align-items:center; justify-content:center; z-index:10; transition:transform 0.15s;"
+          >${isWished ? '❤️' : '🤍'}</button>
         </div>
         <div class="tour-card-body">
           <h3 class="tour-card-title">${t.tourName}</h3>
           <div class="tour-card-meta">
-            <span>⌛ ${t.duration ? t.duration + ' Ngày' : 'Liên hệ'}</span>
+            <span>⏳ ${t.duration ? t.duration + ' Ngày' : 'Liên hệ'}</span>
             <span>📍 ${t.startLocation || 'Đà Nẵng'}</span>
             <span>⭐ ${(t.rating || 5).toFixed(1)} Rating</span>
-            <span>🚌 ${t.transportType || 'Xe du lịch'}</span>
+            <span>😌 ${t.transportType || 'Xe du lịch'}</span>
           </div>
           <div class="tour-card-footer">
             <div class="tour-card-price">
@@ -122,6 +127,7 @@
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
     attachCompareListeners();
+    attachWishlistListeners();
   }
 
   function updatePagination(data) {
@@ -132,6 +138,45 @@
     if (totalInfo) totalInfo.textContent = `${data.totalElements || 0} tour được tìm thấy`;
     if (prevBtn) prevBtn.disabled = (page === 0);
     if (nextBtn) nextBtn.disabled = (page + 1 >= total);
+  }
+
+  function attachWishlistListeners() {
+    document.querySelectorAll('.wishlist-btn').forEach(btn => {
+      btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.2)'; });
+      btn.addEventListener('mouseleave', () => { btn.style.transform = 'scale(1)'; });
+      btn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+        if (!userStr) {
+          alert('Vui lòng đăng nhập để lưu tour yêu thích!');
+          return;
+        }
+        const user = JSON.parse(userStr);
+        const tourId = Number(btn.dataset.tourId);
+        const prev = btn.textContent;
+        btn.textContent = '...';
+        btn.disabled = true;
+        try {
+          const res = await TB.apiFetch(`/api/v1/wishlist/toggle?userId=${user.id}&tourId=${tourId}`, { method: 'POST' });
+          const data = res.data || res;
+          if (data.isAdded) {
+            wishlistIds.add(tourId);
+            btn.textContent = '❤️';
+            btn.title = 'Bỏ khỏi yêu thích';
+          } else {
+            wishlistIds.delete(tourId);
+            btn.textContent = '🤍';
+            btn.title = 'Lưu vào yêu thích';
+          }
+        } catch (err) {
+          btn.textContent = prev;
+          alert('Lỗi: ' + err.message);
+        } finally {
+          btn.disabled = false;
+        }
+      };
+    });
   }
 
   function attachCompareListeners() {
@@ -200,7 +245,18 @@
     }
   }
 
+  async function initWishlist() {
+    const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+    if (!userStr) return;
+    const user = JSON.parse(userStr);
+    try {
+      const res = await TB.apiFetch(`/api/v1/wishlist?userId=${user.id}&page=0&size=200`);
+      const pd = res.data || res;
+      if (pd.content) pd.content.forEach(t => wishlistIds.add(t.id));
+    } catch (e) {}
+  }
+
   updateCompareBadge();
   fetchCategories();
-  fetchTours();
+  initWishlist().then(() => fetchTours());
 })();
