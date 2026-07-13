@@ -230,15 +230,41 @@
     // Load featured tours
     async function loadFeatured() {
       try {
+        let wishlistTourIds = new Set();
+        if (user && user.id) {
+          try {
+            const wlRes = await TB.apiFetch(`/api/v1/wishlist?userId=${user.id}&page=0&size=100`);
+            const wlData = wlRes.data || wlRes;
+            if (wlData && wlData.content) {
+              wlData.content.forEach(item => wishlistTourIds.add(item.id));
+            }
+          } catch (wlErr) {
+            console.warn("Failed to load wishlist for active state:", wlErr);
+          }
+        }
+
         const res = await TB.apiFetch('/api/v1/tours/browse?size=6&sortBy=rating&sortDir=desc');
         const tours = res.data?.content || [];
         const grid = el('featuredTours');
         if (tours.length > 0) {
-          grid.innerHTML = tours.map((t, idx) => `
+          grid.innerHTML = tours.map((t, idx) => {
+            const isFav = wishlistTourIds.has(t.id);
+            const heartSymbol = isFav ? '❤️' : '🤍';
+            return `
             <div class="tour-card reveal" style="animation-delay: ${idx * 0.1}s">
-              <div class="tour-card-img-wrapper">
+              <div class="tour-card-img-wrapper" style="position: relative;">
                 <img src="${t.imageUrl || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg'}" class="tour-card-img" alt="${t.tourName}">
                 <div class="tour-card-badge">✨ NỔI BẬT</div>
+                <button class="wishlist-heart-btn" onclick="event.preventDefault(); event.stopPropagation(); toggleWishlist(${t.id}, this)" style="
+                  position: absolute; top: 12px; right: 12px; z-index: 10;
+                  background: rgba(255, 255, 255, 0.9); border: none;
+                  border-radius: 50%; width: 36px; height: 36px;
+                  cursor: pointer; display: flex; align-items: center; justify-content: center;
+                  box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: transform 0.2s;
+                  font-size: 1.2rem; line-height: 1; padding: 0;
+                " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="Yêu thích">
+                  ${heartSymbol}
+                </button>
               </div>
               <div class="tour-card-body">
                 <h3 class="tour-card-title">${t.tourName}</h3>
@@ -257,7 +283,8 @@
                 </div>
               </div>
             </div>
-          `).join('');
+          `;
+          }).join('');
           initReveal();
         } else {
           grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 50px;">Hiện tại chưa có tour nổi bật.</div>';
@@ -269,6 +296,24 @@
             <p style="font-size: 1.2rem; font-weight: 700;">⚠️ Lỗi kết nối!</p>
             <button onclick="location.reload()" class="btn btn-outline" style="margin-top: 20px;">THỬ LẠI</button>
           </div>`;
+      }
+    }
+
+    async function toggleWishlist(tourId, btn) {
+      if (!user || !user.id) {
+        alert("Vui lòng đăng nhập để thêm tour vào danh sách yêu thích!");
+        window.location.href = "./auth/login.html";
+        return;
+      }
+      try {
+        const res = await TB.apiFetch(`/api/v1/wishlist/toggle?userId=${user.id}&tourId=${tourId}`, { method: 'POST' });
+        const data = res.data || res;
+        if (data.success !== false) {
+          btn.innerText = data.isAdded ? '❤️' : '🤍';
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Lỗi cập nhật wishlist: " + e.message);
       }
     }
 
