@@ -16,7 +16,6 @@ import com.tourbooking.booking.backend.model.dto.response.ReviewResponse;
 import com.tourbooking.booking.backend.model.entity.Review;
 import com.tourbooking.booking.backend.model.entity.Tour;
 import com.tourbooking.booking.backend.model.entity.User;
-import com.tourbooking.booking.backend.model.entity.enums.UserRole;
 import com.tourbooking.booking.backend.repository.ReviewRepository;
 import com.tourbooking.booking.backend.repository.TourRepository;
 import com.tourbooking.booking.backend.repository.UserRepository;
@@ -72,30 +71,32 @@ public class ReviewServiceImpl implements ReviewService {
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
         User user = userRepo.findById(request.getUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        return saveCustomerReview(request, tour, user);
-    }
 
-    @Override
-    @Transactional
-    public ReviewResponse createReview(ReviewRequest request, String customerEmail) {
-        User user = userRepo.findByEmail(customerEmail)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        Tour tour = tourRepo.findById(request.getTourId())
-                .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
-        return saveCustomerReview(request, tour, user);
-    }
+        // Validation: user must have a COMPLETED booking for this tour
+        boolean hasCompletedBooking = tour.getSchedules().stream()
+                .flatMap(schedule -> schedule.getBookings().stream())
+                .anyMatch(booking -> booking.getUser().getId().equals(user.getId()) 
+                                  && booking.getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.COMPLETED);
 
-    private ReviewResponse saveCustomerReview(ReviewRequest request, Tour tour, User user) {
-        if (user.getRole() != UserRole.CUSTOMER) {
-            throw new AppException(ErrorCode.FORBIDDEN);
+        if (!hasCompletedBooking) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Bạn phải hoàn thành chuyến đi của tour này mới có thể viết đánh giá.");
         }
 
-        Review review = reviewRepo.findByUser_IdAndTour_Id(user.getId(), tour.getId())
-                .orElseGet(() -> ReviewMapper.toEntity(request));
-        ReviewMapper.updateEntityFromRequest(review, request);
+        java.util.Optional<Review> existingReviewOpt = reviewRepo.findByUser_IdAndTour_Id(user.getId(), tour.getId());
+        if (existingReviewOpt.isPresent()) {
+            Review existingReview = existingReviewOpt.get();
+            existingReview.setRating(request.getRating());
+            existingReview.setComment(request.getComment());
+            Review savedReview = reviewRepo.save(existingReview);
+            updateTourAverageRating(tour);
+            return ReviewMapper.toResponse(savedReview);
+        }
+        
+        Review review = ReviewMapper.toEntity(request);
         review.setTour(tour);
         review.setUser(user);
         Review savedReview = reviewRepo.save(review);
+        updateTourAverageRating(tour);
 
         return ReviewMapper.toResponse(savedReview);
     }
@@ -121,6 +122,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
 
         Review updatedReview = reviewRepo.save(existingReview);
+        updateTourAverageRating(existingReview.getTour());
         return ReviewMapper.toResponse(updatedReview);
     }
 
@@ -161,9 +163,25 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional
     public void deleteReview(Long id) {
-        if (!reviewRepo.existsById(id)) {
-            throw new AppException(ErrorCode.REVIEW_NOT_FOUND);
+        Review review = reviewRepo.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.REVIEW_NOT_FOUND));
+        Tour tour = review.getTour();
+        reviewRepo.delete(review);
+        if (tour != null) {
+            updateTourAverageRating(tour);
         }
-        reviewRepo.deleteById(id);
+    }
+
+    private void updateTourAverageRating(Tour tour) {
+        List<Review> reviews = reviewRepo.findByTourId(tour.getId());
+        if (reviews.isEmpty()) {
+            tour.setRating(0.0);
+        } else {
+            double sum = reviews.stream().mapToDouble(Review::getRating).sum();
+            double avg = sum / reviews.size();
+            avg = Math.round(avg * 10.0) / 10.0;
+            tour.setRating(avg);
+        }
+        tourRepo.save(tour);
     }
 }
