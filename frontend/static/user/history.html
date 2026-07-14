@@ -214,6 +214,9 @@
             </div>
 
             <div id="bookingList"></div>
+            
+            <!-- Pagination Controls -->
+            <div id="paginationControls" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;"></div>
 
           </div>
         </div>
@@ -402,6 +405,11 @@
     let currentBooking = null;
     let rescheduleBookingId = null;
     let rescheduleSelectedScheduleId = null;
+    
+    // Phân trang
+    let currentPage = 0;
+    const PAGE_SIZE = 5;
+    let currentFilter = 'all';
 
     const $ = (id) => document.getElementById(id);
 
@@ -623,21 +631,53 @@
       }).join('');
     }
 
+    function renderPagination(totalPages) {
+        const container = $('paginationControls');
+        if (!container) return;
+        
+        if (totalPages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = `<button class="btn btn-secondary" ${currentPage === 0 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">❮ Trước</button>`;
+        html += `<span style="display:flex; align-items:center; font-weight:600; margin: 0 10px;">Trang ${currentPage + 1} / ${totalPages}</span>`;
+        html += `<button class="btn btn-secondary" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Tiếp ❯</button>`;
+        
+        container.innerHTML = html;
+    }
+
+    window.goToPage = function(page) {
+        currentPage = page;
+        loadBookings();
+    };
+
     function applyFilter(kind) {
-      const k = String(kind || 'all');
-      if (k === 'pending') {
-        render(allBookings.filter(b => ['PENDING', 'CONFIRMED', 'REFUND_REQUESTED', 'IN_PROGRESS'].includes(String(b.status || '').toUpperCase())));
-        return;
+      currentFilter = kind;
+      currentPage = 0; // reset page khi đổi filter
+      
+      // Update UI active state
+      ['filterAll', 'filterPending', 'filterDone', 'filterCancelled'].forEach(id => {
+        $(id).className = 'btn btn-secondary';
+        $(id).style.background = '';
+        $(id).style.color = '';
+      });
+      
+      const activeBtnMap = {
+          'all': 'filterAll',
+          'pending': 'filterPending',
+          'done': 'filterDone',
+          'cancelled': 'filterCancelled'
+      };
+      
+      const activeBtn = $(activeBtnMap[kind]);
+      if (activeBtn) {
+          activeBtn.className = 'btn';
+          activeBtn.style.background = 'var(--primary)';
+          activeBtn.style.color = 'white';
       }
-      if (k === 'done') {
-        render(allBookings.filter(b => ['COMPLETED', 'SUCCESS'].includes(String(b.status || '').toUpperCase())));
-        return;
-      }
-      if (k === 'cancelled') {
-        render(allBookings.filter(b => ['CANCELLED', 'EXPIRED', 'CANCELLED_BY_OPERATOR', 'COMPANY_CANCELED', 'REFUNDED', 'REFUND_REQUESTED'].includes(String(b.status || '').toUpperCase())));
-        return;
-      }
-      render(allBookings);
+      
+      loadBookings();
     }
 
     async function loadBookings() {
@@ -646,9 +686,26 @@
         TB.goToLogin('Vui lòng đăng nhập để xem lịch sử đặt tour.');
         return;
       }
-      const res = await TB.apiFetch(`/api/v1/bookings/user/${encodeURIComponent(user.id)}`, { method: 'GET' });
-      allBookings = res?.data || [];
-      applyFilter('all');
+      
+      let statusQuery = '';
+      if (currentFilter === 'pending') {
+          statusQuery = '&status=PENDING&status=CONFIRMED&status=REFUND_REQUESTED&status=IN_PROGRESS';
+      } else if (currentFilter === 'done') {
+          statusQuery = '&status=COMPLETED&status=SUCCESS';
+      } else if (currentFilter === 'cancelled') {
+          statusQuery = '&status=CANCELLED&status=EXPIRED&status=CANCELLED_BY_OPERATOR&status=COMPANY_CANCELED&status=REFUNDED';
+      }
+
+      try {
+          const res = await TB.apiFetch(`/api/v1/bookings/history?page=${currentPage}&size=${PAGE_SIZE}${statusQuery}`, { method: 'GET' });
+          if (res?.data) {
+              allBookings = res.data.content || [];
+              render(allBookings);
+              renderPagination(res.data.totalPages || 1);
+          }
+      } catch (err) {
+          $('bookingList').innerHTML = `<div class="card panel" style="border-color:#fecaca;color:#991b1b;">${err.message || 'Không tải được lịch sử đặt tour'}</div>`;
+      }
     }
 
     async function downloadInvoice(bookingId) {

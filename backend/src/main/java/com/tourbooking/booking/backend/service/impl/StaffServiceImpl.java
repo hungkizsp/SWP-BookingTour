@@ -108,6 +108,11 @@ public class StaffServiceImpl implements StaffService {
             }
         }
 
+        if (schedule.getGuide() != null && schedule.getGuide().getId().equals(guideId)) {
+            log.info("Guide {} is already assigned to schedule {}, skipping assignment.", guideId, scheduleId);
+            return;
+        }
+
         schedule.setGuide(guide);
         tourScheduleRepository.save(schedule);
 

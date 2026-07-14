@@ -212,6 +212,11 @@ window.closeModal = function() {
 
 window.submitAssignment = async function() {
     const guideId = document.getElementById('guideSelect').value;
+    const btn = document.querySelector('#assignModal .btn:not(.btn-secondary)');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Assigning...';
+    }
     try {
         await TB.apiFetch(`/api/v1/staff/schedules/${currentScheduleId}/assign-guide?guideId=${guideId}`, { method: 'PATCH' });
         alert('Guide Assigned Successfully!');
@@ -220,6 +225,11 @@ window.submitAssignment = async function() {
     } catch (err) {
         alert('Mocked: Error -> ' + err.message + '. But Guide ID ' + guideId + ' assigned in UI.');
         closeModal();
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = 'Assign';
+        }
     }
 };
 
