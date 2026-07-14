@@ -44,7 +44,14 @@ public class UserNotificationServiceImpl implements UserNotificationService {
         notif.setRead(false);
         notificationRepository.save(notif);
 
-        pushToUser(userId, toResponse(notif));
+        // Best-effort real-time push via SSE.
+        // If the browser has closed the SSE connection, send() throws IOException.
+        // We catch it here so the caller (e.g. assignGuide) is NOT affected.
+        try {
+            pushToUser(userId, toResponse(notif));
+        } catch (Exception e) {
+            log.debug("[NOTIF] Failed to push real-time SSE to user {} (connection likely closed): {}", userId, e.getMessage());
+        }
     }
 
     @Override

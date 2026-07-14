@@ -28,6 +28,7 @@
     COMPLETED: { label: 'Đã hoàn thành', color: '#64748b', bg: '#f1f5f9', icon: '✅' },
     CANCELLED: { label: 'Đã hủy', color: '#9ca3af', bg: '#f3f4f6', icon: '❌' },
     CANCELLED_BY_OPERATOR: { label: 'Đã hủy bởi nhà điều hành', color: '#7c3aed', bg: '#ede9fe', icon: '🚫' },
+    EXPIRED_NO_BOOKING: { label: 'Đã hết hạn - 0 booking', color: '#6b7280', bg: '#e5e7eb', icon: '👻' },
   };
 
   function getStatusMeta(status) {
@@ -50,6 +51,7 @@
     if (status === 'IN_PROGRESS') return { canBook: false, reason: 'Tour đang diễn ra, không thể đặt thêm.', isPendingGuide: false };
     if (status === 'BOOKING_CLOSED') return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.', isPendingGuide: false };
     if (status === 'SOLD_OUT') return { canBook: false, reason: 'Tour đã hết chỗ.', isPendingGuide: false };
+    if (status === 'EXPIRED_NO_BOOKING') return { canBook: false, reason: 'Lịch trình đã hết hạn và không có lịch khởi hành do không đủ khách.', isPendingGuide: false };
     // PENDING_GUIDE: departure is < 1h away and no guide assigned — booking is blocked
     if (status === 'PENDING_GUIDE') return {
       canBook: false,

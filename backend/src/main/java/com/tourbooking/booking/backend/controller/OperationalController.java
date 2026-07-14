@@ -106,6 +106,12 @@ public class OperationalController {
                     ? java.time.temporal.ChronoUnit.MINUTES.between(now, departure)
                     : 0;
 
+            // FIX: Skip stale alerts whose departure has already passed (minutesRemaining < 0).
+            // These schedules have 0 bookings (so the auto-cancel job skipped them), resulting
+            // in frozen OPEN/BOOKING_CLOSED records with negative countdown values.
+            // They are informational-only noise in the Live Alert Queue.
+            if (minsRemaining < 0) continue;
+
             Map<String, Object> card = new HashMap<>();
             card.put("type", "EARLY_WARNING");
             card.put("alertWindow", alert.getAlertWindow());

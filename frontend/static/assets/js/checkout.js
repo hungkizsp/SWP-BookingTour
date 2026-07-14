@@ -142,7 +142,7 @@
     // This mirrors the backend's authoritative checks to provide instant UX feedback.
     // The server will ALWAYS re-validate; this is purely a convenience guard.
     const schedStatus = String(scheduleData.status || '').toUpperCase();
-    const NON_BOOKABLE = ['CANCELLED', 'COMPLETED', 'IN_PROGRESS', 'BOOKING_CLOSED'];
+    const NON_BOOKABLE = ['CANCELLED', 'COMPLETED', 'IN_PROGRESS', 'BOOKING_CLOSED', 'EXPIRED_NO_BOOKING'];
 
     let blockReason = null;
     if (NON_BOOKABLE.includes(schedStatus)) {
@@ -151,6 +151,7 @@
         COMPLETED:      'Tour này đã hoàn thành.',
         IN_PROGRESS:    'Tour đang diễn ra, không thể đặt thêm chỗ.',
         BOOKING_CLOSED: 'Hạn đặt tour cho lịch trình này đã kết thúc.',
+        EXPIRED_NO_BOOKING: 'Đã hết hạn - Không có khách đặt.',
       };
       blockReason = labels[schedStatus] || 'Lịch trình này hiện không thể đặt.';
     } else if (schedStatus === 'SOLD_OUT' || (scheduleData.availableSlots != null && scheduleData.availableSlots <= 0)) {

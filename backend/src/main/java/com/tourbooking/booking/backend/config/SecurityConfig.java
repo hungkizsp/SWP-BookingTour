@@ -1,5 +1,6 @@
 package com.tourbooking.booking.backend.config;
 
+import jakarta.servlet.DispatcherType;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -55,6 +56,10 @@ public class SecurityConfig {
                         }))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
+                        // Allow ASYNC and FORWARD dispatcher types to bypass security checks.
+                        // Without this, SSE (SseEmitter) async re-dispatches by Tomcat trigger
+                        // AuthorizationDeniedException on an already-committed response.
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.FORWARD, DispatcherType.ERROR).permitAll()
                         // Cho phép tất cả các tài nguyên tĩnh
                         .requestMatchers(
                                 "/", "/error", "/index.html", "/favicon.ico",
@@ -63,6 +68,8 @@ public class SecurityConfig {
                                 "/user/**", "/admin/**", "/staff/**",
                                 "/static/**", "/webjars/**", "/uploads/**")
                         .permitAll()
+                        // SSE endpoint authenticates via token query-param — permit the request itself
+                        .requestMatchers("/api/v1/notifications/stream").permitAll()
                         // Cho phép các API Auth & Public
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         // ─── Payment endpoints ─────────────────────────────────────────────────────

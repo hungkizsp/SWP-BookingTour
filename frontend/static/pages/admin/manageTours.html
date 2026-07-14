@@ -12,21 +12,7 @@
 
 <body>
     <div class="admin-layout">
-        <aside class="sidebar">
-            <a href="./dashboard.html" class="logo">TourBooking</a>
-            <nav>
-                <a href="./dashboard.html" class="nav-item">Dashboard</a>
-                <a href="./manageTours.html" class="nav-item active">Tours</a>
-                <a href="./manageCategories.html" class="nav-item">Categories</a>
-                <a href="./manageBookings.html" class="nav-item">Bookings</a>
-                <a href="./manageUsers.html" class="nav-item">Users</a>
-                <a href="./manageReview.html" class="nav-item">Reviews</a>
-                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
-                <a href="./financialReport.html" class="nav-item">Financial Report</a>
-                <a href="./manageDiscounts.html" class="nav-item">Manage Discount</a>
-                <a href="./manageVouchers.html" class="nav-item"> Vouchers</a>
-            </nav>
-        </aside>
+        <aside class="sidebar"></aside>
 
         <main class="main-content">
             <header>
@@ -122,13 +108,13 @@
             </div>
 
             <div class="form-group" style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">
-                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Tour Itinerary (Lịch Trình Tham
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Tour Itinerary (L?ch Tr�nh Tham
                     Quan)</label>
                 <div id="itineraryContainer" style="display: flex; flex-direction: column; gap: 15px;">
                     <!-- Itinerary days will be injected here -->
                 </div>
                 <button type="button" onclick="addItineraryRow()" class="btn btn-secondary btn-sm"
-                    style="margin-top: 10px;">+ Add Day (Thêm Ngày)</button>
+                    style="margin-top: 10px;">+ Add Day (Th�m Ng�y)</button>
             </div>
 
             <div class="form-group">
@@ -176,7 +162,7 @@
                         Date</label>
                     <label style="display: flex; align-items: center; gap: 5px;"><input type="radio"
                             name="recurrenceMode" value="recurring" onchange="toggleRecurrence()"> Recurring Schedule
-                        (Láº·p láº¡i)</label>
+                        (Lặp lại)</label>
                 </div>
             </div>
 
@@ -192,7 +178,7 @@
             <div id="recurringBlock"
                 style="display: none; margin-bottom: 15px; border: 1px solid var(--border); padding: 15px; border-radius: 5px; background: var(--bg-light);">
                 <div class="form-group">
-                    <label>Days of Week (Thá»© trong tuáº§n)</label>
+                    <label>Days of Week (Thứ trong tuần)</label>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
                         <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
                                 name="daysOfWeek" value="MONDAY"> Mon</label>
@@ -212,11 +198,11 @@
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div class="form-group">
-                        <label>Range Start (Báº¯t Ä‘áº§u láº·p) *</label>
+                        <label>Range Start (Bắt đầu lặp) *</label>
                         <input type="date" id="bulkStartDate" class="form-control">
                     </div>
                     <div class="form-group">
-                        <label>Range End (Káº¿t thÃºc láº·p) *</label>
+                        <label>Range End (Kết thúc lặp) *</label>
                         <input type="date" id="bulkEndDate" class="form-control">
                     </div>
                 </div>
@@ -244,7 +230,7 @@
         const API = "/api/v1/admin/tours";
         const PUBLIC_API = "/api/v1/tours";
 
-        // Kiá»ƒm tra quyá»n ADMIN
+        // Kiểm tra quyền ADMIN
         function checkAuth() {
             try {
                 const userStr = sessionStorage.getItem('user');
@@ -281,7 +267,7 @@
 
         let currentEditId = null;
 
-        // Helper: Láº¥y Header (bao gá»“m Token)
+        // Helper: Lấy Header (bao gồm Token)
         function getHeaders() {
             const token = sessionStorage.getItem('token');
             const headers = {
@@ -522,35 +508,35 @@
                 <button type="button" onclick="this.parentElement.remove()" style="position: absolute; right: 10px; top: 10px; background: #ef4444; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem;">X</button>
                 <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; margin-bottom: 10px;">
                     <div>
-                        <label>Ngày Tháng</label>
+                        <label>Ng�y Th�ng</label>
                         <input type="number" class="form-control i-day" value="${dayData?.dayNumber || (container.children.length + 1)}" min="1" required>
                     </div>
                     <div>
-                        <label>Tiêu Đề</label>
-                        <input type="text" class="form-control i-title" value="${dayData?.title || ''}" placeholder="Vd: Vui Chơi Tham Quan" required>
+                        <label>Ti�u �?</label>
+                        <input type="text" class="form-control i-title" value="${dayData?.title || ''}" placeholder="Vd: Vui Choi Tham Quan" required>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                     <div>
-                        <label>Phương Tiện</label>
+                        <label>Phuong Ti?n</label>
                         <input type="text" class="form-control i-transport" value="${dayData?.transportation || ''}" placeholder="Vd: Xe bus">
                     </div>
                     <div>
-                        <label>Bữa Ăn</label>
-                        <input type="text" class="form-control i-meals" value="${dayData?.meals || ''}" placeholder="Vd: Sáng, Trưa">
+                        <label>B?a An</label>
+                        <input type="text" class="form-control i-meals" value="${dayData?.meals || ''}" placeholder="Vd: S�ng, Trua">
                     </div>
                     <div>
-                        <label>Nơi Ăn</label>
-                        <input type="text" class="form-control i-accommodation" value="${dayData?.accommodation || ''}" placeholder="Vd: Khách Sạn 4 sao">
+                        <label>Noi An</label>
+                        <input type="text" class="form-control i-accommodation" value="${dayData?.accommodation || ''}" placeholder="Vd: Kh�ch S?n 4 sao">
                     </div>
                 </div>
                 <div style="margin-bottom: 10px;">
-                    <label>Phương Tiện Tham Quan</label>
-                    <input type="text" class="form-control i-highlights" value="${dayData?.highlights || ''}" placeholder="Vd: Bà Nà Hills, Cầu Vàng...">
+                    <label>Phuong Ti?n Tham Quan</label>
+                    <input type="text" class="form-control i-highlights" value="${dayData?.highlights || ''}" placeholder="Vd: B� N� Hills, C?u V�ng...">
                 </div>
                 <div style="margin-bottom: 10px;">
-                    <label>Mô Tả Chi Tiết</label>
-                    <textarea class="form-control i-desc" rows="2" placeholder="Nhập Chi Tiết Lịch Trình..." required>${dayData?.description || ''}</textarea>
+                    <label>M� T? Chi Ti?t</label>
+                    <textarea class="form-control i-desc" rows="2" placeholder="Nh?p Chi Ti?t L?ch Tr�nh..." required>${dayData?.description || ''}</textarea>
                 </div>
                 <div>
                     <label>&#7843;nh L&#7883;ch tr&#236;nh (T&#249;y ch&#7885;n)</label>
@@ -584,7 +570,7 @@
             container.appendChild(row);
         }
 
-        // ── Itinerary image upload — event delegation (works for dynamically added rows) ──
+        // -- Itinerary image upload � event delegation (works for dynamically added rows) --
         document.addEventListener('click', function(e) {
             // Click on preview box triggers file picker
             const box = e.target.closest('.itinerary-image-preview-box');
@@ -640,11 +626,11 @@
                 const formData = new FormData();
                 formData.append('files', file);
                 // TB.apiFetch auto-prepends http://localhost:8080 when on dev port,
-                // and injects the Bearer token — no need to set headers manually.
+                // and injects the Bearer token � no need to set headers manually.
                 const resData = await TB.apiFetch('/api/v1/admin/tours/upload', {
                     method: 'POST',
                     body: formData
-                    // Do NOT set Content-Type — browser sets it with multipart boundary
+                    // Do NOT set Content-Type � browser sets it with multipart boundary
                 });
                 // Response: { code, message, data: ["url"] }
                 if (resData.code === 200 && resData.data && resData.data.length > 0) {
@@ -725,7 +711,7 @@
             const nowTime = new Date().toTimeString().substring(0, 5);
             for (const s of schedules) {
                 if (s.startDate === todayStr && s.departureTime && s.departureTime < nowTime) {
-                    showToast('Giá» khá»Ÿi hÃ nh khÃ´ng Ä‘Æ°á»£c nhá» hÆ¡n giá» hiá»‡n táº¡i Ä‘á»‘i vá»›i lá»‹ch trÃ¬nh hÃ´m nay!', 'error');
+                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
                     return;
                 }
             }
@@ -753,7 +739,7 @@
                     });
                     const uploadData = await uploadRes.json();
                     if (!uploadRes.ok) throw new Error(uploadData.message || 'Image upload failed');
-                    // Gáº¯n thÃªm áº£nh má»›i vÃ o danh sÃ¡ch áº£nh cÅ© (náº¿u cÃ³)
+                    // Gắn thêm ảnh mới vào danh sách ảnh cũ (nếu có)
                     finalImageUrls = finalImageUrls.concat(uploadData.data);
                 } catch (error) {
                     console.error('Upload error:', error);
@@ -859,16 +845,16 @@
                 <input type="time" class="form-control schedule-time" value="${depTime}" title="Departure Time">
                 <input type="number" class="form-control schedule-max" value="${data ? data.maxSlots || data.availableSlots : ''}" min="1" placeholder="Slots" title="Max Slots">
                 ${data && data.id
-                    ? (data.status === 'CANCELLED' || data.status === 'CANCELLED_BY_OPERATOR'
-                        ? '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">ÄÃ£ há»§y</span>'
-                        : '<button type="button" onclick="cancelSchedule(' + data.id + ', this)" class="btn btn-danger btn-sm" style="padding: 2px 5px;" title="Há»§y lá»‹ch trÃ¬nh (HoÃ n tiá»n 100%)">Há»§y</button>')
+                    ? (['CANCELLED', 'CANCELLED_BY_OPERATOR', 'EXPIRED_NO_BOOKING'].includes(data.status)
+                        ? '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">Đã hủy</span>'
+                        : '<button type="button" onclick="cancelSchedule(' + data.id + ', this)" class="btn btn-danger btn-sm" style="padding: 2px 5px;" title="Hủy lịch trình (Hoàn tiền 100%)">Hủy</button>')
                     : '<button type="button" onclick="this.parentElement.remove()" class="btn btn-danger btn-sm" style="padding: 2px 5px;">&times;</button>'}
             `;
             container.appendChild(row);
         }
 
         async function cancelSchedule(scheduleId, btn) {
-            if (!confirm("Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n há»§y lá»‹ch trÃ¬nh nÃ y? ToÃ n bá»™ booking liÃªn quan sáº½ bá»‹ há»§y vÃ  hoÃ n tiá»n 100%.")) {
+            if (!confirm("Bạn có chắc chắn muốn hủy lịch trình này? Toàn bộ booking liên quan sẽ bị hủy và hoàn tiền 100%.")) {
                 return;
             }
             try {
@@ -876,12 +862,12 @@
                     method: 'PUT'
                 });
 
-                showToast('Lá»‹ch trÃ¬nh Ä‘Ã£ Ä‘Æ°á»£c há»§y vÃ  hoÃ n tiá»n thÃ nh cÃ´ng!', 'success');
-                btn.outerHTML = '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">ÄÃ£ há»§y</span>';
+                showToast('Lịch trình đã được hủy và hoàn tiền thành công!', 'success');
+                btn.outerHTML = '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">Đã hủy</span>';
 
             } catch (error) {
                 console.error('Error cancelling schedule:', error);
-                showToast(error.message || 'Lá»—i khi há»§y lá»‹ch trÃ¬nh', 'error');
+                showToast(error.message || 'Lỗi khi hủy lịch trình', 'error');
             }
         }
 
@@ -985,15 +971,15 @@
             if (mode === 'single') {
                 const startDate = document.getElementById('singleStartDate').value;
                 if (!startDate) {
-                    showToast('Vui lÃ²ng chá»n ngÃ y báº¯t Ä‘áº§u (Please select a start date).', 'error');
+                    showToast('Vui lòng chọn ngày bắt đầu (Please select a start date).', 'error');
                     return;
                 }
                 if (startDate < todayStr) {
-                    showToast('NgÃ y báº¯t Ä‘áº§u khÃ´ng Ä‘Æ°á»£c náº±m trong quÃ¡ khá»© (Start date cannot be in the past).', 'error');
+                    showToast('Ngày bắt đầu không được nằm trong quá khứ (Start date cannot be in the past).', 'error');
                     return;
                 }
                 if (startDate === todayStr && departureTime.substring(0, 5) < nowTime) {
-                    showToast('Giá» khá»Ÿi hÃ nh khÃ´ng Ä‘Æ°á»£c nhá» hÆ¡n giá» hiá»‡n táº¡i Ä‘á»‘i vá»›i lá»‹ch trÃ¬nh hÃ´m nay!', 'error');
+                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
                     return;
                 }
                 payload.rangeStartDate = startDate;
@@ -1002,19 +988,19 @@
                 const startDate = document.getElementById('bulkStartDate').value;
                 const endDate = document.getElementById('bulkEndDate').value;
                 if (!startDate || !endDate) {
-                    showToast('Vui lÃ²ng chá»n cáº£ ngÃ y báº¯t Ä‘áº§u vÃ  ngÃ y káº¿t thÃºc (Please select both range start and end dates).', 'error');
+                    showToast('Vui lòng chọn cả ngày bắt đầu và ngày kết thúc (Please select both range start and end dates).', 'error');
                     return;
                 }
                 if (startDate < todayStr || endDate < todayStr) {
-                    showToast('NgÃ y báº¯t Ä‘áº§u vÃ  káº¿t thÃºc khÃ´ng Ä‘Æ°á»£c náº±m trong quÃ¡ khá»© (Dates cannot be in the past).', 'error');
+                    showToast('Ngày bắt đầu và kết thúc không được nằm trong quá khứ (Dates cannot be in the past).', 'error');
                     return;
                 }
                 if (startDate > endDate) {
-                    showToast('NgÃ y báº¯t Ä‘áº§u khÃ´ng Ä‘Æ°á»£c lá»›n hÆ¡n ngÃ y káº¿t thÃºc (Start date cannot be after end date).', 'error');
+                    showToast('Ngày bắt đầu không được lớn hơn ngày kết thúc (Start date cannot be after end date).', 'error');
                     return;
                 }
                 if (startDate === todayStr && departureTime.substring(0, 5) < nowTime) {
-                    showToast('Giá» khá»Ÿi hÃ nh khÃ´ng Ä‘Æ°á»£c nhá» hÆ¡n giá» hiá»‡n táº¡i Ä‘á»‘i vá»›i lá»‹ch trÃ¬nh hÃ´m nay!', 'error');
+                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
                     return;
                 }
 
@@ -1023,13 +1009,13 @@
                 const diffTime = Math.abs(endObj - startObj);
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                 if (diffDays > 365) {
-                    showToast('Khoáº£ng thá»i gian láº·p láº¡i khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ 1 nÄƒm (Duration cannot exceed 365 days).', 'error');
+                    showToast('Khoảng thời gian lặp lại không được vượt quá 1 năm (Duration cannot exceed 365 days).', 'error');
                     return;
                 }
 
                 const checkboxes = document.querySelectorAll('input[name="daysOfWeek"]:checked');
                 if (checkboxes.length === 0) {
-                    showToast('Vui lÃ²ng chá»n Ã­t nháº¥t má»™t thá»© trong tuáº§n Ä‘á»ƒ láº·p láº¡i (Please select at least one day).', 'error');
+                    showToast('Vui lòng chọn ít nhất một thứ trong tuần để lặp lại (Please select at least one day).', 'error');
                     return;
                 }
                 checkboxes.forEach(cb => payload.daysOfWeek.push(cb.value));
@@ -1094,6 +1080,8 @@
             loadTours();
         }
     </script>
+<script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>
+

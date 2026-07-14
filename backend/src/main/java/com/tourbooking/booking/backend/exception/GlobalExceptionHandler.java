@@ -1,11 +1,14 @@
 package com.tourbooking.booking.backend.exception;
 
 import com.tourbooking.booking.backend.model.dto.response.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -67,6 +70,35 @@ public class GlobalExceptionHandler {
                 .message("File upload quá lớn. Vui lòng chọn file có kích thước nhỏ hơn (Tối đa 5MB).")
                 .build();
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
+    }
+
+    /**
+     * Handles SSE (Server-Sent Events) connection timeout gracefully.
+     * When a {@code SseEmitter} times out (e.g. after 5 minutes of inactivity),
+     * Tomcat fires an async timeout dispatch and Spring throws
+     * {@code AsyncRequestTimeoutException}. Without this handler, the generic
+     * {@link #handleRuntimeException} would try to write an {@code ApiResponse}
+     * JSON body into the already-committed {@code text/event-stream} response,
+     * causing {@code HttpMessageNotWritableException} noise in the logs.
+     *
+     * <p>This handler simply returns {@code void}: the {@code SseEmitter.onTimeout()}
+     * callback registered in the service already performs cleanup (removing the
+     * dead emitter from the registry).</p>
+     */
+    @ExceptionHandler(AsyncRequestTimeoutException.class)
+    public void handleAsyncRequestTimeout(
+            AsyncRequestTimeoutException ex,
+            HttpServletRequest request,
+            HttpServletResponse response) {
+        // SSE connection timed out — the SseEmitter.onTimeout() callback handles
+        // emitter cleanup. Do NOT write any body; the response is already committed
+        // with Content-Type: text/event-stream and cannot accept JSON.
+        if (!response.isCommitted()) {
+            response.setStatus(HttpServletResponse.SC_REQUEST_TIMEOUT);
+        }
+        // Log at DEBUG only — this is a normal part of the SSE lifecycle.
+        log.debug("[SSE] Async request timed out for {} {} (normal SSE lifecycle)",
+                request.getMethod(), request.getRequestURI());
     }
 
     @ExceptionHandler(RuntimeException.class)

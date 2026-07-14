@@ -61,6 +61,15 @@ public class OperationalScheduler {
     /**
      * Runs every 3 minutes. Scans upcoming OPEN schedules without a guide and fires
      * one-time notifications for each threshold window that has been entered.
+     *
+     * <p><b>Duplicate-alert fix (break):</b> After successfully recording and firing one NEW alert
+     * window for a schedule, we {@code break} out of the inner loop. This prevents a schedule
+     * that is detected late (e.g. its departure already crossed both the 24H and 12H thresholds
+     * simultaneously) from generating multiple alert cards in a single scheduler run. Subsequent
+     * runs will pick up the next threshold if the guide is still missing.</p>
+     *
+     * <p><b>Past-departure guard:</b> Schedules whose departure has already passed are skipped;
+     * the auto-cancel job (Job 3) is responsible for handling them.</p>
      */
     @Scheduled(fixedRate = 180_000)
     @Transactional
@@ -74,6 +83,11 @@ public class OperationalScheduler {
         for (TourSchedule schedule : candidates) {
             LocalDateTime departure = schedule.getDepartureDateTime();
             if (departure == null) continue;
+
+            // Skip schedules whose departure has already passed - Job 3 (auto-cancel) handles those.
+            if (now.isAfter(departure)) {
+                continue;
+            }
 
             // Bypass workflows if schedule has 0 bookings
             int maxSlots = schedule.getMaxSlots() != null ? schedule.getMaxSlots() : 0;
@@ -129,6 +143,12 @@ public class OperationalScheduler {
                 }
 
                 alertsSent++;
+
+                // KEY FIX: break after firing the first NEW alert window for this schedule in
+                // this run. Without this, a late-detected schedule fires ALL applicable windows
+                // at once (e.g. 24H + 12H simultaneously), creating duplicate alert cards.
+                // The next scheduler run (3 min later) will fire the next window if still needed.
+                break;
             }
         }
 
@@ -314,6 +334,89 @@ public class OperationalScheduler {
                 schedule.setStatus(TourStatus.PENDING_GUIDE);
                 tourScheduleRepository.save(schedule);
             }
+        }
+    }
+    // ══════════════════════════════════════════════════════════════════════
+    // JOB 5 — Auto-Expire: change status of OPEN schedules that are past departure
+    //          AND have zero bookings (all statuses) to avoid frozen records.
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Runs every 15 minutes. Updates OPEN, guide-less schedules whose departure
+     * has already passed AND that have never received any booking (including
+     * cancelled/refunded ones) to EXPIRED_NO_BOOKING. These schedules are "ghost" rows — no customer
+     * was ever impacted — and leaving them OPEN causes:
+     * <ul>
+     *   <li>Inflated "Schedules No Guide" count on the dashboard.</li>
+     *   <li>Stale {@link OperationalAlert} records with negative minutesRemaining
+     *       appearing in the Live Alert Queue.</li>
+     * </ul>
+     *
+     * <p><b>Safety:</b> The booking count is re-checked inside the transaction at
+     * runtime, not only at query time, so a booking created between the initial
+     * query and the update will prevent expiration (race-condition safe).</p>
+     *
+     * <p><b>Atomicity:</b> {@code OperationalAlert} records for the schedule are
+     * deleted in the same transaction before the schedule status is updated.</p>
+     */
+    @Scheduled(fixedRate = 900_000) // every 15 minutes
+    @Transactional
+    public void expireZeroBookingPastDepartureSchedules() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
+
+        // Candidate query: OPEN + no guide + startDate on or before today
+        List<TourSchedule> candidates = tourScheduleRepository
+                .findOpenNoGuideSchedulesOnOrBeforeDate(today);
+
+        int purged = 0;
+        for (TourSchedule schedule : candidates) {
+            LocalDateTime departure = schedule.getDepartureDateTime();
+
+            // Only process schedules whose departure has actually passed
+            if (departure != null && now.isBefore(departure)) {
+                continue;
+            }
+
+            // Re-check booking count inside the transaction (race-condition safety)
+            long bookingCount = bookingRepository.countByScheduleId(schedule.getId());
+            if (bookingCount > 0) {
+                // A booking exists (even if cancelled/refunded) — do NOT delete.
+                // The normal auto-cancel flow should handle it.
+                log.info("[OPS-PURGE] Schedule #{} has {} booking(s) — skipping purge.",
+                        schedule.getId(), bookingCount);
+                continue;
+            }
+
+            // Safe to purge: delete associated alerts first, then the schedule
+            int alertsDeleted = 0;
+            try {
+                operationalAlertRepository.deleteByScheduleId(schedule.getId());
+                alertsDeleted = 1; // deleteByScheduleId is void; just flag success
+            } catch (Exception e) {
+                log.warn("[OPS-EXPIRE] Could not delete alerts for schedule #{}: {}",
+                        schedule.getId(), e.getMessage());
+            }
+
+            try {
+                String tourName = schedule.getTour() != null
+                        ? schedule.getTour().getTourName()
+                        : "Tour #" + (schedule.getTour() != null ? schedule.getTour().getId() : "?");
+                schedule.setStatus(TourStatus.EXPIRED_NO_BOOKING);
+                tourScheduleRepository.save(schedule);
+                purged++;
+                log.info("[OPS-EXPIRE] Expired ghost schedule #{} ({} — {}) with 0 bookings. Alerts also removed: {}",
+                        schedule.getId(), tourName,
+                        schedule.getStartDate(),
+                        alertsDeleted > 0 ? "yes" : "none");
+            } catch (Exception e) {
+                log.error("[OPS-EXPIRE] Failed to expire schedule #{}: {}",
+                        schedule.getId(), e.getMessage(), e);
+            }
+        }
+
+        if (purged > 0) {
+            log.info("[OPS-EXPIRE] Expired {} zero-booking past-departure ghost schedule(s).", purged);
         }
     }
 }

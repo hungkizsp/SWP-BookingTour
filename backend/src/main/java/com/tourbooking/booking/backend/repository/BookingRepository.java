@@ -117,6 +117,10 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "AND b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED")
     List<Booking> findConfirmedByScheduleId(@Param("scheduleId") Long scheduleId);
 
+    /** Count ALL bookings for a schedule (any status) — used by the purge job to ensure 0 bookings before deletion. */
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.schedule.id = :scheduleId")
+    long countByScheduleId(@Param("scheduleId") Long scheduleId);
+
     /** Count bookings with REFUNDED status (caused by CANCELLED_BY_OPERATOR). */
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.REFUNDED " +
            "AND EXISTS (SELECT 1 FROM TourSchedule s WHERE s.id = b.schedule.id " +
