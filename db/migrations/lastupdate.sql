@@ -1,6 +1,6 @@
 USE [master]
 GO
-/****** Object:  Database [TourBookingDB]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Database [TourBookingDB]    Script Date: 15/07/2026 10:48:16 SA ******/
 CREATE DATABASE [TourBookingDB]
  CONTAINMENT = NONE
  ON  PRIMARY 
@@ -82,7 +82,7 @@ ALTER DATABASE [TourBookingDB] SET QUERY_STORE (OPERATION_MODE = READ_WRITE, CLE
 GO
 USE [TourBookingDB]
 GO
-/****** Object:  Table [dbo].[TourSchedules]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[TourSchedules]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -110,7 +110,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Bookings]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Bookings]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -128,13 +128,17 @@ CREATE TABLE [dbo].[Bookings](
 	[CreatedAt] [datetime2](7) NOT NULL,
 	[UpdatedAt] [datetime2](7) NOT NULL,
 	[OccupiedSlots] [int] NULL,
+	[CancellationReason] [nvarchar](500) NULL,
+	[DiscountID] [bigint] NULL,
+	[LoyaltyPointsUsed] [int] NULL,
+	[LoyaltyDiscountAmount] [decimal](10, 2) NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[BookingID] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Tours]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Tours]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -170,7 +174,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  View [dbo].[TourBookingStats]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  View [dbo].[TourBookingStats]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -186,7 +190,7 @@ GO
         GROUP BY t.TourID
     
 GO
-/****** Object:  Table [dbo].[Categories]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Categories]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -207,7 +211,7 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ChatEscalations]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[ChatEscalations]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -228,7 +232,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ChatMessages]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[ChatMessages]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -248,7 +252,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ChatSessions]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[ChatSessions]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -268,7 +272,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Cities]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Cities]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -290,7 +294,7 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[DiscountPolicies]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[DiscountPolicies]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -312,7 +316,7 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Discounts]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Discounts]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -330,6 +334,8 @@ CREATE TABLE [dbo].[Discounts](
 	[MinimumBookingAmount] [decimal](10, 2) NULL,
 	[CreatedAt] [datetime2](7) NOT NULL,
 	[UpdatedAt] [datetime2](7) NOT NULL,
+	[MaxDiscountAmount] [decimal](18, 2) NULL,
+	[ApplicableTourID] [bigint] NULL,
 PRIMARY KEY CLUSTERED 
 (
 	[DiscountID] ASC
@@ -340,7 +346,7 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Documents]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Documents]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -359,7 +365,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Invoice]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Invoice]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -376,7 +382,26 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[LoyaltyPoint]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[loyalty_transaction]    Script Date: 15/07/2026 10:48:16 SA ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[loyalty_transaction](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[user_id] [bigint] NOT NULL,
+	[points] [int] NOT NULL,
+	[transaction_type] [nvarchar](10) NOT NULL,
+	[booking_id] [bigint] NULL,
+	[description] [nvarchar](255) NULL,
+	[created_at] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[LoyaltyPoint]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -397,7 +422,7 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Newsletters]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Newsletters]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -418,7 +443,7 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[OperationalAlerts]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[OperationalAlerts]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -434,7 +459,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Passengers]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Passengers]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -454,7 +479,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[PaymentLogs]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[PaymentLogs]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -471,7 +496,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Payments]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Payments]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -496,7 +521,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[PrivacyPolicies]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[PrivacyPolicies]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -514,7 +539,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[RefundRequests]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[RefundRequests]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -536,7 +561,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Reviews]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Reviews]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -556,7 +581,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Tokens]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Tokens]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -576,7 +601,36 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[TourActivityImages]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[tour_itinerary_day]    Script Date: 15/07/2026 10:48:16 SA ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[tour_itinerary_day](
+	[id] [bigint] IDENTITY(1,1) NOT NULL,
+	[tour_id] [bigint] NOT NULL,
+	[day_number] [int] NOT NULL,
+	[title] [nvarchar](255) NOT NULL,
+	[description] [nvarchar](max) NULL,
+	[accommodation] [nvarchar](255) NULL,
+	[meals] [nvarchar](100) NULL,
+	[transportation] [nvarchar](100) NULL,
+	[highlights] [nvarchar](max) NULL,
+	[image_url] [nvarchar](500) NULL,
+	[CreatedAt] [datetime2](7) NULL,
+	[UpdatedAt] [datetime2](7) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_TourItinerary_TourDay] UNIQUE NONCLUSTERED 
+(
+	[tour_id] ASC,
+	[day_number] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[TourActivityImages]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -594,7 +648,61 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[TourFaqs]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[TourChatGroupMembers]    Script Date: 15/07/2026 10:48:16 SA ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[TourChatGroupMembers](
+	[Id] [bigint] IDENTITY(1,1) NOT NULL,
+	[GroupID] [bigint] NOT NULL,
+	[UserID] [bigint] NOT NULL,
+	[JoinedAt] [datetime2](7) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY],
+ CONSTRAINT [UQ_TCGM_GroupUser] UNIQUE NONCLUSTERED 
+(
+	[GroupID] ASC,
+	[UserID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[TourChatGroupMessages]    Script Date: 15/07/2026 10:48:16 SA ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[TourChatGroupMessages](
+	[Id] [bigint] IDENTITY(1,1) NOT NULL,
+	[GroupID] [bigint] NOT NULL,
+	[UserID] [bigint] NOT NULL,
+	[Content] [nvarchar](max) NOT NULL,
+	[SentAt] [datetime2](7) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[TourChatGroups]    Script Date: 15/07/2026 10:48:16 SA ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[TourChatGroups](
+	[Id] [bigint] IDENTITY(1,1) NOT NULL,
+	[ScheduleID] [bigint] NOT NULL,
+	[IsActive] [bit] NOT NULL,
+	[CreatedAt] [datetime2](7) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[Id] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[TourFaqs]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -612,7 +720,27 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[TourHighlights]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[TourGroupMessages]    Script Date: 15/07/2026 10:48:16 SA ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[TourGroupMessages](
+	[MessageID] [bigint] IDENTITY(1,1) NOT NULL,
+	[ScheduleID] [bigint] NOT NULL,
+	[SenderID] [bigint] NOT NULL,
+	[SenderRole] [nvarchar](20) NULL,
+	[Message] [nvarchar](max) NULL,
+	[SentAt] [datetime2](7) NULL,
+	[CreatedAt] [datetime2](7) NOT NULL,
+	[UpdatedAt] [datetime2](7) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[MessageID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[TourHighlights]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -629,7 +757,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[TourImages]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[TourImages]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -646,7 +774,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[TourProgressLogs]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[TourProgressLogs]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -663,7 +791,28 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Users]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[UserNotifications]    Script Date: 15/07/2026 10:48:16 SA ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE TABLE [dbo].[UserNotifications](
+	[NotificationID] [bigint] IDENTITY(1,1) NOT NULL,
+	[UserID] [bigint] NOT NULL,
+	[Title] [nvarchar](200) NULL,
+	[Message] [nvarchar](max) NULL,
+	[Type] [nvarchar](50) NULL,
+	[Link] [nvarchar](500) NULL,
+	[IsRead] [bit] NOT NULL,
+	[CreatedAt] [datetime2](7) NOT NULL,
+	[UpdatedAt] [datetime2](7) NOT NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[NotificationID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
+GO
+/****** Object:  Table [dbo].[Users]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -695,7 +844,7 @@ UNIQUE NONCLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[Wishlist]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Table [dbo].[Wishlist]    Script Date: 15/07/2026 10:48:16 SA ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -717,7 +866,7 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Index [UQ_Reviews_Booking]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Index [UQ_Reviews_Booking]    Script Date: 15/07/2026 10:48:16 SA ******/
 CREATE UNIQUE NONCLUSTERED INDEX [UQ_Reviews_Booking] ON [dbo].[Reviews]
 (
 	[BookingID] ASC
@@ -725,9 +874,28 @@ CREATE UNIQUE NONCLUSTERED INDEX [UQ_Reviews_Booking] ON [dbo].[Reviews]
 WHERE ([BookingID] IS NOT NULL)
 WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
+/****** Object:  Index [idx_tcgmember_user]    Script Date: 15/07/2026 10:48:16 SA ******/
+CREATE NONCLUSTERED INDEX [idx_tcgmember_user] ON [dbo].[TourChatGroupMembers]
+(
+	[UserID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [idx_tcgm_group_sent]    Script Date: 15/07/2026 10:48:16 SA ******/
+CREATE NONCLUSTERED INDEX [idx_tcgm_group_sent] ON [dbo].[TourChatGroupMessages]
+(
+	[GroupID] ASC,
+	[SentAt] DESC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+/****** Object:  Index [idx_tcg_schedule]    Script Date: 15/07/2026 10:48:16 SA ******/
+CREATE NONCLUSTERED INDEX [idx_tcg_schedule] ON [dbo].[TourChatGroups]
+(
+	[ScheduleID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
 SET ANSI_PADDING ON
 GO
-/****** Object:  Index [idx_tours_transport_type]    Script Date: 24/06/2026 10:43:17 SA ******/
+/****** Object:  Index [idx_tours_transport_type]    Script Date: 15/07/2026 10:48:16 SA ******/
 CREATE NONCLUSTERED INDEX [idx_tours_transport_type] ON [dbo].[Tours]
 (
 	[TransportType] ASC
@@ -740,6 +908,10 @@ GO
 ALTER TABLE [dbo].[Bookings] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
 GO
 ALTER TABLE [dbo].[Bookings] ADD  DEFAULT (sysdatetime()) FOR [UpdatedAt]
+GO
+ALTER TABLE [dbo].[Bookings] ADD  DEFAULT ((0)) FOR [LoyaltyPointsUsed]
+GO
+ALTER TABLE [dbo].[Bookings] ADD  DEFAULT ((0)) FOR [LoyaltyDiscountAmount]
 GO
 ALTER TABLE [dbo].[Categories] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
 GO
@@ -784,6 +956,8 @@ GO
 ALTER TABLE [dbo].[Invoice] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
 GO
 ALTER TABLE [dbo].[Invoice] ADD  DEFAULT (sysdatetime()) FOR [UpdatedAt]
+GO
+ALTER TABLE [dbo].[loyalty_transaction] ADD  DEFAULT (getdate()) FOR [created_at]
 GO
 ALTER TABLE [dbo].[LoyaltyPoint] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
 GO
@@ -831,13 +1005,29 @@ ALTER TABLE [dbo].[Tokens] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
 GO
 ALTER TABLE [dbo].[Tokens] ADD  DEFAULT (sysdatetime()) FOR [UpdatedAt]
 GO
+ALTER TABLE [dbo].[tour_itinerary_day] ADD  DEFAULT (getdate()) FOR [CreatedAt]
+GO
+ALTER TABLE [dbo].[tour_itinerary_day] ADD  DEFAULT (getdate()) FOR [UpdatedAt]
+GO
 ALTER TABLE [dbo].[TourActivityImages] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
 GO
 ALTER TABLE [dbo].[TourActivityImages] ADD  DEFAULT (sysdatetime()) FOR [UpdatedAt]
 GO
+ALTER TABLE [dbo].[TourChatGroupMembers] ADD  DEFAULT (getdate()) FOR [JoinedAt]
+GO
+ALTER TABLE [dbo].[TourChatGroupMessages] ADD  DEFAULT (getdate()) FOR [SentAt]
+GO
+ALTER TABLE [dbo].[TourChatGroups] ADD  DEFAULT ((1)) FOR [IsActive]
+GO
+ALTER TABLE [dbo].[TourChatGroups] ADD  DEFAULT (getdate()) FOR [CreatedAt]
+GO
 ALTER TABLE [dbo].[TourFaqs] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
 GO
 ALTER TABLE [dbo].[TourFaqs] ADD  DEFAULT (sysdatetime()) FOR [UpdatedAt]
+GO
+ALTER TABLE [dbo].[TourGroupMessages] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
+GO
+ALTER TABLE [dbo].[TourGroupMessages] ADD  DEFAULT (sysdatetime()) FOR [UpdatedAt]
 GO
 ALTER TABLE [dbo].[TourHighlights] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
 GO
@@ -865,6 +1055,12 @@ ALTER TABLE [dbo].[TourSchedules] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
 GO
 ALTER TABLE [dbo].[TourSchedules] ADD  DEFAULT (sysdatetime()) FOR [UpdatedAt]
 GO
+ALTER TABLE [dbo].[UserNotifications] ADD  DEFAULT ((0)) FOR [IsRead]
+GO
+ALTER TABLE [dbo].[UserNotifications] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
+GO
+ALTER TABLE [dbo].[UserNotifications] ADD  DEFAULT (sysdatetime()) FOR [UpdatedAt]
+GO
 ALTER TABLE [dbo].[Users] ADD  DEFAULT ('CUSTOMER') FOR [Role]
 GO
 ALTER TABLE [dbo].[Users] ADD  DEFAULT ((1)) FOR [IsActive]
@@ -876,6 +1072,9 @@ GO
 ALTER TABLE [dbo].[Wishlist] ADD  DEFAULT (sysdatetime()) FOR [CreatedAt]
 GO
 ALTER TABLE [dbo].[Wishlist] ADD  DEFAULT (sysdatetime()) FOR [UpdatedAt]
+GO
+ALTER TABLE [dbo].[Bookings]  WITH CHECK ADD FOREIGN KEY([DiscountID])
+REFERENCES [dbo].[Discounts] ([DiscountID])
 GO
 ALTER TABLE [dbo].[Bookings]  WITH CHECK ADD  CONSTRAINT [FK_Bookings_Schedules] FOREIGN KEY([ScheduleID])
 REFERENCES [dbo].[TourSchedules] ([ScheduleID])
@@ -922,6 +1121,16 @@ REFERENCES [dbo].[Bookings] ([BookingID])
 GO
 ALTER TABLE [dbo].[Invoice] CHECK CONSTRAINT [FK_Invoice_Bookings]
 GO
+ALTER TABLE [dbo].[loyalty_transaction]  WITH CHECK ADD  CONSTRAINT [FK_LoyaltyTx_Booking] FOREIGN KEY([booking_id])
+REFERENCES [dbo].[Bookings] ([BookingID])
+GO
+ALTER TABLE [dbo].[loyalty_transaction] CHECK CONSTRAINT [FK_LoyaltyTx_Booking]
+GO
+ALTER TABLE [dbo].[loyalty_transaction]  WITH CHECK ADD  CONSTRAINT [FK_LoyaltyTx_User] FOREIGN KEY([user_id])
+REFERENCES [dbo].[Users] ([UserID])
+GO
+ALTER TABLE [dbo].[loyalty_transaction] CHECK CONSTRAINT [FK_LoyaltyTx_User]
+GO
 ALTER TABLE [dbo].[LoyaltyPoint]  WITH CHECK ADD  CONSTRAINT [FK_LoyaltyPoint_Users] FOREIGN KEY([user_UserID])
 REFERENCES [dbo].[Users] ([UserID])
 GO
@@ -963,15 +1172,55 @@ REFERENCES [dbo].[Users] ([UserID])
 GO
 ALTER TABLE [dbo].[Reviews] CHECK CONSTRAINT [FK_Reviews_Users]
 GO
+ALTER TABLE [dbo].[tour_itinerary_day]  WITH CHECK ADD  CONSTRAINT [FK_TourItinerary_Tour] FOREIGN KEY([tour_id])
+REFERENCES [dbo].[Tours] ([TourID])
+GO
+ALTER TABLE [dbo].[tour_itinerary_day] CHECK CONSTRAINT [FK_TourItinerary_Tour]
+GO
 ALTER TABLE [dbo].[TourActivityImages]  WITH CHECK ADD  CONSTRAINT [FK_TourActivityImages_Schedules] FOREIGN KEY([ScheduleID])
 REFERENCES [dbo].[TourSchedules] ([ScheduleID])
 GO
 ALTER TABLE [dbo].[TourActivityImages] CHECK CONSTRAINT [FK_TourActivityImages_Schedules]
 GO
+ALTER TABLE [dbo].[TourChatGroupMembers]  WITH CHECK ADD  CONSTRAINT [FK_TCGM_Group] FOREIGN KEY([GroupID])
+REFERENCES [dbo].[TourChatGroups] ([Id])
+GO
+ALTER TABLE [dbo].[TourChatGroupMembers] CHECK CONSTRAINT [FK_TCGM_Group]
+GO
+ALTER TABLE [dbo].[TourChatGroupMembers]  WITH CHECK ADD  CONSTRAINT [FK_TCGM_User] FOREIGN KEY([UserID])
+REFERENCES [dbo].[Users] ([UserID])
+GO
+ALTER TABLE [dbo].[TourChatGroupMembers] CHECK CONSTRAINT [FK_TCGM_User]
+GO
+ALTER TABLE [dbo].[TourChatGroupMessages]  WITH CHECK ADD  CONSTRAINT [FK_TCGMsg_Group] FOREIGN KEY([GroupID])
+REFERENCES [dbo].[TourChatGroups] ([Id])
+GO
+ALTER TABLE [dbo].[TourChatGroupMessages] CHECK CONSTRAINT [FK_TCGMsg_Group]
+GO
+ALTER TABLE [dbo].[TourChatGroupMessages]  WITH CHECK ADD  CONSTRAINT [FK_TCGMsg_User] FOREIGN KEY([UserID])
+REFERENCES [dbo].[Users] ([UserID])
+GO
+ALTER TABLE [dbo].[TourChatGroupMessages] CHECK CONSTRAINT [FK_TCGMsg_User]
+GO
+ALTER TABLE [dbo].[TourChatGroups]  WITH CHECK ADD  CONSTRAINT [FK_TourChatGroups_TourSchedules] FOREIGN KEY([ScheduleID])
+REFERENCES [dbo].[TourSchedules] ([ScheduleID])
+GO
+ALTER TABLE [dbo].[TourChatGroups] CHECK CONSTRAINT [FK_TourChatGroups_TourSchedules]
+GO
 ALTER TABLE [dbo].[TourFaqs]  WITH CHECK ADD  CONSTRAINT [FK_TourFaqs_Tours] FOREIGN KEY([TourID])
 REFERENCES [dbo].[Tours] ([TourID])
 GO
 ALTER TABLE [dbo].[TourFaqs] CHECK CONSTRAINT [FK_TourFaqs_Tours]
+GO
+ALTER TABLE [dbo].[TourGroupMessages]  WITH CHECK ADD  CONSTRAINT [FK_GroupMessage_Schedule] FOREIGN KEY([ScheduleID])
+REFERENCES [dbo].[TourSchedules] ([ScheduleID])
+GO
+ALTER TABLE [dbo].[TourGroupMessages] CHECK CONSTRAINT [FK_GroupMessage_Schedule]
+GO
+ALTER TABLE [dbo].[TourGroupMessages]  WITH CHECK ADD  CONSTRAINT [FK_GroupMessage_Sender] FOREIGN KEY([SenderID])
+REFERENCES [dbo].[Users] ([UserID])
+GO
+ALTER TABLE [dbo].[TourGroupMessages] CHECK CONSTRAINT [FK_GroupMessage_Sender]
 GO
 ALTER TABLE [dbo].[TourHighlights]  WITH CHECK ADD  CONSTRAINT [FK_TourHighlights_Tours] FOREIGN KEY([TourID])
 REFERENCES [dbo].[Tours] ([TourID])
@@ -1008,6 +1257,11 @@ REFERENCES [dbo].[Tours] ([TourID])
 GO
 ALTER TABLE [dbo].[TourSchedules] CHECK CONSTRAINT [FK_TourSchedules_Tours]
 GO
+ALTER TABLE [dbo].[UserNotifications]  WITH CHECK ADD  CONSTRAINT [FK_Notification_User] FOREIGN KEY([UserID])
+REFERENCES [dbo].[Users] ([UserID])
+GO
+ALTER TABLE [dbo].[UserNotifications] CHECK CONSTRAINT [FK_Notification_User]
+GO
 ALTER TABLE [dbo].[Wishlist]  WITH CHECK ADD  CONSTRAINT [FK_Wishlist_Tours] FOREIGN KEY([TourID])
 REFERENCES [dbo].[Tours] ([TourID])
 GO
@@ -1022,7 +1276,7 @@ ALTER TABLE [dbo].[Passengers]  WITH CHECK ADD  CONSTRAINT [CK_Passengers_Passen
 GO
 ALTER TABLE [dbo].[Passengers] CHECK CONSTRAINT [CK_Passengers_PassengerType]
 GO
-ALTER TABLE [dbo].[TourSchedules]  WITH CHECK ADD  CONSTRAINT [CK_TourSchedules_Status] CHECK  (([Status]='CANCELLED_BY_OPERATOR' OR [Status]='CANCELLED' OR [Status]='COMPLETED' OR [Status]='IN_PROGRESS' OR [Status]='PENDING_GUIDE' OR [Status]='SOLD_OUT' OR [Status]='BOOKING_CLOSED' OR [Status]='OPEN'))
+ALTER TABLE [dbo].[TourSchedules]  WITH CHECK ADD  CONSTRAINT [CK_TourSchedules_Status] CHECK  (([Status]='EXPIRED_NO_BOOKING' OR [Status]='CANCELLED_BY_OPERATOR' OR [Status]='CANCELLED' OR [Status]='COMPLETED' OR [Status]='IN_PROGRESS' OR [Status]='PENDING_GUIDE' OR [Status]='SOLD_OUT' OR [Status]='BOOKING_CLOSED' OR [Status]='OPEN'))
 GO
 ALTER TABLE [dbo].[TourSchedules] CHECK CONSTRAINT [CK_TourSchedules_Status]
 GO
@@ -1030,108 +1284,3 @@ USE [master]
 GO
 ALTER DATABASE [TourBookingDB] SET  READ_WRITE 
 GO
-ALTER TABLE Bookings ADD CancellationReason NVARCHAR(500) NULL;
-GO
-
--- ====== TOUR CHAT GROUP ======
-CREATE TABLE [dbo].[TourChatGroups] (
-    [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
-    [ScheduleID] BIGINT NOT NULL,
-    [IsActive] BIT NOT NULL DEFAULT 1,
-    [CreatedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT [FK_TourChatGroups_TourSchedules] FOREIGN KEY ([ScheduleID]) REFERENCES [dbo].[TourSchedules]([ScheduleID])
-);
-GO
-
-CREATE TABLE [dbo].[TourChatGroupMembers] (
-    [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
-    [GroupID] BIGINT NOT NULL,
-    [UserID] BIGINT NOT NULL,
-    [JoinedAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT [FK_TCGM_Group] FOREIGN KEY ([GroupID]) REFERENCES [dbo].[TourChatGroups]([Id]),
-    CONSTRAINT [FK_TCGM_User] FOREIGN KEY ([UserID]) REFERENCES [dbo].[Users]([UserID]),
-    CONSTRAINT [UQ_TCGM_GroupUser] UNIQUE ([GroupID], [UserID])
-);
-GO
-
-CREATE TABLE [dbo].[TourChatGroupMessages] (
-    [Id] BIGINT IDENTITY(1,1) PRIMARY KEY,
-    [GroupID] BIGINT NOT NULL,
-    [UserID] BIGINT NOT NULL,
-    [Content] NVARCHAR(MAX) NOT NULL,
-    [SentAt] DATETIME2 NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT [FK_TCGMsg_Group] FOREIGN KEY ([GroupID]) REFERENCES [dbo].[TourChatGroups]([Id]),
-    CONSTRAINT [FK_TCGMsg_User] FOREIGN KEY ([UserID]) REFERENCES [dbo].[Users]([UserID])
-);
-GO
-
-CREATE INDEX [idx_tcg_schedule] ON [dbo].[TourChatGroups]([ScheduleID]);
-CREATE INDEX [idx_tcgmember_user] ON [dbo].[TourChatGroupMembers]([UserID]);
-CREATE INDEX [idx_tcgm_group_sent] ON [dbo].[TourChatGroupMessages]([GroupID], [SentAt] DESC);
-GO
-
--- ====== VOUCHERS ======
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'MaxDiscountAmount' AND Object_ID = Object_ID(N'dbo.Discounts'))
-BEGIN
-    ALTER TABLE [dbo].[Discounts] ADD [MaxDiscountAmount] DECIMAL(18,2);
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'ApplicableTourID' AND Object_ID = Object_ID(N'dbo.Discounts'))
-BEGIN
-    ALTER TABLE [dbo].[Discounts] ADD [ApplicableTourID] BIGINT;
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'DiscountID' AND Object_ID = Object_ID(N'dbo.Bookings'))
-BEGIN
-    ALTER TABLE [dbo].[Bookings] ADD [DiscountID] BIGINT REFERENCES [dbo].[Discounts]([DiscountID]);
-END
-GO
-
--- ====== LOYALTY POINTS ======
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'LoyaltyPointsUsed' AND Object_ID = Object_ID(N'dbo.Bookings'))
-BEGIN
-    ALTER TABLE [dbo].[Bookings] ADD [LoyaltyPointsUsed] INT DEFAULT 0;
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE Name = N'LoyaltyDiscountAmount' AND Object_ID = Object_ID(N'dbo.Bookings'))
-BEGIN
-    ALTER TABLE [dbo].[Bookings] ADD [LoyaltyDiscountAmount] DECIMAL(10,2) DEFAULT 0;
-END
-GO
-
-CREATE TABLE [dbo].[loyalty_transaction] (
-    [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
-    [user_id] BIGINT NOT NULL,
-    [points] INT NOT NULL,
-    [transaction_type] NVARCHAR(10) NOT NULL,
-    [booking_id] BIGINT NULL,
-    [description] NVARCHAR(255) NULL,
-    [created_at] DATETIME2 DEFAULT GETDATE(),
-    CONSTRAINT [FK_LoyaltyTx_User] FOREIGN KEY ([user_id]) REFERENCES [dbo].[Users]([UserID]),
-    CONSTRAINT [FK_LoyaltyTx_Booking] FOREIGN KEY ([booking_id]) REFERENCES [dbo].[Bookings]([BookingID])
-);
-GO
-
--- ====================================================================
--- Feature 3: Tour Itinerary Day
--- ====================================================================
-CREATE TABLE [dbo].[tour_itinerary_day] (
-    [id] BIGINT IDENTITY(1,1) PRIMARY KEY,
-    [tour_id] BIGINT NOT NULL,
-    [day_number] INT NOT NULL,
-    [title] NVARCHAR(255) NOT NULL,
-    [description] NVARCHAR(MAX) NULL,
-    [accommodation] NVARCHAR(255) NULL,
-    [meals] NVARCHAR(100) NULL,
-    [transportation] NVARCHAR(100) NULL,
-    [highlights] NVARCHAR(MAX) NULL,
-    [image_url] NVARCHAR(500) NULL,
-    [created_at] DATETIME2 DEFAULT GETDATE(),
-    [updated_at] DATETIME2 DEFAULT GETDATE(),
-    CONSTRAINT [FK_TourItinerary_Tour] FOREIGN KEY ([tour_id]) REFERENCES [dbo].[Tours]([TourID]),
-    CONSTRAINT [UQ_TourItinerary_TourDay] UNIQUE ([tour_id], [day_number])
-);
-GO
