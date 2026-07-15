@@ -54,9 +54,7 @@
             transform: translate(20px, -20px);
         }
 
-        .stat-card.blue::after {
-            background: #3b82f6;
-        }
+        .stat-card.blue::after { background: #0284c7; }
 
         .stat-card.green::after {
             background: #10b981;
@@ -81,13 +79,9 @@
             flex-shrink: 0;
         }
 
-        .stat-icon.blue {
-            background: #eff6ff;
-        }
+        .stat-icon.blue { background: #e0f2fe; }
 
-        .stat-icon.green {
-            background: #ecfdf5;
-        }
+        .stat-icon.green { background: #ecfdf5; }
 
         .stat-icon.purple {
             background: #f5f3ff;
@@ -222,8 +216,7 @@
 
         .panel-badge {
             font-size: 0.75rem;
-            background: #eff6ff;
-            color: #1d4ed8;
+            background: #e0f2fe; color: #0369a1;
             padding: 0.25rem 0.65rem;
             border-radius: 9999px;
             font-weight: 600;
@@ -252,9 +245,7 @@
         }
 
         .quick-link:hover {
-            background: #eff6ff;
-            border-color: #bfdbfe;
-            color: #1d4ed8;
+            background: #e0f2fe; border-color: #7dd3fc; color: #0369a1;
         }
 
         .quick-link .link-icon {
@@ -497,7 +488,7 @@
         }
 
         .btn-assign-guide {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            background: linear-gradient(135deg, #0284c7, #0369a1);
             color: white;
             border: none;
             border-radius: 0.5rem;
@@ -550,12 +541,23 @@
                     <h1>Dashboard Overview</h1>
                     <div class="last-updated" id="lastUpdated">Đang tải dữ liệu...</div>
                 </div>
-                <div style="display:flex; align-items:center; gap:1rem;">
+                <div class="header-actions">
                     <button class="btn-refresh" id="refreshBtn" onclick="refreshStats()">
-                        <span class="icon">🔄</span> Làm mới
+                        <span class="icon">&#x1F504;</span> Lam moi
                     </button>
-                    <span id="userInfo" style="font-weight:600; font-size:0.9rem;"></span>
-                    <button id="logoutBtn" class="btn btn-secondary">Đăng xuất</button>
+                    <div style="width:1px; height:24px; background:var(--border);"></div>
+                    <div style="position:relative; cursor:pointer; padding:0.5rem 0.6rem; border-radius:0.5rem; border:1px solid var(--border);">
+                        <span style="font-size:1.1rem;">&#x1F514;</span>
+                        <span style="position:absolute; top:2px; right:2px; background:#f59e0b; width:8px; height:8px; border-radius:50%; border:2px solid var(--bg-main);"></span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.75rem; padding:0.25rem 0.75rem; border-radius:0.75rem; border:1px solid var(--border); cursor:pointer;">
+                        <div style="width:32px; height:32px; border-radius:50%; background:#e0f2fe; color:#0369a1; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem;" id="userAvatar">A</div>
+                        <div style="display:flex; flex-direction:column; line-height:1.2;">
+                            <span id="userInfo" style="font-weight:700; font-size:0.85rem;">Admin</span>
+                            <span style="font-size:0.7rem; color:var(--text-muted);">Administrator</span>
+                        </div>
+                    </div>
+                    <button id="logoutBtn" class="btn btn-secondary" style="font-size:0.8rem; padding:0.4rem 0.85rem;">Dang xuat</button>
                 </div>
             </header>
 
@@ -579,7 +581,7 @@
 
                 <!-- Online Users -->
                 <div class="stat-card green" id="card-online-users">
-                    <div class="stat-icon green"></div>
+                    <div class="stat-icon green">&#x1F7E2;</div>
                     <div class="stat-body">
                         <div class="stat-label">Đang trực tuyến</div>
                         <div class="stat-value" id="onlineUsers">
@@ -593,7 +595,7 @@
 
                 <!-- Monthly Revenue -->
                 <div class="stat-card purple" id="card-revenue">
-                    <div class="stat-icon purple"></div>
+                    <div class="stat-icon purple">&#x1F4B0;</div>
                     <div class="stat-body">
                         <div class="stat-label">Doanh thu tháng này</div>
                         <div class="stat-value" id="totalRevenue">
@@ -607,7 +609,7 @@
 
                 <!-- Active Bookings -->
                 <div class="stat-card orange" id="card-bookings">
-                    <div class="stat-icon orange"></div>
+                    <div class="stat-icon orange">&#x1F4C5;</div>
                     <div class="stat-body">
                         <div class="stat-label">Booking đang hoạt động</div>
                         <div class="stat-value" id="activeBookings">

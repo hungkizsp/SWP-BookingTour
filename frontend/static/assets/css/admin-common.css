@@ -1,16 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
 :root {
-    --text-main: #1e293b;
-    --text-muted: #64748b;
-    --primary: #3b82f6;
-    --primary-dark: #2563eb;
+    --text-main: #0f172a; /* Deep Navy */
+    --text-muted: #64748b; /* Slate Gray */
+    --primary: #0284c7; /* Ocean Blue */
+    --primary-light: #e0f2fe;
+    --primary-dark: #0369a1; /* Deep Blue */
     --success: #10b981;
     --danger: #ef4444;
-    --warning: #f59e0b;
-    --border: #e2e8f0;
-    --bg-main: #f1f5f9;
+    --warning: #f59e0b; /* Sunset Orange */
+    --border: #e2e8f0; /* Soft Gray */
+    --bg-main: #f8fafc; /* Pearl Gray */
     --bg-white: #ffffff;
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -1px rgb(0 0 0 / 0.03);
+    --shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -2px rgb(0 0 0 / 0.04);
 }
 
 * {
@@ -20,7 +24,7 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-color: var(--bg-main);
     color: var(--text-main);
 }
@@ -33,58 +37,103 @@ body {
 
 /* Sidebar */
 .sidebar {
-    width: 260px;
-    background: var(--text-main);
-    color: white;
-    padding: 2rem 1.5rem;
+    width: 280px;
+    background: var(--bg-white);
+    color: var(--text-main);
+    padding: 1.5rem 1rem;
     position: fixed;
     height: 100vh;
     overflow-y: auto;
+    border-right: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    z-index: 50;
 }
 
 .sidebar .logo {
-    color: white;
+    color: var(--primary-dark);
     font-size: 1.5rem;
-    margin-bottom: 3rem;
-    display: block;
+    margin-bottom: 2rem;
+    padding: 0 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     text-decoration: none;
-    font-weight: bold;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+}
+
+.sidebar-group-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 1.5rem 0 0.5rem 0.75rem;
 }
 
 .nav-item {
-    padding: 0.75rem 1rem;
-    color: rgba(255, 255, 255, 0.7);
+    padding: 0.875rem 1rem;
+    color: var(--text-muted);
     text-decoration: none;
-    display: block;
-    border-radius: 0.5rem;
-    margin-bottom: 0.5rem;
-    transition: all 0.2s;
-    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    border-radius: 0.75rem;
+    margin-bottom: 0.25rem;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    font-size: 0.95rem;
 }
 
-.nav-item:hover,
+.nav-item:hover {
+    background: var(--bg-main);
+    color: var(--primary);
+}
+
 .nav-item.active {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.nav-icon {
+    font-size: 1.25rem;
+    width: 24px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.nav-item.active .nav-icon {
+    opacity: 1;
+    color: var(--primary);
 }
 
 /* Main Content */
 .main-content {
     flex: 1;
-    margin-left: 260px;
-    padding: 2rem 5%;
+    margin-left: 280px;
+    padding: 2rem 3rem;
+    max-width: 1600px;
 }
 
 header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 2.5rem;
+    background: var(--bg-main); /* Match main bg */
 }
 
 header h1 {
-    font-size: 1.875rem;
-    font-weight: 700;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: var(--text-main);
+    letter-spacing: -0.025em;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
 }
 
 /* Common Components */
@@ -95,16 +144,21 @@ header h1 {
     border: 1px solid var(--border);
     box-shadow: var(--shadow-sm);
     margin-bottom: 1.5rem;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: var(--shadow-hover);
 }
 
 /* Buttons */
 .btn {
-    padding: 0.5rem 1rem;
+    padding: 0.625rem 1.25rem;
     border-radius: 0.5rem;
     cursor: pointer;
     font-size: 0.875rem;
-    font-weight: 500;
-    transition: all 0.2s;
+    font-weight: 600;
+    transition: all 0.2s ease;
     border: none;
     display: inline-flex;
     align-items: center;
@@ -268,9 +322,12 @@ tr:hover { background-color: #f8fafc; }
 
 /* Responsive */
 @media (max-width: 1024px) {
-    .sidebar { width: 80px; padding: 2rem 0.5rem; }
-    .sidebar .logo span, .nav-item span { display: none; }
-    .main-content { margin-left: 80px; }
+    .sidebar { width: 80px; padding: 1.5rem 0.5rem; }
+    .sidebar .logo span, .nav-item span, .sidebar-group-title { display: none; }
+    .sidebar .logo { justify-content: center; padding: 0; }
+    .nav-item { padding: 0.875rem; justify-content: center; }
+    .nav-icon { font-size: 1.5rem; margin: 0; }
+    .main-content { margin-left: 80px; padding: 1.5rem; }
 }
 
 /* Pagination */
@@ -325,3 +382,35 @@ tr:hover { background-color: #f8fafc; }
     color: var(--text-muted);
     margin: 0 1rem;
 }
+
+/* ── Table Refinements ── */
+th {
+    background: #f8fafc;
+    font-weight: 700;
+    color: var(--text-muted);
+    letter-spacing: 0.02em;
+}
+
+tr:hover { background-color: #f0f9ff; }
+
+/* ── Sidebar Scrollbar ── */
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+/* ── Button micro-interactions ── */
+.btn { letter-spacing: 0.01em; }
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3); }
+.btn-success:hover { background: #059669; transform: translateY(-1px); }
+.btn-danger:hover { background: #dc2626; transform: translateY(-1px); }
+
+/* ── Input Focus Ring ── */
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+/* ── Link in tables ── */
+a { color: var(--primary); text-decoration: none; }
+a:hover { color: var(--primary-dark); text-decoration: underline; }
