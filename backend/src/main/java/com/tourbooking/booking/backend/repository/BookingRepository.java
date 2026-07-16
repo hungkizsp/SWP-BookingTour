@@ -16,6 +16,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     long countByUserId(Long userId);
     List<Booking> findByScheduleId(Long scheduleId);
     List<Booking> findByScheduleIdAndStatusIn(Long scheduleId, List<BookingStatus> statuses);
+    long countByScheduleIdAndStatusIn(Long scheduleId, List<BookingStatus> statuses);
     List<Booking> findByUser_IdAndStatusIn(Long userId, List<BookingStatus> statuses);
     List<Booking> findByStatus(BookingStatus status);
     org.springframework.data.domain.Page<Booking> findByStatus(BookingStatus status, org.springframework.data.domain.Pageable pageable);

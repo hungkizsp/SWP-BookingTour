@@ -25,6 +25,7 @@ import com.tourbooking.booking.backend.model.dto.response.ProgressLogResponse;
 import com.tourbooking.booking.backend.model.entity.TourProgressLog;
 import com.tourbooking.booking.backend.repository.TourProgressLogRepository;
 import com.tourbooking.booking.backend.service.ProgressLogService;
+import com.tourbooking.booking.backend.util.ActiveBookingStatuses;
 
 @Slf4j
 @Service
@@ -45,7 +46,10 @@ public class GuideServiceImpl implements GuideService {
         log.info("Fetching assigned tours for guide ID: {}", guideId);
         List<TourSchedule> schedules = tourScheduleRepository.findByGuide_Id(guideId);
         log.info("Found {} schedules for guide ID: {}", schedules.size(), guideId);
-        return schedules.stream().map(s -> mapToResponse(s, false)).collect(Collectors.toList());
+        return schedules.stream()
+                .filter(s -> bookingRepository.countByScheduleIdAndStatusIn(s.getId(), ActiveBookingStatuses.STATUSES) > 0)
+                .map(s -> mapToResponse(s, false))
+                .collect(Collectors.toList());
     }
 
     @Override

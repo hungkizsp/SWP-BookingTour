@@ -87,6 +87,15 @@ public class AdminController {
                 .build();
     }
 
+    @PatchMapping("/tour-schedules/{scheduleId}/release-guide")
+    public ApiResponse<Void> releaseGuideFromSchedule(@PathVariable Long scheduleId) {
+        tourScheduleService.releaseGuideIfNoActiveBookings(scheduleId);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Guide released from schedule if no active bookings remain")
+                .build();
+    }
+
     @PutMapping("/tours/{id}")
     public ApiResponse<TourResponse> updateTour(@PathVariable Long id, @RequestBody TourRequest request) {
         return ApiResponse.<TourResponse>builder()

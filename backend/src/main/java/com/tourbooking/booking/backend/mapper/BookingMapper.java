@@ -3,6 +3,7 @@ package com.tourbooking.booking.backend.mapper;
 import com.tourbooking.booking.backend.model.dto.request.BookingRequest;
 import com.tourbooking.booking.backend.model.dto.response.BookingResponse;
 import com.tourbooking.booking.backend.model.entity.Booking;
+import com.tourbooking.booking.backend.model.entity.enums.BookingStatus;
 
 public class BookingMapper {
 
@@ -30,7 +31,9 @@ public class BookingMapper {
                 response.setTourName(booking.getSchedule().getTour().getTourName());
                 response.setTourItinerary(booking.getSchedule().getTour().getItinerary());
             }
-            if (booking.getSchedule().getGuide() != null) {
+            boolean bookingCancelled = booking.getStatus() == BookingStatus.CANCELLED
+                    || booking.getStatus() == BookingStatus.COMPANY_CANCELED;
+            if (!bookingCancelled && booking.getSchedule().getGuide() != null) {
                 response.setGuideFullName(booking.getSchedule().getGuide().getFullName());
                 response.setGuidePhone(booking.getSchedule().getGuide().getPhoneNumber());
                 response.setGuideAvatar(booking.getSchedule().getGuide().getAvatarUrl());

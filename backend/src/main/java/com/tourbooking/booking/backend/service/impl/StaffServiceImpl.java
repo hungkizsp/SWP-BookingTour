@@ -30,6 +30,7 @@ import com.tourbooking.booking.backend.model.dto.response.UserResponse;
 import com.tourbooking.booking.backend.model.dto.response.ProgressLogResponse;
 import com.tourbooking.booking.backend.repository.TourProgressLogRepository;
 import com.tourbooking.booking.backend.service.ProgressLogService;
+import com.tourbooking.booking.backend.util.ActiveBookingStatuses;
 
 @Service
 @RequiredArgsConstructor
@@ -93,6 +94,9 @@ public class StaffServiceImpl implements StaffService {
                 if (existing.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED ||
                     existing.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR ||
                     existing.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.COMPLETED) {
+                    continue;
+                }
+                if (bookingRepository.countByScheduleIdAndStatusIn(existing.getId(), ActiveBookingStatuses.STATUSES) == 0) {
                     continue;
                 }
                 
@@ -289,7 +293,9 @@ public class StaffServiceImpl implements StaffService {
                     res.setTourName(b.getSchedule() != null && b.getSchedule().getTour() != null
                             ? b.getSchedule().getTour().getTourName()
                             : "N/A");
-                    if (b.getSchedule() != null && b.getSchedule().getGuide() != null) {
+                    boolean bookingCancelled = b.getStatus() == BookingStatus.CANCELLED
+                            || b.getStatus() == BookingStatus.COMPANY_CANCELED;
+                    if (!bookingCancelled && b.getSchedule() != null && b.getSchedule().getGuide() != null) {
                         res.setGuideFullName(b.getSchedule().getGuide().getFullName());
                     }
                     res.setBookingDate(b.getBookingDate());
@@ -325,7 +331,9 @@ public class StaffServiceImpl implements StaffService {
             res.setTourName(b.getSchedule() != null && b.getSchedule().getTour() != null
                     ? b.getSchedule().getTour().getTourName()
                     : "N/A");
-            if (b.getSchedule() != null && b.getSchedule().getGuide() != null) {
+            boolean bookingCancelled = b.getStatus() == BookingStatus.CANCELLED
+                    || b.getStatus() == BookingStatus.COMPANY_CANCELED;
+            if (!bookingCancelled && b.getSchedule() != null && b.getSchedule().getGuide() != null) {
                 res.setGuideFullName(b.getSchedule().getGuide().getFullName());
             }
             res.setBookingDate(b.getBookingDate());

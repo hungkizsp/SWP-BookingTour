@@ -11,6 +11,7 @@ import com.tourbooking.booking.backend.model.entity.enums.TourStatus;
 import com.tourbooking.booking.backend.repository.TourScheduleRepository;
 import com.tourbooking.booking.backend.service.TourScheduleService;
 import com.tourbooking.booking.backend.service.TourChatGroupService;
+import com.tourbooking.booking.backend.util.ActiveBookingStatuses;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -94,6 +95,30 @@ public class TourScheduleServiceImpl implements TourScheduleService {
             }
         }
         bookingRepository.saveAll(activeBookings);
+
+        if (schedule.getGuide() != null) {
+            schedule.setGuide(null);
+            tourScheduleRepository.save(schedule);
+            log.info("[CANCEL-SCHEDULE] Released guide from schedule #{} after full cancellation.", scheduleId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void releaseGuideIfNoActiveBookings(Long scheduleId) {
+        TourSchedule schedule = tourScheduleRepository.findById(scheduleId).orElse(null);
+        if (schedule == null || schedule.getGuide() == null) {
+            return;
+        }
+
+        long activeCount = bookingRepository.countByScheduleIdAndStatusIn(scheduleId, ActiveBookingStatuses.STATUSES);
+        if (activeCount == 0) {
+            Long guideId = schedule.getGuide().getId();
+            schedule.setGuide(null);
+            tourScheduleRepository.save(schedule);
+            log.info("[RELEASE-GUIDE] Released guide #{} from schedule #{} (0 active bookings).",
+                    guideId, scheduleId);
+        }
     }
 
 

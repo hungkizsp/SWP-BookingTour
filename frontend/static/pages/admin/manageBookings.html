@@ -106,6 +106,25 @@
         </div>
     </div>
 
+    <!-- Cancel Entire Schedule Modal -->
+    <div class="modal" id="cancelScheduleModal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 12px; width: 500px; max-width: 95%;">
+            <h2 style="margin-top: 0; margin-bottom: 1rem; color: #991b1b;">Hủy Toàn Bộ Chuyến Đi</h2>
+            <p id="cancelScheduleTarget" style="margin-bottom: 0.75rem; color: #475569; font-weight: 600;"></p>
+            <p id="cancelScheduleWarning" style="margin-bottom: 1rem; color: #991b1b; font-size: 0.9rem; line-height: 1.5; background: #fef2f2; padding: 12px; border-radius: 8px; border: 1px solid #fecaca;"></p>
+            <p style="margin-bottom: 0.5rem; color: #64748b; font-size: 0.85rem;">
+                Dùng khi tour bị hủy do vận hành/thời tiết (ảnh hưởng toàn bộ đoàn). Khác với "Hủy Đặt Tour" — chỉ hủy 1 khách.
+            </p>
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem;">
+                <button class="btn btn-secondary" onclick="closeCancelScheduleModal()" style="padding: 8px 16px;">Đóng</button>
+                <button id="confirmCancelScheduleBtn" class="btn btn-danger" onclick="submitCancelSchedule()"
+                    style="padding: 8px 16px;">Xác nhận hủy toàn bộ chuyến</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const PAGE_SIZE = 10;
         let allBookings = [];
@@ -129,6 +148,12 @@
             return item.userEmail
                 || (item.user && item.user.email)
                 || 'N/A';
+        }
+
+        const ACTIVE_BOOKING_STATUSES = ['CONFIRMED', 'PAID', 'PENDING', 'PENDING_CASH'];
+
+        function countActiveBookingsForSchedule(scheduleId) {
+            return allBookings.filter(b => b.scheduleId == scheduleId && ACTIVE_BOOKING_STATUSES.includes(b.status)).length;
         }
 
         function formatBookingDate(value) {
@@ -233,7 +258,7 @@
                 })()}
                         <td style="font-size:0.8rem; max-width:220px; line-height:1.4;">${formatRefundInfo(item)}</td>
                         <td>
-                            <div style="display:flex; gap:5px;">
+                            <div style="display:flex; gap:5px; flex-wrap:wrap;">
                                 ${item.status === 'REFUND_REQUESTED' ? `
                                     <button onclick="updateStatus(${item.id}, 'CANCELLED')" class="btn btn-danger btn-sm">Approve Cancel</button>
                                     <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-secondary btn-sm">Reject</button>
@@ -243,6 +268,7 @@
                                 ` : ''}
                                 ${(item.status === 'CONFIRMED' || item.status === 'PAID') ? `
                                     <button onclick="openCancelModal(${item.id})" class="btn btn-danger btn-sm">Hủy Đặt Tour</button>
+                                    <button onclick="openCancelScheduleModal(${item.scheduleId}, '${escapeHtml(item.tourName || 'N/A')}')" class="btn btn-sm" style="background:#7f1d1d; color:white; border:none;">Hủy Toàn Bộ Chuyến</button>
                                 ` : ''}
 
                             </div>
@@ -397,7 +423,49 @@
                 closeCancelModal();
                 loadBookings(currentPage);
             } catch (err) {
-                showToast('L�i khi hủy: ' + err.message, 'error');
+                showToast('Lỗi khi hủy: ' + err.message, 'error');
+            }
+        }
+
+        let currentCancelScheduleId = null;
+
+        async function openCancelScheduleModal(scheduleId, tourName) {
+            currentCancelScheduleId = scheduleId;
+            document.getElementById('cancelScheduleTarget').textContent = `Schedule #${scheduleId} — ${tourName}`;
+            document.getElementById('cancelScheduleWarning').textContent = 'Đang tải số lượng khách...';
+            document.getElementById('cancelScheduleModal').style.display = 'flex';
+
+            try {
+                const res = await TB.apiFetch('/api/v1/bookings');
+                const activeCount = (res.data || []).filter(
+                    b => b.scheduleId == scheduleId && ACTIVE_BOOKING_STATUSES.includes(b.status)
+                ).length;
+                document.getElementById('cancelScheduleWarning').textContent =
+                    `Hành động này sẽ hủy TOÀN BỘ ${activeCount} khách trong chuyến đi này và hoàn tiền cho tất cả, không thể hoàn tác.`;
+            } catch (e) {
+                document.getElementById('cancelScheduleWarning').textContent =
+                    'Hành động này sẽ hủy TOÀN BỘ khách trong chuyến đi này và hoàn tiền cho tất cả, không thể hoàn tác.';
+            }
+        }
+
+        function closeCancelScheduleModal() {
+            document.getElementById('cancelScheduleModal').style.display = 'none';
+            currentCancelScheduleId = null;
+        }
+
+        async function submitCancelSchedule() {
+            if (!currentCancelScheduleId) return;
+            if (!confirm('Bạn chắc chắn muốn hủy TOÀN BỘ chuyến đi này? Hành động không thể hoàn tác.')) return;
+
+            try {
+                await TB.apiFetch(`/api/v1/admin/tour-schedules/${currentCancelScheduleId}/cancel`, {
+                    method: 'PUT'
+                });
+                showToast('Hủy toàn bộ chuyến đi thành công', 'success');
+                closeCancelScheduleModal();
+                loadBookings(currentPage);
+            } catch (err) {
+                showToast('Lỗi khi hủy chuyến: ' + err.message, 'error');
             }
         }
 

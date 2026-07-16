@@ -881,6 +881,11 @@ public class BookingServiceImpl implements BookingService {
         }
 
         bookingRepository.save(booking);
+
+        if (schedule != null) {
+            tourScheduleService.releaseGuideIfNoActiveBookings(schedule.getId());
+        }
+
         return BookingMapper.toResponse(booking);
     }
 
@@ -919,6 +924,10 @@ public class BookingServiceImpl implements BookingService {
         }
 
         bookingRepository.save(booking);
+
+        if (schedule != null) {
+            tourScheduleService.releaseGuideIfNoActiveBookings(schedule.getId());
+        }
 
         // Send email
         String tourName = (schedule != null && schedule.getTour() != null) ? schedule.getTour().getTourName() : "N/A";

@@ -16,4 +16,9 @@ public interface TourScheduleService {
     List<TourSchedule> bulkCreateSchedules(TourScheduleBulkRequest request);
 
     void cancelTourSchedule(Long scheduleId);
+
+    /**
+     * Releases the assigned guide when no active bookings remain on the schedule.
+     */
+    void releaseGuideIfNoActiveBookings(Long scheduleId);
 }
