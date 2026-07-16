@@ -43,8 +43,12 @@ import java.util.List;
 @Slf4j
 public class OperationalScheduler {
 
-    // ─── Alert window definitions ────────────────────────────────────────────
-    private static final long[] ALERT_HOURS = {24L, 12L, 6L, 2L};
+    // ─── Alert window definitions (ordered most-to-least relaxed) ─────────────
+    // IMPORTANT: must remain in descending-hour order (24 → 2) because the loop
+    // fires the FIRST window whose threshold has been entered. Once a more urgent
+    // (smaller-hour) window has already been recorded in the DB for a schedule,
+    // any less-urgent windows are skipped via skipBelowIndex (see sendEarlyWarningAlerts).
+    private static final long[]   ALERT_HOURS   = {24L, 12L, 6L, 2L};
     private static final String[] ALERT_WINDOWS = {"24H", "12H", "6H", "2H"};
 
     private final TourScheduleRepository tourScheduleRepository;
@@ -77,7 +81,7 @@ public class OperationalScheduler {
         LocalDateTime now = LocalDateTime.now();
         LocalDate today = now.toLocalDate();
 
-        List<TourSchedule> candidates = tourScheduleRepository.findOpenSchedulesWithNoGuide(today);
+        List<TourSchedule> candidates = tourScheduleRepository.findEligibleSchedulesWithNoGuide(today);
 
         int alertsSent = 0;
         for (TourSchedule schedule : candidates) {
@@ -96,7 +100,24 @@ public class OperationalScheduler {
                 continue;
             }
 
-            for (int i = 0; i < ALERT_HOURS.length; i++) {
+            // ── Determine the most urgent window already fired for this schedule ──────
+            // If e.g. "12H" has already been sent, we must NOT send "24H" even if it
+            // hasn't been stored yet (happens when a schedule is detected AFTER it
+            // crossed both the 24H and 12H thresholds in the same scheduler cycle).
+            // We find the index of the most-urgent (smallest hours) existing window.
+            int mostUrgentExistingIdx = -1;
+            for (int i = ALERT_WINDOWS.length - 1; i >= 0; i--) {
+                if (operationalAlertRepository.existsByScheduleIdAndAlertWindow(schedule.getId(), ALERT_WINDOWS[i])) {
+                    mostUrgentExistingIdx = i;
+                    break;
+                }
+            }
+
+            // FIX Bug B: Iterate backwards from most urgent (2H) to least urgent (24H).
+            // If a schedule is created at 10 hours remaining, we want to fire ONLY 12H (and break).
+            // If we iterated 24H -> 2H, we would incorrectly fire 24H first because it's valid, 
+            // and miss firing 12H until the next run (causing a duplicate).
+            for (int i = ALERT_HOURS.length - 1; i >= 0; i--) {
                 long hoursAhead = ALERT_HOURS[i];
                 String window = ALERT_WINDOWS[i];
 
@@ -106,7 +127,18 @@ public class OperationalScheduler {
                     continue; // Not yet in this window — skip
                 }
 
-                // Idempotency: has this alert already been sent?
+                // ── Skip less-urgent windows superseded by a more urgent existing one ──
+                // Example: if "12H" (index 1) already exists, skip "24H" (index 0) even
+                // if it was never stored — it is no longer actionable information.
+                if (mostUrgentExistingIdx > i) {
+                    // A more urgent window (smaller hours, higher index) already fired.
+                    // This less-urgent window is now irrelevant — don't backfill it.
+                    log.debug("[OPS-ALERT] Skipping {} for schedule #{} — {} already sent (more urgent)",
+                            window, schedule.getId(), ALERT_WINDOWS[mostUrgentExistingIdx]);
+                    continue;
+                }
+
+                // Idempotency: has this exact alert already been sent?
                 if (operationalAlertRepository.existsByScheduleIdAndAlertWindow(schedule.getId(), window)) {
                     continue;
                 }
@@ -136,7 +168,6 @@ public class OperationalScheduler {
 
                 // Try to send email to admin (best-effort, non-blocking)
                 try {
-                    // Note: MailService.sendGuideAssignedEmail repurposed pattern — using sendMonthlyReportEmail for admin alerts
                     mailService.sendOperationalAlert(subject, body);
                 } catch (Exception e) {
                     log.warn("[OPS-ALERT] Could not send alert email for schedule #{}: {}", schedule.getId(), e.getMessage());
@@ -144,10 +175,11 @@ public class OperationalScheduler {
 
                 alertsSent++;
 
-                // KEY FIX: break after firing the first NEW alert window for this schedule in
-                // this run. Without this, a late-detected schedule fires ALL applicable windows
-                // at once (e.g. 24H + 12H simultaneously), creating duplicate alert cards.
-                // The next scheduler run (3 min later) will fire the next window if still needed.
+                // Break after firing one new alert per schedule per run.
+                // Combined with the mostUrgentExistingIdx check above, this ensures:
+                // – At most 1 alert fires per schedule per run.
+                // – A schedule that crosses multiple thresholds in one cycle only gets
+                //   the most urgent (smallest remaining time) alert that is applicable.
                 break;
             }
         }
@@ -171,7 +203,7 @@ public class OperationalScheduler {
         LocalDateTime now = LocalDateTime.now();
         LocalDate today = now.toLocalDate();
 
-        List<TourSchedule> candidates = tourScheduleRepository.findOpenNoGuideSchedulesOnOrBeforeDate(today);
+        List<TourSchedule> candidates = tourScheduleRepository.findEligibleNoGuideSchedulesOnOrBeforeDate(today);
 
         int transitioned = 0;
         for (TourSchedule schedule : candidates) {
@@ -192,6 +224,13 @@ public class OperationalScheduler {
 
             if (now.isAfter(departure)) {
                 // Past departure — the auto-cancel job will handle this
+                continue;
+            }
+
+            // CRITICAL GUARD: Only auto-transition OPEN schedules to PENDING_GUIDE.
+            // Do NOT touch BOOKING_CLOSED or SOLD_OUT schedules automatically to avoid
+            // mass unintended refunds for tours that actually have confirmed bookings!
+            if (schedule.getStatus() != TourStatus.OPEN) {
                 continue;
             }
 
@@ -314,7 +353,7 @@ public class OperationalScheduler {
 
         // Find OPEN schedules with no guide that have reached or passed departure (not yet > 1 day old)
         List<TourSchedule> candidatesForProgress = tourScheduleRepository
-                .findOpenNoGuideSchedulesOnOrBeforeDate(today);
+                .findEligibleNoGuideSchedulesOnOrBeforeDate(today);
 
         for (TourSchedule schedule : candidatesForProgress) {
             LocalDateTime departure = schedule.getDepartureDateTime();
@@ -329,6 +368,7 @@ public class OperationalScheduler {
                 continue;
             }
             // This schedule has reached departure with no guide — block IN_PROGRESS
+            // CRITICAL GUARD: Only auto-transition OPEN schedules to PENDING_GUIDE.
             if (schedule.getStatus() == TourStatus.OPEN) {
                 log.warn("[OPS-GUARD] Schedule #{} reached departure with no guide — forcing PENDING_GUIDE.", schedule.getId());
                 schedule.setStatus(TourStatus.PENDING_GUIDE);
@@ -365,9 +405,9 @@ public class OperationalScheduler {
         LocalDateTime now = LocalDateTime.now();
         LocalDate today = now.toLocalDate();
 
-        // Candidate query: OPEN + no guide + startDate on or before today
+        // Candidate query: OPEN, BOOKING_CLOSED, SOLD_OUT + no guide + startDate on or before today
         List<TourSchedule> candidates = tourScheduleRepository
-                .findOpenNoGuideSchedulesOnOrBeforeDate(today);
+                .findEligibleNoGuideSchedulesOnOrBeforeDate(today);
 
         int purged = 0;
         for (TourSchedule schedule : candidates) {

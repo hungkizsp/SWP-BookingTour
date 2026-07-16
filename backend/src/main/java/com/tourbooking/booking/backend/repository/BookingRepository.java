@@ -121,8 +121,21 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.schedule.id = :scheduleId")
     long countByScheduleId(@Param("scheduleId") Long scheduleId);
 
-    /** Count bookings with REFUNDED status (caused by CANCELLED_BY_OPERATOR). */
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status IN (com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED, com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PAID) " +
+           "AND b.schedule.guide IS NULL " +
+           "AND b.schedule.status IN (com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN, com.tourbooking.booking.backend.model.entity.enums.TourStatus.BOOKING_CLOSED, com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT, com.tourbooking.booking.backend.model.entity.enums.TourStatus.PENDING_GUIDE)")
+    long countValidBookingsMissingGuide();
+
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status IN (com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED, com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PAID) " +
+           "AND b.schedule.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.PENDING_GUIDE")
+    long countValidBookingsPendingGuide();
+
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.REFUNDED " +
+           "AND b.schedule.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR")
+    long countBookingsRefundedByOperator();
+
+    /** Count affected distinct customers (users) caused by CANCELLED_BY_OPERATOR. */
+    @Query("SELECT COUNT(DISTINCT b.user.id) FROM Booking b WHERE b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.REFUNDED " +
            "AND EXISTS (SELECT 1 FROM TourSchedule s WHERE s.id = b.schedule.id " +
            "AND s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR)")
     long countOperatorCancelledRefundedBookings();

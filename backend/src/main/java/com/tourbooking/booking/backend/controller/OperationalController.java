@@ -58,7 +58,7 @@ public class OperationalController {
                 .findByStatusIn(List.of(TourStatus.PENDING_GUIDE));
 
         // Gather OPEN schedules with no guide (upcoming, for alert context)
-        List<TourSchedule> openNoGuide = tourScheduleRepository.findOpenSchedulesWithNoGuide(today);
+        List<TourSchedule> openNoGuide = tourScheduleRepository.findEligibleSchedulesWithNoGuide(today);
 
         List<Map<String, Object>> alertList = new ArrayList<>();
 
@@ -80,8 +80,32 @@ public class OperationalController {
             alertList.add(card);
         }
 
-        // Convert alert records to cards (early warnings)
+        // ── Dedup: for each scheduleId keep only the most-urgent alert window ──
+        // Priority: lowest hours = most urgent: 2H(2) > 6H(6) > 12H(12) > 24H(24)
+        java.util.Map<String, Integer> windowHours = new java.util.HashMap<>();
+        windowHours.put("2H",  2);
+        windowHours.put("6H",  6);
+        windowHours.put("12H", 12);
+        windowHours.put("24H", 24);
+
+        // Group alerts by scheduleId, keeping only the most-urgent per schedule
+        java.util.Map<Long, OperationalAlert> mostUrgentBySchedule = new java.util.LinkedHashMap<>();
         for (OperationalAlert alert : allAlerts) {
+            Long sid = alert.getScheduleId();
+            OperationalAlert existing = mostUrgentBySchedule.get(sid);
+            if (existing == null) {
+                mostUrgentBySchedule.put(sid, alert);
+            } else {
+                int newHours = windowHours.getOrDefault(alert.getAlertWindow(), 999);
+                int existingHours = windowHours.getOrDefault(existing.getAlertWindow(), 999);
+                if (newHours < existingHours) {
+                    mostUrgentBySchedule.put(sid, alert);
+                }
+            }
+        }
+
+        // Convert deduped alert records to cards (early warnings) — one per schedule
+        for (OperationalAlert alert : mostUrgentBySchedule.values()) {
             // Check if the associated schedule still has no guide (still relevant)
             TourSchedule schedule = null;
             try {
@@ -106,10 +130,12 @@ public class OperationalController {
                     ? java.time.temporal.ChronoUnit.MINUTES.between(now, departure)
                     : 0;
 
-            // FIX: Skip stale alerts whose departure has already passed (minutesRemaining < 0).
-            // These schedules have 0 bookings (so the auto-cancel job skipped them), resulting
-            // in frozen OPEN/BOOKING_CLOSED records with negative countdown values.
-            // They are informational-only noise in the Live Alert Queue.
+            // Skip schedules with 0 active bookings (e.g. all bookings were cancelled)
+            int maxSlots = schedule.getMaxSlots() != null ? schedule.getMaxSlots() : 0;
+            int availableSlots = schedule.getAvailableSlots() != null ? schedule.getAvailableSlots() : 0;
+            if (maxSlots - availableSlots <= 0) continue;
+
+            // Skip stale alerts whose departure has already passed
             if (minsRemaining < 0) continue;
 
             Map<String, Object> card = new HashMap<>();
@@ -133,38 +159,92 @@ public class OperationalController {
     }
 
     /**
-     * Returns aggregate operational metrics for the admin dashboard:
-     * - Upcoming OPEN schedules missing a guide (warning zone)
-     * - Schedules currently in PENDING_GUIDE (critical zone)
-     * - Schedules in CANCELLED_BY_OPERATOR (failed due to no guide)
-     * - Total affected customers and refund totals
+     * Returns aggregate operational metrics for the staff/admin dashboard.
+     * All counts are now expressed in BOOKINGS (not schedules) for operational clarity.
      */
     @GetMapping("/operational-metrics")
     @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
     public ResponseEntity<Map<String, Object>> getOperationalMetrics() {
-        LocalDate today = LocalDate.now();
-
-        long openNoGuideCount = tourScheduleRepository.findOpenSchedulesWithNoGuide(today).size();
-        long pendingGuideCount = tourScheduleRepository.countByStatus(TourStatus.PENDING_GUIDE);
-        long cancelledByOperatorCount = tourScheduleRepository.countByStatus(TourStatus.CANCELLED_BY_OPERATOR);
-
+        // Bookings in schedules missing a guide (all relevant statuses)
+        long bookingsMissingGuide = 0;
+        long bookingsPendingGuide = 0;
+        long bookingsRefundedByOperator = 0;
         long affectedCustomers = 0;
         java.math.BigDecimal totalRefundAmount = java.math.BigDecimal.ZERO;
+
         try {
-            affectedCustomers = bookingRepository.countOperatorCancelledRefundedBookings();
+            bookingsMissingGuide = bookingRepository.countValidBookingsMissingGuide();
+            bookingsPendingGuide = bookingRepository.countValidBookingsPendingGuide();
+            bookingsRefundedByOperator = bookingRepository.countBookingsRefundedByOperator();
+            affectedCustomers = bookingRepository.countOperatorCancelledRefundedBookings(); // now counts distinct users
             java.math.BigDecimal dbRefund = bookingRepository.sumOperatorCancelledRefundAmounts();
             if (dbRefund != null) totalRefundAmount = dbRefund;
         } catch (Exception e) {
-            log.warn("[OPS-METRICS] Could not compute refund totals: {}", e.getMessage());
+            log.warn("[OPS-METRICS] Could not compute metrics: {}", e.getMessage());
         }
 
         Map<String, Object> metrics = new HashMap<>();
-        metrics.put("openSchedulesWithNoGuide", openNoGuideCount);
-        metrics.put("pendingGuideSchedules", pendingGuideCount);
-        metrics.put("cancelledByOperatorSchedules", cancelledByOperatorCount);
+        metrics.put("bookingsMissingGuide", bookingsMissingGuide);
+        metrics.put("bookingsPendingGuide", bookingsPendingGuide);
+        metrics.put("bookingsRefundedByOperator", bookingsRefundedByOperator);
         metrics.put("affectedCustomers", affectedCustomers);
         metrics.put("totalRefundAmount", totalRefundAmount);
         metrics.put("generatedAt", LocalDateTime.now().toString());
         return ResponseEntity.ok(metrics);
+    }
+
+    /**
+     * URGENT Dashboard Component API
+     * Returns schedules with CONFIRMED/PAID bookings, NO guide, and either past departure or within 24h.
+     */
+    @GetMapping("/critical-guide-alerts")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ResponseEntity<List<Map<String, Object>>> getCriticalGuideAlerts() {
+        LocalDateTime now = LocalDateTime.now();
+        List<TourSchedule> candidates = tourScheduleRepository.findCriticalMissingGuideSchedules();
+
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (TourSchedule s : candidates) {
+            LocalDateTime departure = s.getDepartureDateTime();
+            long minsRemaining = departure != null ? java.time.temporal.ChronoUnit.MINUTES.between(now, departure) : 0;
+            
+            // Filter: only past departure (minsRemaining <= 0) OR within 24h (minsRemaining <= 1440)
+            if (minsRemaining > 1440) continue;
+
+            // Calculate active bookings count and total value
+            long activeBookings = 0;
+            java.math.BigDecimal totalValue = java.math.BigDecimal.ZERO;
+            if (s.getBookings() != null) {
+                for (com.tourbooking.booking.backend.model.entity.Booking b : s.getBookings()) {
+                    if (b.getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED ||
+                        b.getStatus() == com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PAID) {
+                        activeBookings++;
+                        if (b.getTotalPrice() != null) {
+                            totalValue = totalValue.add(b.getTotalPrice());
+                        }
+                    }
+                }
+            }
+
+            Map<String, Object> card = new HashMap<>();
+            card.put("scheduleId", s.getId());
+            card.put("tourName", s.getTour() != null ? s.getTour().getTourName() : "Unknown");
+            card.put("departureDateTime", departure != null ? departure.toString() : null);
+            card.put("activeBookings", activeBookings);
+            card.put("totalValue", totalValue);
+            card.put("minutesRemaining", minsRemaining);
+            card.put("status", s.getStatus().name());
+            
+            results.add(card);
+        }
+
+        // Sort: Past departure first (most negative first), then ascending remaining time
+        results.sort((a, b) -> {
+            long minA = (long) a.get("minutesRemaining");
+            long minB = (long) b.get("minutesRemaining");
+            return Long.compare(minA, minB);
+        });
+
+        return ResponseEntity.ok(results);
     }
 }

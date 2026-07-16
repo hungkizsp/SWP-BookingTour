@@ -234,19 +234,19 @@
                 <div class="ops-metrics-grid" id="opsMetricsGrid">
                     <div class="ops-metric-card amber">
                         <div class="ops-metric-val" id="opsOpenNoGuide">0</div>
-                        <div class="ops-metric-label">⚠️ Schedules No Guide</div>
+                        <div class="ops-metric-label">⚠️ Bookings Chưa Có Guide</div>
                     </div>
                     <div class="ops-metric-card red">
                         <div class="ops-metric-val" id="opsPendingGuide">0</div>
-                        <div class="ops-metric-label">🔴 PENDING_GUIDE</div>
+                        <div class="ops-metric-label">🔴 Bookings Đang Chờ Guide</div>
                     </div>
                     <div class="ops-metric-card purple">
                         <div class="ops-metric-val" id="opsCancelledOp">0</div>
-                        <div class="ops-metric-label">🚫 Cancelled by Operator</div>
+                        <div class="ops-metric-label">🚫 Bookings Bị Hủy Bởi Vận Hành</div>
                     </div>
                     <div class="ops-metric-card blue">
                         <div class="ops-metric-val" id="opsAffected">0</div>
-                        <div class="ops-metric-label">👥 Affected Customers</div>
+                        <div class="ops-metric-label">👥 Khách Hàng Bị Ảnh Hưởng</div>
                     </div>
                 </div>
 
@@ -332,9 +332,9 @@
                 // Metrics
                 if (metricsRes.status === 'fulfilled' && metricsRes.value) {
                     const m = metricsRes.value.data || metricsRes.value;
-                    document.getElementById('opsOpenNoGuide').textContent = m.openSchedulesWithNoGuide ?? '—';
-                    document.getElementById('opsPendingGuide').textContent = m.pendingGuideSchedules ?? '—';
-                    document.getElementById('opsCancelledOp').textContent = m.cancelledByOperatorSchedules ?? '—';
+                    document.getElementById('opsOpenNoGuide').textContent = m.bookingsMissingGuide ?? '—';
+                    document.getElementById('opsPendingGuide').textContent = m.bookingsPendingGuide ?? '—';
+                    document.getElementById('opsCancelledOp').textContent = m.bookingsRefundedByOperator ?? '—';
                     document.getElementById('opsAffected').textContent = m.affectedCustomers ?? '—';
                 }
 
@@ -382,7 +382,7 @@
                 const scheduleId = alert.scheduleId;
                 let actionArea = `
                     <div style="margin-top:10px;">
-                        <a href="./manageSchedules.html?highlight=${scheduleId}" class="btn-assign-guide">
+                        <a href="./manageBookings.html" class="btn-assign-guide">
                             👤 Assign Guide
                         </a>
                     </div>`;

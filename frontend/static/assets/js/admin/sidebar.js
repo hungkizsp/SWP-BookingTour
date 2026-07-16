@@ -72,4 +72,11 @@ document.addEventListener('DOMContentLoaded', () => {
             layoutEl.insertBefore(sidebarEl, layoutEl.firstChild);
         }
     }
+
+    // Inject Critical Alerts Component dynamically
+    if (!document.querySelector('script[src="/assets/js/critical-alerts.js"]')) {
+        const script = document.createElement('script');
+        script.src = '/assets/js/critical-alerts.js';
+        document.head.appendChild(script);
+    }
 });
