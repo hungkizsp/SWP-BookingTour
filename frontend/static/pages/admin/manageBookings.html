@@ -66,7 +66,7 @@
         </main>
     </div>
 
-    
+
     <!-- Assign Guide Modal -->
     <div class="modal" id="assignModal"
         style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
@@ -75,9 +75,11 @@
             <h2 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">Assign Tour Guide</h2>
             <p id="targetScheduleId" style="margin-bottom:10px; color:#475569;"></p>
             <p style="margin-bottom:15px; font-size:0.9em; color:#dc2626; font-weight:bold;">
-                Lưu ý: Guide này sẽ áp dụng cho toàn bộ Schedule này, bao gồm tất cả các booking (khách hàng) trong schedule đó.
+                Lưu ý: Guide này sẽ áp dụng cho toàn bộ Schedule này, bao gồm tất cả các booking (khách hàng) trong
+                schedule đó.
             </p>
-            <select id="guideSelect" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc;"></select>
+            <select id="guideSelect"
+                style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc;"></select>
             <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
                 <button class="btn btn-secondary" onclick="closeAssignModal()" style="padding: 8px 16px;">Đóng</button>
                 <button class="btn btn-primary" onclick="submitAssignment()"
@@ -225,10 +227,10 @@
                         <td style="font-weight:800; color:var(--price);">${Number(item.totalPrice).toLocaleString('vi-VN')}VNĐ</td>
                         <td><span class="badge ${getStatusClass(item.status)}">${item.status}</span></td>
                         ${(() => {
-                            if (item.guideFullName) return `<td>${escapeHtml(item.guideFullName)}</td>`;
-                            if (item.status === 'CONFIRMED' || item.status === 'PAID') return `<td><button class="btn btn-sm" style="background: #3b82f6; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;" onclick="openAssignModal(${item.scheduleId})">👤 Assign</button></td>`;
-                            return '<td>-</td>';
-                        })()}
+                    if (item.guideFullName) return `<td>${escapeHtml(item.guideFullName)}</td>`;
+                    if (item.status === 'CONFIRMED' || item.status === 'PAID') return `<td><button class="btn btn-sm" style="background: #3b82f6; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;" onclick="openAssignModal(${item.scheduleId})">👤 Assign</button></td>`;
+                    return '<td>-</td>';
+                })()}
                         <td style="font-size:0.8rem; max-width:220px; line-height:1.4;">${formatRefundInfo(item)}</td>
                         <td>
                             <div style="display:flex; gap:5px;">
@@ -240,7 +242,7 @@
                                     <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-success btn-sm">Confirm</button>
                                 ` : ''}
                                 ${(item.status === 'CONFIRMED' || item.status === 'PAID') ? `
-                                    <button onclick="openCancelModal(${item.id})" class="btn btn-danger btn-sm">Hủy VNĐặt tour</button>
+                                    <button onclick="openCancelModal(${item.id})" class="btn btn-danger btn-sm">Hủy Đặt Tour</button>
                                 ` : ''}
 
                             </div>
@@ -294,7 +296,7 @@
             }
         }
 
-        
+
         // ==========================================
         // ASSIGN GUIDE LOGIC
         // ==========================================
@@ -302,7 +304,7 @@
             document.getElementById('targetScheduleId').innerText = 'Schedule ID: SD-' + scheduleId;
             document.getElementById('targetScheduleId').dataset.sid = scheduleId;
             document.getElementById('assignModal').style.display = 'flex';
-            
+
             try {
                 const select = document.getElementById('guideSelect');
                 select.innerHTML = '<option value="">-- Đang tải danh sách Guide --</option>';
@@ -329,7 +331,7 @@
         async function submitAssignment() {
             const sid = document.getElementById('targetScheduleId').dataset.sid;
             const gid = document.getElementById('guideSelect').value;
-            
+
             if (!gid) {
                 if (typeof showToast === 'function') showToast('Vui lòng chọn 1 Guide!', 'error');
                 return;
@@ -339,7 +341,7 @@
                 const res = await TB.apiFetch('/api/v1/staff/schedules/' + sid + '/assign-guide?guideId=' + gid, {
                     method: 'PATCH'
                 });
-                
+
                 if (res.code === 200) {
                     if (typeof showToast === 'function') showToast('Gán Guide thành công!', 'success');
                     closeAssignModal();
@@ -350,7 +352,7 @@
                             b.guideFullName = selectedText;
                         }
                     });
-                    renderBookingsPage(); 
+                    renderBookingsPage();
                 } else {
                     if (typeof showToast === 'function') showToast('Lỗi gán Guide: ' + res.message, 'error');
                 }
@@ -465,7 +467,7 @@
             background: #f5f5f5;
         }
     </style>
-<script src="../../assets/js/admin/sidebar.js"></script>
+    <script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>
