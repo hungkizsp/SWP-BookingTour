@@ -185,9 +185,10 @@ window.closeAssignModal = function() {
 window.submitAssignment = async function() {
     const sid = document.getElementById('targetScheduleId').dataset.sid;
     const gid = document.getElementById('guideSelect').value;
-    
+    const notify = (msg, type) => (typeof showToast === 'function') ? showToast(msg, type) : alert(msg);
+
     if (!gid) {
-        alert('Vui lòng chọn 1 Guide!');
+        notify('Vui lòng chọn 1 Guide!', 'error');
         return;
     }
 
@@ -195,9 +196,9 @@ window.submitAssignment = async function() {
         const res = await TB.apiFetch(`/api/v1/staff/schedules/${sid}/assign-guide?guideId=${gid}`, {
             method: 'PATCH'
         });
-        
+
         if (res.code === 200) {
-            alert('Gán Guide thành công!');
+            notify('Gán Guide thành công!', 'success');
             closeAssignModal();
             // Cập nhật UI ngay lập tức
             const selectEl = document.getElementById('guideSelect');
@@ -207,13 +208,15 @@ window.submitAssignment = async function() {
                     b.guideFullName = selectedText;
                 }
             });
-            renderBookingsPage(); 
+            renderBookingsPage();
         } else {
-            alert('Lỗi gán Guide: ' + res.message);
+            notify('Lỗi gán Guide: ' + (res.message || 'Không rõ lỗi.'), 'error');
         }
     } catch (e) {
-        alert('Lỗi hệ thống khi gán Guide.');
-        console.error(e);
+        // e.message đã chứa sẵn message từ server (xử lý trong api.js)
+        const serverMsg = e.message || 'Lỗi hệ thống khi gán Guide.';
+        notify('❌ ' + serverMsg, 'error');
+        console.error('[AssignGuide]', e);
     }
 };
 

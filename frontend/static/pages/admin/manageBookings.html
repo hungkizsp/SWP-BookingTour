@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -357,8 +357,10 @@
                     if (typeof showToast === 'function') showToast('Lỗi gán Guide: ' + res.message, 'error');
                 }
             } catch (e) {
-                if (typeof showToast === 'function') showToast('Lỗi hệ thống khi gán Guide.', 'error');
-                console.error(e);
+                const serverMsg = e.message || 'Lỗi hệ thống khi gán Guide.';
+                if (typeof showToast === 'function') showToast('❌ ' + serverMsg, 'error');
+                else alert('❌ ' + serverMsg);
+                console.error('[AssignGuide]', e);
             }
         }
 
