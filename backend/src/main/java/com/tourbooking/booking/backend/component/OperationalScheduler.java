@@ -12,6 +12,7 @@ import com.tourbooking.booking.backend.repository.BookingRepository;
 import com.tourbooking.booking.backend.repository.OperationalAlertRepository;
 import com.tourbooking.booking.backend.repository.PaymentLogRepository;
 import com.tourbooking.booking.backend.repository.PaymentRepository;
+import com.tourbooking.booking.backend.repository.RefundRequestRepository;
 import com.tourbooking.booking.backend.repository.TourScheduleRepository;
 import com.tourbooking.booking.backend.service.MailService;
 import lombok.RequiredArgsConstructor;
@@ -56,6 +57,7 @@ public class OperationalScheduler {
     private final PaymentRepository paymentRepository;
     private final PaymentLogRepository paymentLogRepository;
     private final OperationalAlertRepository operationalAlertRepository;
+    private final RefundRequestRepository refundRequestRepository;
     private final MailService mailService;
 
     // ══════════════════════════════════════════════════════════════════════
@@ -93,10 +95,9 @@ public class OperationalScheduler {
                 continue;
             }
 
-            // Bypass workflows if schedule has 0 bookings
-            int maxSlots = schedule.getMaxSlots() != null ? schedule.getMaxSlots() : 0;
-            int availableSlots = schedule.getAvailableSlots() != null ? schedule.getAvailableSlots() : 0;
-            if (maxSlots - availableSlots <= 0) {
+            // Bypass workflows if schedule has 0 valid bookings
+            long validBookings = bookingRepository.countValidBookingsByScheduleId(schedule.getId());
+            if (validBookings <= 0) {
                 continue;
             }
 
@@ -210,10 +211,9 @@ public class OperationalScheduler {
             LocalDateTime departure = schedule.getDepartureDateTime();
             if (departure == null) continue;
 
-            // Bypass workflows if schedule has 0 bookings
-            int maxSlots = schedule.getMaxSlots() != null ? schedule.getMaxSlots() : 0;
-            int availableSlots = schedule.getAvailableSlots() != null ? schedule.getAvailableSlots() : 0;
-            if (maxSlots - availableSlots <= 0) {
+            // Bypass workflows if schedule has 0 valid bookings
+            long validBookings = bookingRepository.countValidBookingsByScheduleId(schedule.getId());
+            if (validBookings <= 0) {
                 continue;
             }
 
@@ -227,10 +227,8 @@ public class OperationalScheduler {
                 continue;
             }
 
-            // CRITICAL GUARD: Only auto-transition OPEN schedules to PENDING_GUIDE.
-            // Do NOT touch BOOKING_CLOSED or SOLD_OUT schedules automatically to avoid
-            // mass unintended refunds for tours that actually have confirmed bookings!
-            if (schedule.getStatus() != TourStatus.OPEN) {
+            // CRITICAL GUARD: Only auto-transition OPEN, BOOKING_CLOSED, SOLD_OUT schedules to PENDING_GUIDE.
+            if (schedule.getStatus() != TourStatus.OPEN && schedule.getStatus() != TourStatus.BOOKING_CLOSED && schedule.getStatus() != TourStatus.SOLD_OUT) {
                 continue;
             }
 
@@ -275,60 +273,56 @@ public class OperationalScheduler {
             schedule.setStatus(TourStatus.CANCELLED_BY_OPERATOR);
             tourScheduleRepository.save(schedule);
 
-            // Step B: Refund all CONFIRMED bookings
+            // Step B: Set all CONFIRMED bookings to REFUND_REQUESTED
             List<Booking> confirmedBookings = bookingRepository.findConfirmedByScheduleId(schedule.getId());
             for (Booking booking : confirmedBookings) {
-                processOperatorCancellationRefund(booking, schedule);
+                processOperatorCancellationToRefundRequest(booking, schedule);
             }
 
-            log.info("[OPS-CANCEL] Schedule #{} cancelled. {} booking(s) refunded.", schedule.getId(), confirmedBookings.size());
+            log.info("[OPS-CANCEL] Schedule #{} cancelled. {} booking(s) moved to REFUND_REQUESTED.", schedule.getId(), confirmedBookings.size());
         }
     }
 
     /**
-     * Processes a full refund for a single booking due to CANCELLED_BY_OPERATOR.
+     * Processes a cancellation for a single booking by setting it to REFUND_REQUESTED,
+     * creating a RefundRequest, and notifying the customer immediately.
      */
-    private void processOperatorCancellationRefund(Booking booking, TourSchedule schedule) {
+    private void processOperatorCancellationToRefundRequest(Booking booking, TourSchedule schedule) {
         try {
-            // 1. Set booking to REFUNDED
-            booking.setStatus(BookingStatus.REFUNDED);
+            BookingStatus originalStatus = booking.getStatus();
+            // 1. Set booking to REFUND_REQUESTED
+            booking.setStatus(BookingStatus.REFUND_REQUESTED);
             bookingRepository.save(booking);
 
-            // 2. Find the latest successful payment and mark it REFUNDED
-            Payment payment = paymentRepository
-                    .findFirstByBooking_IdAndStatusOrderByPaymentDateDesc(booking.getId(), PaymentStatus.SUCCESS)
-                    .orElse(null);
+            // 2. Create RefundRequest
+            com.tourbooking.booking.backend.model.entity.RefundRequest refundRequest = new com.tourbooking.booking.backend.model.entity.RefundRequest();
+            refundRequest.setBooking(booking);
+            refundRequest.setAmount(booking.getTotalPrice());
+            refundRequest.setReason("[HỆ THỐNG] Tour bị hủy tự động do không có Guide. Cần hoàn tiền 100% cho khách.");
+            refundRequest.setStatus(com.tourbooking.booking.backend.model.entity.enums.RefundStatus.PENDING);
+            refundRequest.setOriginalBookingStatus(originalStatus);
+            refundRequestRepository.save(refundRequest);
 
-            if (payment != null) {
-                payment.setStatus(PaymentStatus.REFUNDED);
-                paymentRepository.save(payment);
-
-                // 3. Save refund log
-                PaymentLog refundLog = new PaymentLog();
-                refundLog.setPayment(payment);
-                refundLog.setLogMessage("OPERATOR_CANCELLATION_REFUND | scheduleId=" + schedule.getId() +
-                        " | reason=GUIDE_NOT_ASSIGNED | amount=" + payment.getAmount() +
-                        " | refundedAt=" + LocalDateTime.now());
-                paymentLogRepository.save(refundLog);
-            }
-
-            // 4. Send customer notification email
+            // 3. Send customer notification email
             if (booking.getUser() != null && booking.getUser().getEmail() != null) {
                 try {
-                    mailService.sendOperatorCancellationRefundEmail(
+                    String tourName = schedule.getTour() != null ? schedule.getTour().getTourName() : "N/A";
+                    mailService.sendTourCancellationEmail(
                             booking.getUser().getEmail(),
                             booking.getUser().getFullName(),
                             booking.getId(),
-                            booking.getTotalPrice());
+                            tourName,
+                            "Yêu cầu vận hành không được đáp ứng (Không có Hướng dẫn viên). Chúng tôi đang tiến hành hoàn tiền 100% cho bạn."
+                    );
                 } catch (Exception emailEx) {
-                    log.warn("[OPS-CANCEL] Failed to send refund email for booking #{}: {}",
+                    log.warn("[OPS-CANCEL] Failed to send cancellation email for booking #{}: {}",
                             booking.getId(), emailEx.getMessage());
                 }
             }
 
-            log.info("[OPS-CANCEL] Booking #{} refunded (GUIDE_NOT_ASSIGNED).", booking.getId());
+            log.info("[OPS-CANCEL] Booking #{} moved to REFUND_REQUESTED (GUIDE_NOT_ASSIGNED).", booking.getId());
         } catch (Exception ex) {
-            log.error("[OPS-CANCEL] Error processing refund for booking #{}: {}", booking.getId(), ex.getMessage(), ex);
+            log.error("[OPS-CANCEL] Error processing refund request for booking #{}: {}", booking.getId(), ex.getMessage(), ex);
         }
     }
 
@@ -361,15 +355,13 @@ public class OperationalScheduler {
                 continue; // not yet at departure
             }
 
-            // Bypass workflows if schedule has 0 bookings
-            int maxSlots = schedule.getMaxSlots() != null ? schedule.getMaxSlots() : 0;
-            int availableSlots = schedule.getAvailableSlots() != null ? schedule.getAvailableSlots() : 0;
-            if (maxSlots - availableSlots <= 0) {
+            // Bypass workflows if schedule has 0 valid bookings
+            long validBookings = bookingRepository.countValidBookingsByScheduleId(schedule.getId());
+            if (validBookings <= 0) {
                 continue;
             }
-            // This schedule has reached departure with no guide — block IN_PROGRESS
-            // CRITICAL GUARD: Only auto-transition OPEN schedules to PENDING_GUIDE.
-            if (schedule.getStatus() == TourStatus.OPEN) {
+            // CRITICAL GUARD: Only auto-transition OPEN, BOOKING_CLOSED, SOLD_OUT schedules to PENDING_GUIDE.
+            if (schedule.getStatus() == TourStatus.OPEN || schedule.getStatus() == TourStatus.BOOKING_CLOSED || schedule.getStatus() == TourStatus.SOLD_OUT) {
                 log.warn("[OPS-GUARD] Schedule #{} reached departure with no guide — forcing PENDING_GUIDE.", schedule.getId());
                 schedule.setStatus(TourStatus.PENDING_GUIDE);
                 tourScheduleRepository.save(schedule);
