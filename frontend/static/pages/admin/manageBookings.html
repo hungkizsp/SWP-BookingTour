@@ -49,13 +49,14 @@
                                 <th>Booking Date</th>
                                 <th>Total</th>
                                 <th>Status</th>
+                                <th>Guide</th>
                                 <th>Refund Info</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="bookingTable">
                             <tr>
-                                <td colspan="8" style="text-align: center; padding: 2rem;">Loading bookings...</td>
+                                <td colspan="9" style="text-align: center; padding: 2rem;">Loading bookings...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -63,6 +64,26 @@
                 <div id="pagination" class="pagination-container"></div>
             </div>
         </main>
+    </div>
+
+    
+    <!-- Assign Guide Modal -->
+    <div class="modal" id="assignModal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 12px; width: 450px; max-width: 95%;">
+            <h2 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">Assign Tour Guide</h2>
+            <p id="targetScheduleId" style="margin-bottom:10px; color:#475569;"></p>
+            <p style="margin-bottom:15px; font-size:0.9em; color:#dc2626; font-weight:bold;">
+                Lưu ý: Guide này sẽ áp dụng cho toàn bộ Schedule này, bao gồm tất cả các booking (khách hàng) trong schedule đó.
+            </p>
+            <select id="guideSelect" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc;"></select>
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeAssignModal()" style="padding: 8px 16px;">Đóng</button>
+                <button class="btn btn-primary" onclick="submitAssignment()"
+                    style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">Assign</button>
+            </div>
+        </div>
     </div>
 
     <!-- Cancel Booking Modal -->
@@ -187,7 +208,7 @@
             const pageItems = allBookings.slice(start, start + PAGE_SIZE);
 
             if (!pageItems.length) {
-                table.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">No bookings found.</td></tr>';
+                table.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem;">No bookings found.</td></tr>';
                 renderPagination(0, 0);
                 return;
             }
@@ -203,6 +224,11 @@
                         <td style="font-size:0.85rem; white-space:nowrap;">${formatBookingDate(item.bookingDate)}</td>
                         <td style="font-weight:800; color:var(--price);">${Number(item.totalPrice).toLocaleString('vi-VN')}VNĐ</td>
                         <td><span class="badge ${getStatusClass(item.status)}">${item.status}</span></td>
+                        ${(() => {
+                            if (item.guideFullName) return `<td>${escapeHtml(item.guideFullName)}</td>`;
+                            if (item.status === 'CONFIRMED' || item.status === 'PAID') return `<td><button class="btn btn-sm" style="background: #3b82f6; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;" onclick="openAssignModal(${item.scheduleId})">👤 Assign</button></td>`;
+                            return '<td>-</td>';
+                        })()}
                         <td style="font-size:0.8rem; max-width:220px; line-height:1.4;">${formatRefundInfo(item)}</td>
                         <td>
                             <div style="display:flex; gap:5px;">
@@ -265,6 +291,72 @@
                 loadBookings(currentPage);
             } catch (err) {
                 showToast('Update failed: ' + err.message, 'error');
+            }
+        }
+
+        
+        // ==========================================
+        // ASSIGN GUIDE LOGIC
+        // ==========================================
+        async function openAssignModal(scheduleId) {
+            document.getElementById('targetScheduleId').innerText = 'Schedule ID: SD-' + scheduleId;
+            document.getElementById('targetScheduleId').dataset.sid = scheduleId;
+            document.getElementById('assignModal').style.display = 'flex';
+            
+            try {
+                const select = document.getElementById('guideSelect');
+                select.innerHTML = '<option value="">-- Đang tải danh sách Guide --</option>';
+                const res = await TB.apiFetch('/api/v1/staff/guides');
+                select.innerHTML = '<option value="">-- Chọn Guide --</option>';
+                if (res.code === 200 && res.data) {
+                    res.data.forEach(g => {
+                        const opt = document.createElement('option');
+                        opt.value = g.id;
+                        opt.textContent = g.fullName + ' (' + g.email + ')';
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading guides:', e);
+                document.getElementById('guideSelect').innerHTML = '<option value="">Lỗi khi tải danh sách Guide</option>';
+            }
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assignModal').style.display = 'none';
+        }
+
+        async function submitAssignment() {
+            const sid = document.getElementById('targetScheduleId').dataset.sid;
+            const gid = document.getElementById('guideSelect').value;
+            
+            if (!gid) {
+                if (typeof showToast === 'function') showToast('Vui lòng chọn 1 Guide!', 'error');
+                return;
+            }
+
+            try {
+                const res = await TB.apiFetch('/api/v1/staff/schedules/' + sid + '/assign-guide?guideId=' + gid, {
+                    method: 'PATCH'
+                });
+                
+                if (res.code === 200) {
+                    if (typeof showToast === 'function') showToast('Gán Guide thành công!', 'success');
+                    closeAssignModal();
+                    const selectEl = document.getElementById('guideSelect');
+                    const selectedText = selectEl.options[selectEl.selectedIndex].text.split('(')[0].trim();
+                    allBookings.forEach(b => {
+                        if (b.scheduleId == sid) {
+                            b.guideFullName = selectedText;
+                        }
+                    });
+                    renderBookingsPage(); 
+                } else {
+                    if (typeof showToast === 'function') showToast('Lỗi gán Guide: ' + res.message, 'error');
+                }
+            } catch (e) {
+                if (typeof showToast === 'function') showToast('Lỗi hệ thống khi gán Guide.', 'error');
+                console.error(e);
             }
         }
 
