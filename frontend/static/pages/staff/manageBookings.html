@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Bookings - Staff</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/admin-common.css">
+
+</head>
+
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar"></aside>
+
+        <main class="main-content">
+            <header>
+                <div>
+                    <h1>Manage Bookings</h1>
+                </div>
+                <div class="header-actions">
+                    <div
+                        style="display:flex; align-items:center; gap:0.75rem; padding:0.25rem 0.75rem; border-radius:0.75rem; border:1px solid var(--border); cursor:pointer;">
+                        <div
+                            style="width:32px; height:32px; border-radius:50%; background:var(--primary-light); color:var(--primary-dark); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem;">
+                            S</div>
+                        <div style="display:flex; flex-direction:column; line-height:1.2;">
+                            <span id="userInfo" style="font-weight:700; font-size:0.85rem;">Staff</span>
+                            <span style="font-size:0.7rem; color:var(--text-muted);">Operations</span>
+                        </div>
+                    </div>
+                    <button id="logoutBtn" class="btn btn-secondary" style="font-size:0.8rem; padding:0.4rem 0.85rem;"
+                        onclick="TB.logout()">Đăng Xuất</button>
+                </div>
+            </header>
+
+            <table style="width: 100%; border-collapse: collapse;" class="table-container" id="bookingsTable">
+                <thead>
+                    <tr>
+                        <th>Booking ID</th>
+                        <th>User</th>
+                        <th>Tour Schedule</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Guide</th>
+                        <th>Chat</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td colspan="8">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div id="pagination" class="pagination-container"
+                style="margin-top:20px; display:flex; gap:5px; justify-content:center;"></div>
+        </main>
+    </div>
+
+    <!-- Assign Guide Modal -->
+    <div class="modal" id="assignModal">
+        <div class="modal-content">
+            <h2>Assign Tour Guide</h2>
+            <p id="targetScheduleId" style="margin-bottom:10px; color:#475569;"></p>
+            <p style="margin-bottom:15px; font-size:0.9em; color:#dc2626; font-weight:bold;">
+                Lưu ý: Guide này sẽ áp dụng cho toàn bộ Schedule này, bao gồm tất cả các booking (khách hàng) trong schedule đó.
+            </p>
+            <select id="guideSelect" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc;"></select>
+            <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:10px;">
+                <button class="action-btn" style="background:#64748b;" onclick="closeAssignModal()">Close</button>
+                <button class="action-btn" onclick="submitAssignment()">Assign</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // STAFF-only guard ΓÇö Admin bi redirect ve admin dashboard
+        (function () {
+            var userStr = sessionStorage.getItem('user');
+            if (!userStr) { window.location.href = '/pages/auth/login.html'; return; }
+            var user = JSON.parse(userStr);
+            if (user.role === 'ADMIN') { window.location.href = '/pages/admin/dashboard.html'; return; }
+            if (user.role !== 'STAFF') { window.location.href = '/pages/auth/login.html'; return; }
+            document.getElementById('userInfo') && (document.getElementById('userInfo').innerText = user.fullName || user.email);
+        })();
+    </script>
+    <script src="/assets/js/api.js"></script>
+    <script src="/assets/js/notification-bell.js"></script>
+    <script src="/assets/js/admin-bookings.js"></script>
+    <script src="/assets/js/staff/sidebar.js"></script>
+</body>
+
+</html>

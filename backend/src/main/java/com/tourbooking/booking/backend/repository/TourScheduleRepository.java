@@ -154,4 +154,10 @@ public interface TourScheduleRepository extends JpaRepository<TourSchedule, Long
 
        /** Count schedules with PENDING_GUIDE status. */
        long countByStatus(TourStatus status);
+
+       /** Override findAll to prevent N+1 by using JOIN FETCH */
+       @Query("SELECT DISTINCT s FROM TourSchedule s " +
+              "LEFT JOIN FETCH s.tour " +
+              "LEFT JOIN FETCH s.guide")
+       List<TourSchedule> findAllWithDetails();
 }

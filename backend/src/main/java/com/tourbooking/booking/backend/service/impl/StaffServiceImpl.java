@@ -275,7 +275,7 @@ public class StaffServiceImpl implements StaffService {
         if (status != null && !status.isEmpty()) {
             bookings = bookingRepository.findByStatus(BookingStatus.valueOf(status.toUpperCase()));
         } else {
-            bookings = bookingRepository.findAll();
+            bookings = bookingRepository.findAllWithDetails();
         }
 
         return bookings.stream()
@@ -289,6 +289,9 @@ public class StaffServiceImpl implements StaffService {
                     res.setTourName(b.getSchedule() != null && b.getSchedule().getTour() != null
                             ? b.getSchedule().getTour().getTourName()
                             : "N/A");
+                    if (b.getSchedule() != null && b.getSchedule().getGuide() != null) {
+                        res.setGuideFullName(b.getSchedule().getGuide().getFullName());
+                    }
                     res.setBookingDate(b.getBookingDate());
                     res.setNumberOfPeople(b.getNumberOfPeople());
                     res.setTotalPrice(b.getTotalPrice());
@@ -322,6 +325,9 @@ public class StaffServiceImpl implements StaffService {
             res.setTourName(b.getSchedule() != null && b.getSchedule().getTour() != null
                     ? b.getSchedule().getTour().getTourName()
                     : "N/A");
+            if (b.getSchedule() != null && b.getSchedule().getGuide() != null) {
+                res.setGuideFullName(b.getSchedule().getGuide().getFullName());
+            }
             res.setBookingDate(b.getBookingDate());
             res.setNumberOfPeople(b.getNumberOfPeople());
             res.setTotalPrice(b.getTotalPrice());
@@ -342,7 +348,7 @@ public class StaffServiceImpl implements StaffService {
     @Override
     @Transactional(readOnly = true)
     public List<TourScheduleResponse> listSchedules() {
-        return tourScheduleRepository.findAll().stream()
+        return tourScheduleRepository.findAllWithDetails().stream()
                 .map(s -> mapToResponse(s, false))
                 .collect(Collectors.toList());
     }

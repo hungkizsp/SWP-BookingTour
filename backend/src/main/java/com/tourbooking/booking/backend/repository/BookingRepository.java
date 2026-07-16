@@ -145,5 +145,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "AND EXISTS (SELECT 1 FROM TourSchedule s WHERE s.id = b.schedule.id " +
            "AND s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR)")
     java.math.BigDecimal sumOperatorCancelledRefundAmounts();
+
+    /** Override findAll for admin/staff dashboard to prevent N+1 by using JOIN FETCH */
+    @Query("SELECT DISTINCT b FROM Booking b " +
+           "LEFT JOIN FETCH b.user " +
+           "LEFT JOIN FETCH b.schedule s " +
+           "LEFT JOIN FETCH s.tour " +
+           "LEFT JOIN FETCH s.guide")
+    List<Booking> findAllWithDetails();
 }
 
