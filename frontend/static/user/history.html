@@ -482,29 +482,126 @@
       return n.toLocaleString('vi-VN') + ' ₫';
     }
 
-    function renderItinerary(itineraryStr) {
-      if (!itineraryStr) return '';
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function isNewApiItinerary(value) {
+      return String(value || '').trim().toUpperCase() === 'NEW_API';
+    }
+
+    function resolveTourId(booking) {
+      if (!booking) return null;
+      return booking.tourId
+        || (booking.schedule && (booking.schedule.tourId || (booking.schedule.tour && booking.schedule.tour.id)))
+        || null;
+    }
+
+    function buildItineraryDaysHtml(days) {
+      if (!days || days.length === 0) {
+        return '<div style="color:#94a3b8; font-style:italic;">Chưa có thông tin lịch trình chi tiết.</div>';
+      }
+      return days.map(day => {
+        const meta = [
+          day.transportation ? `🚌 ${escapeHtml(day.transportation)}` : '',
+          day.meals ? `🍽️ ${escapeHtml(day.meals)}` : '',
+          day.accommodation ? `🏨 ${escapeHtml(day.accommodation)}` : ''
+        ].filter(Boolean).join(' &nbsp;|&nbsp; ');
+        const highlights = day.highlights
+          ? `<div style="font-size:0.85rem; color:#64748b; margin-top:4px;">📍 ${escapeHtml(day.highlights)}</div>`
+          : '';
+        const image = day.imageUrl
+          ? `<img src="${TB.normalizeImageUrl(day.imageUrl)}" alt="${escapeHtml(day.title || '')}" style="width:100%; max-height:160px; object-fit:cover; border-radius:6px; margin:8px 0;" onerror="this.style.display='none'">`
+          : '';
+        return `
+          <div style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px dashed #e2e8f0;">
+            <strong style="color:var(--primary); font-size:0.95rem;">Ngày ${day.dayNumber}: ${escapeHtml(day.title || '')}</strong>
+            ${meta ? `<div style="font-size:0.82rem; color:#64748b; margin-top:4px;">${meta}</div>` : ''}
+            ${highlights}
+            ${image}
+            <div style="margin-top:6px; padding-left:10px; border-left:3px solid #cbd5e1; color:#334155; white-space:pre-line; font-size:0.9rem;">${escapeHtml(day.description || '')}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function itineraryContainerStyle() {
+      return 'margin-top:16px; font-size:0.9rem; color:#475569; max-height:250px; overflow-y:auto; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;';
+    }
+
+    function itineraryLoadingBlock(tourId) {
+      return `<div class="itinerary-block" data-tour-id="${tourId}" style="${itineraryContainerStyle()}">
+          <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình chi tiết:</strong>
+          <div class="itinerary-loading" style="color:#94a3b8; font-style:italic;">Đang tải lịch trình...</div>
+        </div>`;
+    }
+
+    function renderItinerary(itineraryStr, tourId) {
+      const normalized = String(itineraryStr || '').trim();
+
+      if (isNewApiItinerary(normalized) || !normalized) {
+        if (!tourId) return '';
+        return itineraryLoadingBlock(tourId);
+      }
+
       try {
-        const items = JSON.parse(itineraryStr);
+        const items = JSON.parse(normalized);
         if (Array.isArray(items)) {
           const listHtml = items.map(item => `
             <div style="margin-bottom:12px;">
-              <strong style="color:var(--primary); font-size:0.95rem;">${item.title || ''}</strong>
-              <div style="margin-top:4px; padding-left:10px; border-left:3px solid #cbd5e1; color:#334155;">${item.content || ''}</div>
+              <strong style="color:var(--primary); font-size:0.95rem;">${escapeHtml(item.title || '')}</strong>
+              <div style="margin-top:4px; padding-left:10px; border-left:3px solid #cbd5e1; color:#334155;">${escapeHtml(item.content || '')}</div>
             </div>
           `).join('');
-          return `<div style="margin-top:16px; font-size:0.9rem; color:#475569; max-height:250px; overflow-y:auto; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
-                    <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình chi tiết:</strong>
-                    ${listHtml}
-                  </div>`;
+          return `<div style="${itineraryContainerStyle()}">
+            <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình chi tiết:</strong>
+            ${listHtml}
+          </div>`;
         }
       } catch (e) {
-        return `<div style="margin-top:16px; font-size:0.9rem; color:#475569; max-height:150px; overflow-y:auto; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
-                  <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình:</strong>
-                  ${itineraryStr.replace(/\\n/g, '<br>')}
-                </div>`;
+        if (isNewApiItinerary(normalized)) {
+          if (!tourId) return '';
+          return itineraryLoadingBlock(tourId);
+        }
+        return `<div style="${itineraryContainerStyle()}">
+          <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình:</strong>
+          ${escapeHtml(normalized).replace(/\n/g, '<br>')}
+        </div>`;
       }
       return '';
+    }
+
+    const itineraryCache = new Map();
+
+    async function fetchTourItineraryDays(tourId) {
+      const key = String(tourId);
+      if (itineraryCache.has(key)) return itineraryCache.get(key);
+      const res = await TB.apiFetch(`/api/v1/tours/${tourId}/itinerary`);
+      const days = res?.data || [];
+      itineraryCache.set(key, days);
+      return days;
+    }
+
+    async function loadItineraryBlocks() {
+      const blocks = document.querySelectorAll('.itinerary-block[data-tour-id]');
+      await Promise.all([...blocks].map(async (block) => {
+        const tourId = block.dataset.tourId;
+        if (!tourId) return;
+        try {
+          const days = await fetchTourItineraryDays(tourId);
+          block.querySelector('.itinerary-loading')?.remove();
+          block.insertAdjacentHTML('beforeend', buildItineraryDaysHtml(days));
+        } catch (e) {
+          const loading = block.querySelector('.itinerary-loading');
+          if (loading) {
+            loading.textContent = 'Không tải được lịch trình. Vui lòng thử lại sau.';
+            loading.style.color = '#ef4444';
+          }
+        }
+      }));
     }
 
     function statusBadge(status) {
@@ -615,7 +712,7 @@
                         ${renderGuideCard(b, false)}
                     </div>
                 </div>
-                ${renderItinerary(b.tourItinerary)}
+                ${renderItinerary(b.tourItinerary, resolveTourId(b))}
                 ${operatorCancelBanner}
             </div>
             <div class="booking-actions">
@@ -629,6 +726,7 @@
           </div>
         `;
       }).join('');
+      loadItineraryBlocks();
     }
 
     function renderPagination(totalPages) {
@@ -861,13 +959,37 @@
         if (!b) throw new Error("Không tìm thấy thông tin");
 
         let itHtml = '';
-        try {
-          const items = JSON.parse(b.tourItinerary || '[]');
-          if (Array.isArray(items)) {
-            itHtml = items.map(item => `<div style="margin-bottom:8px;"><strong>${item.title || ''}</strong><br><span style="color:#555;">${item.content || ''}</span></div>`).join('');
+        const detailTourId = resolveTourId(b);
+        const normalizedItinerary = String(b.tourItinerary || '').trim();
+        if (isNewApiItinerary(normalizedItinerary) || !normalizedItinerary) {
+          if (detailTourId) {
+            try {
+              const days = await fetchTourItineraryDays(detailTourId);
+              itHtml = buildItineraryDaysHtml(days);
+            } catch (e) {
+              itHtml = '<span style="color:#ef4444;">Không tải được lịch trình.</span>';
+            }
+          } else {
+            itHtml = '<span style="color:#94a3b8;">Chưa có thông tin lịch trình.</span>';
           }
-        } catch (e) {
-          itHtml = b.tourItinerary ? b.tourItinerary.replace(/\n/g, '<br>') : '';
+        } else {
+          try {
+            const items = JSON.parse(normalizedItinerary);
+            if (Array.isArray(items)) {
+              itHtml = items.map(item => `<div style="margin-bottom:8px;"><strong>${escapeHtml(item.title || '')}</strong><br><span style="color:#555;">${escapeHtml(item.content || '')}</span></div>`).join('');
+            }
+          } catch (e) {
+            if (isNewApiItinerary(normalizedItinerary) && detailTourId) {
+              try {
+                const days = await fetchTourItineraryDays(detailTourId);
+                itHtml = buildItineraryDaysHtml(days);
+              } catch (err) {
+                itHtml = '<span style="color:#ef4444;">Không tải được lịch trình.</span>';
+              }
+            } else {
+              itHtml = escapeHtml(normalizedItinerary).replace(/\n/g, '<br>');
+            }
+          }
         }
 
         const detailsHtml = `

@@ -108,13 +108,13 @@
             </div>
 
             <div class="form-group" style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">
-                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Tour Itinerary (L?ch Tr�nh Tham
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Tour Itinerary (Lịch Trình Tham
                     Quan)</label>
                 <div id="itineraryContainer" style="display: flex; flex-direction: column; gap: 15px;">
                     <!-- Itinerary days will be injected here -->
                 </div>
                 <button type="button" onclick="addItineraryRow()" class="btn btn-secondary btn-sm"
-                    style="margin-top: 10px;">+ Add Day (Th�m Ng�y)</button>
+                    style="margin-top: 10px;">+ Add Day (Thêm Ngày)</button>
             </div>
 
             <div class="form-group">
@@ -508,35 +508,35 @@
                 <button type="button" onclick="this.parentElement.remove()" style="position: absolute; right: 10px; top: 10px; background: #ef4444; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem;">X</button>
                 <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; margin-bottom: 10px;">
                     <div>
-                        <label>Ng�y Th�ng</label>
+                        <label>Ngày Tháng</label>
                         <input type="number" class="form-control i-day" value="${dayData?.dayNumber || (container.children.length + 1)}" min="1" required>
                     </div>
                     <div>
-                        <label>Ti�u �?</label>
+                        <label>Tiêu Đề</label>
                         <input type="text" class="form-control i-title" value="${dayData?.title || ''}" placeholder="Vd: Vui Choi Tham Quan" required>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
                     <div>
-                        <label>Phuong Ti?n</label>
+                        <label>Phương Tiện</label>
                         <input type="text" class="form-control i-transport" value="${dayData?.transportation || ''}" placeholder="Vd: Xe bus">
                     </div>
                     <div>
-                        <label>B?a An</label>
-                        <input type="text" class="form-control i-meals" value="${dayData?.meals || ''}" placeholder="Vd: S�ng, Trua">
+                        <label>Bữa Ăn</label>
+                        <input type="text" class="form-control i-meals" value="${dayData?.meals || ''}" placeholder="Vd: Sáng, Trưa">
                     </div>
                     <div>
-                        <label>Noi An</label>
-                        <input type="text" class="form-control i-accommodation" value="${dayData?.accommodation || ''}" placeholder="Vd: Kh�ch S?n 4 sao">
+                        <label>Nơi Ở</label>
+                        <input type="text" class="form-control i-accommodation" value="${dayData?.accommodation || ''}" placeholder="Vd: Khách Sạn 4 sao">
                     </div>
                 </div>
                 <div style="margin-bottom: 10px;">
-                    <label>Phuong Ti?n Tham Quan</label>
-                    <input type="text" class="form-control i-highlights" value="${dayData?.highlights || ''}" placeholder="Vd: B� N� Hills, C?u V�ng...">
+                    <label>Điểm Nổi Bật</label>
+                    <input type="text" class="form-control i-highlights" value="${dayData?.highlights || ''}" placeholder="Vd: Bà Nà Hills, Cầu Vàng...">
                 </div>
                 <div style="margin-bottom: 10px;">
-                    <label>M� T? Chi Ti?t</label>
-                    <textarea class="form-control i-desc" rows="2" placeholder="Nh?p Chi Ti?t L?ch Tr�nh..." required>${dayData?.description || ''}</textarea>
+                    <label>Mô Tả Chi Tiết</label>
+                    <textarea class="form-control i-desc" rows="2" placeholder="Nhập Chi Tiết Lịch Trình..." required>${dayData?.description || ''}</textarea>
                 </div>
                 <div>
                     <label>&#7843;nh L&#7883;ch tr&#236;nh (T&#249;y ch&#7885;n)</label>
@@ -570,8 +570,8 @@
             container.appendChild(row);
         }
 
-        // -- Itinerary image upload � event delegation (works for dynamically added rows) --
-        document.addEventListener('click', function(e) {
+        // -- Itinerary image upload � event delegation (works for dynamically added rows) --
+        document.addEventListener('click', function (e) {
             // Click on preview box triggers file picker
             const box = e.target.closest('.itinerary-image-preview-box');
             if (box) {
@@ -590,7 +590,7 @@
             }
         });
 
-        document.addEventListener('change', async function(e) {
+        document.addEventListener('change', async function (e) {
             if (!e.target.classList.contains('itinerary-file-input')) return;
             const file = e.target.files[0];
             if (!file) return;
@@ -626,11 +626,11 @@
                 const formData = new FormData();
                 formData.append('files', file);
                 // TB.apiFetch auto-prepends http://localhost:8080 when on dev port,
-                // and injects the Bearer token � no need to set headers manually.
+                // and injects the Bearer token � no need to set headers manually.
                 const resData = await TB.apiFetch('/api/v1/admin/tours/upload', {
                     method: 'POST',
                     body: formData
-                    // Do NOT set Content-Type � browser sets it with multipart boundary
+                    // Do NOT set Content-Type � browser sets it with multipart boundary
                 });
                 // Response: { code, message, data: ["url"] }
                 if (resData.code === 200 && resData.data && resData.data.length > 0) {
@@ -1080,8 +1080,7 @@
             loadTours();
         }
     </script>
-<script src="../../assets/js/admin/sidebar.js"></script>
+    <script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>
-

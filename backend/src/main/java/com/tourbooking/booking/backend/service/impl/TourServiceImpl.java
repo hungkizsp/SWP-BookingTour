@@ -52,7 +52,7 @@ public class TourServiceImpl implements TourService {
     @Override
     @Transactional(readOnly = true)
     public List<TourResponse> getAllTours() {
-        return tourRepo.findAll().stream()
+        return tourRepo.findAllWithBasicDetails().stream()
                 .map(TourMapper::toResponse)
                 .toList();
     }
@@ -346,6 +346,32 @@ public class TourServiceImpl implements TourService {
                         }
                     }
                     resp.setMaxGroupSize(maxGroup > 0 ? maxGroup : 30);
+                    
+                    // Map itinerary days
+                    java.util.List<com.tourbooking.booking.backend.model.dto.response.TourItineraryDayResponse> dayResponses = days.stream()
+                        .map(d -> com.tourbooking.booking.backend.model.dto.response.TourItineraryDayResponse.builder()
+                            .id(d.getId())
+                            .tourId(tour.getId())
+                            .dayNumber(d.getDayNumber())
+                            .title(d.getTitle())
+                            .description(d.getDescription())
+                            .accommodation(d.getAccommodation())
+                            .meals(d.getMeals())
+                            .transportation(d.getTransportation())
+                            .highlights(d.getHighlights())
+                            .imageUrl(d.getImageUrl())
+                            .build())
+                        .toList();
+                    resp.setItineraryDayList(dayResponses);
+                    
+                    // Map destinations
+                    java.util.List<String> dests = new java.util.ArrayList<>();
+                    if (tour.getStartLocation() != null && !tour.getStartLocation().isBlank()) dests.add(tour.getStartLocation().trim());
+                    if (tour.getEndLocation() != null && !tour.getEndLocation().isBlank() && !dests.contains(tour.getEndLocation().trim())) dests.add(tour.getEndLocation().trim());
+                    if (tour.getCity() != null && tour.getCity().getCityName() != null && !tour.getCity().getCityName().isBlank() && !dests.contains(tour.getCity().getCityName().trim())) {
+                        dests.add(tour.getCity().getCityName().trim());
+                    }
+                    resp.setDestinations(dests);
                     
                     return resp;
                 })

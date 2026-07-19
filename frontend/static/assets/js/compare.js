@@ -144,6 +144,39 @@
         <div>${escapeHtml(t.startLocation || 'Đà Nẵng')}</div>
       `);
 
+      bodyHtml += renderRow('🗺️ Điểm đến', t => {
+        if (!t.destinations || t.destinations.length === 0) return '<div>—</div>';
+        return `<div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          ${t.destinations.map(d => `<span class="schedule-tag" style="background:#e0f2fe; color:#0369a1;">${escapeHtml(d)}</span>`).join('')}
+        </div>`;
+      });
+
+      bodyHtml += renderRow('📝 Tóm tắt tour', t => {
+        const desc = t.description || '';
+        const shortDesc = desc.length > 150 ? desc.substring(0, 150) + '...' : desc;
+        return `<div class="itinerary-summary" style="text-align:justify;">${escapeHtml(shortDesc)}</div>`;
+      });
+
+      bodyHtml += renderRow('🗓️ Lịch trình chi tiết', t => {
+        let html = '';
+        if (t.itineraryDayList && t.itineraryDayList.length > 0) {
+          html = `<div style="display:flex; flex-direction:column; gap:8px;">`;
+          t.itineraryDayList.slice(0, 3).forEach(day => {
+            html += `<div style="font-size:0.85rem; border-left:3px solid var(--primary); padding-left:10px;">
+              <strong style="color:var(--primary-dark)">Ngày ${day.dayNumber}:</strong> ${escapeHtml(day.title)}
+            </div>`;
+          });
+          if (t.itineraryDayList.length > 3) {
+            html += `<div style="font-size:0.8rem; color:var(--text-soft); font-style:italic; padding-left:10px;">+ ${t.itineraryDayList.length - 3} ngày nữa</div>`;
+          }
+          html += `</div>`;
+          html += `<button onclick="window.showFullItinerary(${t.id})" class="btn-text-action" style="margin-top:10px; color:var(--primary);">Xem chi tiết toàn bộ lịch trình →</button>`;
+        } else {
+          html = `<div>Đang cập nhật</div>`;
+        }
+        return html;
+      });
+
       bodyHtml += renderRow('🎯 Còn chỗ', t => {
         const slots = t.closestScheduleSlots || 0;
         const isSoldOut = slots === 0;

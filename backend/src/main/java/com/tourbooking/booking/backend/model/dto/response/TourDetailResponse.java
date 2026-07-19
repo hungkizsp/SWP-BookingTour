@@ -28,6 +28,8 @@ public class TourDetailResponse {
     private String externalId;
     private List<String> highlights;
     private List<TourScheduleSummary> schedules;
+    private List<String> destinations;
+    private List<TourItineraryDayResponse> itineraryDayList;
     
     // New metrics for Comparison Engine
     private Integer reviewCount;
