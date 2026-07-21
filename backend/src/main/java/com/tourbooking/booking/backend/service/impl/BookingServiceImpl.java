@@ -616,10 +616,12 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void deleteBooking(Long id) {
-        if (!bookingRepository.existsById(id)) {
-            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
-        }
-        bookingRepository.deleteById(id);
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancellationReason("Deleted by admin");
+        bookingRepository.save(booking);
     }
 
     @Override

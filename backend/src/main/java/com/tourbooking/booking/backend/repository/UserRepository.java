@@ -14,6 +14,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     java.util.List<User> findByRole(com.tourbooking.booking.backend.model.entity.enums.UserRole role);
     
     java.util.List<User> findByIsActiveFalseAndCreatedAtBefore(java.time.LocalDateTime cutoff);
+    java.util.List<User> findByEmailVerifiedFalseAndCreatedAtBefore(java.time.LocalDateTime cutoff);
 
     long countByCurrentSessionIdIsNotNull();
 

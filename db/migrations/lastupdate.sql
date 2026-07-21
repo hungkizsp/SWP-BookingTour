@@ -1284,3 +1284,8 @@ USE [master]
 GO
 ALTER DATABASE [TourBookingDB] SET  READ_WRITE 
 GO
+
+-- Add EmailVerified flag
+ALTER TABLE Users ADD EmailVerified BIT NOT NULL DEFAULT 0;
+UPDATE Users SET EmailVerified = 1;
+

@@ -1,67 +1,110 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chi tiáº¿t Tour - TourBooking</title>
     <link rel="stylesheet" href="../../assets/css/admin-common.css">
     <style>
-        .file-input { display: none; }
-        .file-label { display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed var(--border); border-radius: 0.5rem; padding: 20px; cursor: pointer; color: var(--text-muted); font-size: 0.9rem; text-align: center; }
-        .file-label:hover { background: var(--bg-main); border-color: var(--primary); color: var(--primary); }
-        #previewImages { display: flex; gap: 8px; overflow-x: auto; margin-top: 10px; padding-bottom: 5px; }
-        .preview-img { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; }
+        .file-input {
+            display: none;
+        }
+
+        .file-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed var(--border);
+            border-radius: 0.5rem;
+            padding: 20px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .file-label:hover {
+            background: var(--bg-main);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        #previewImages {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            margin-top: 10px;
+            padding-bottom: 5px;
+        }
+
+        .preview-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
     </style>
 </head>
+
 <body>
     <div class="admin-layout">
         <aside class="sidebar"></aside>
 
         <main class="main-content">
             <header style="display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;">
-                <a href="/pages/guide/dashboard.html" class="btn btn-secondary" style="border-radius: 50%; padding: 0.5rem; width: 40px; height: 40px;">&larr;</a>
-                <h1 id="tourTitle" style="margin: 0;">Äang táº£i...</h1>
+                <a href="/pages/guide/dashboard.html" class="btn btn-secondary"
+                    style="border-radius: 50%; padding: 0.5rem; width: 40px; height: 40px;">&larr;</a>
+                <h1 id="tourTitle" style="margin: 0;">Đang tải...</h1>
             </header>
 
             <div style="display: grid; gap: 1.5rem; max-width: 800px;">
-                <a id="groupChatLink" href="#" class="btn btn-primary" style="display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; padding: 1rem;">
-                    &#x1F4AC; NhÃ³m chat vá»›i khÃ¡ch
+                <a id="groupChatLink" href="#" class="btn btn-primary"
+                    style="display:flex; align-items:center; justify-content:center; gap:8px; text-decoration:none; padding: 1rem;">
+                    &#x1F4AC; Nhóm chat với khách
                 </a>
 
                 <!-- UC28: Update Progress -->
                 <div class="card">
-                    <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Cáº­p nháº­t tiáº¿n Ä‘á»™</h3>
+                    <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Cập
+                        Nhật Tiến Độ</h3>
                     <div class="form-group">
-                        <label>Vá»‹ trÃ­ hoáº·c tráº¡ng thÃ¡i hiá»‡n táº¡i</label>
-                        <textarea id="progressInput" placeholder="Äang diá»…n ra Ä‘iá»u gÃ¬?" class="form-control" rows="2" style="margin-bottom: 0.5rem;"></textarea>
-                        <button class="btn btn-primary" onclick="updateProgress()">LÆ°u tiáº¿n Ä‘á»™</button>
+                        <label>Vị trí hoặc trạng thái hiện tại</label>
+                        <textarea id="progressInput" placeholder="Chuyện gì đang diễn ra..." class="form-control"
+                            rows="2" style="margin-bottom: 0.5rem;"></textarea>
+                        <button class="btn btn-primary" onclick="updateProgress()">Lưu tiến độ</button>
                     </div>
                     <div id="progressHistory" style="margin-top: 1rem; max-height: 200px; overflow-y: auto;"></div>
                 </div>
 
                 <!-- UC29: Upload Images -->
                 <div class="card">
-                    <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Táº£i áº£nh hoáº¡t Ä‘á»™ng tour</h3>
+                    <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                        Tải ảnh hoạt động Tour</h3>
                     <div class="form-group">
                         <input type="file" id="photosInput" class="file-input" multiple accept="image/*">
                         <label for="photosInput" class="file-label">
                             <span style="font-size: 1.5rem; margin-bottom: 4px;">&#x1F4F7;</span>
-                            Nháº¥n Ä‘á»ƒ chá»n áº£nh
+                            Nhấn để chọn ảnh
                         </label>
                         <div id="previewImages"></div>
                     </div>
-                    <button class="btn btn-secondary" id="uploadBtn" onclick="uploadPhotos()">Táº£i lÃªn áº£nh</button>
+                    <button class="btn btn-secondary" id="uploadBtn" onclick="uploadPhotos()">Tải lên ảnh</button>
                     <div id="uploadedGallery" style="margin-top: 15px; display: flex; gap: 8px; flex-wrap: wrap;"></div>
                 </div>
 
                 <!-- UC30: Submit Report -->
                 <div class="card" style="border-color: var(--danger);">
-                    <h3 style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; color: var(--danger);">Káº¿t thÃºc tour &amp; Ná»™p bÃ¡o cÃ¡o</h3>
+                    <h3
+                        style="margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; color: var(--danger);">
+                        Kết thúc Tour &amp; Nộp báo cáo</h3>
                     <div class="form-group">
-                        <label>Ná»™i dung bÃ¡o cÃ¡o</label>
-                        <textarea id="reportInput" class="form-control" rows="4" placeholder="TÃ³m táº¯t tour, ghi chÃº cÃ¡c sá»± cá»‘..."></textarea>
+                        <label>Nội dung báo cáo</label>
+                        <textarea id="reportInput" class="form-control" rows="4"
+                            placeholder="Tóm tắt tour, ghi chú các sự cố..."></textarea>
                     </div>
-                    <button class="btn btn-danger" onclick="submitReport()">Ná»™p bÃ¡o cÃ¡o cuá»‘i</button>
+                    <button class="btn btn-danger" onclick="submitReport()">Nộp báo cáo cuối</button>
                 </div>
             </div>
         </main>
@@ -72,4 +115,5 @@
     <script src="/assets/js/notification-bell.js"></script>
     <script src="/assets/js/guide-schedule.js"></script>
 </body>
+
 </html>

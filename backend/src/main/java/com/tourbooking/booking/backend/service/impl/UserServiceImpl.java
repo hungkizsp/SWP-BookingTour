@@ -155,6 +155,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
         user.setIsActive(true);
+        user.setEmailVerified(true);
         userRepository.save(user);
         tokenRepository.delete(token);
 

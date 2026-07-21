@@ -25,16 +25,22 @@ public class CleanupService {
     public void deleteUnverifiedUsers() {
 
         LocalDateTime cutoff = LocalDateTime.now().minusSeconds(180);
-        List<User> unverifiedUsers = userRepository.findByIsActiveFalseAndCreatedAtBefore(cutoff);
+        List<User> unverifiedUsers = userRepository.findByEmailVerifiedFalseAndCreatedAtBefore(cutoff);
 
         if (!unverifiedUsers.isEmpty()) {
+            java.util.List<User> toDelete = new java.util.ArrayList<>();
             for (User user : unverifiedUsers) {
-                // Xoá token nếu có
-                tokenRepository.deleteByEmail(user.getEmail());
+                if (user.getBookings() == null || user.getBookings().isEmpty()) {
+                    // Xoá token nếu có
+                    tokenRepository.deleteByEmail(user.getEmail());
+                    toDelete.add(user);
+                }
             }
-            // Xoá user
-            userRepository.deleteAll(unverifiedUsers);
-            log.info("Xoá {} users chưa xác thực quá 180s.", unverifiedUsers.size());
+            if (!toDelete.isEmpty()) {
+                // Xoá user
+                userRepository.deleteAll(toDelete);
+                log.info("Xoá {} users chưa xác thực quá 180s.", toDelete.size());
+            }
         }
     }
 }
