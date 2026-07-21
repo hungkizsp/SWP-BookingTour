@@ -659,15 +659,36 @@
         async function getItineraryDataAsync() {
             const rows = document.querySelectorAll('.itinerary-row');
             const data = [];
-            for (const row of rows) {
+            const daySet = new Set();
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const dayNumberStr = row.querySelector('.i-day').value;
+                const dayNumber = parseInt(dayNumberStr);
+                const title = row.querySelector('.i-title').value.trim();
+                const description = row.querySelector('.i-desc').value.trim();
+                
+                if (isNaN(dayNumber) || dayNumber <= 0) {
+                    showToast(`Ngày lịch trình thứ ${i + 1} phải là số nguyên dương hợp lệ.`, 'error');
+                    return null;
+                }
+                if (daySet.has(dayNumber)) {
+                    showToast(`Ngày ${dayNumber} bị trùng lặp, vui lòng kiểm tra lại lịch trình.`, 'error');
+                    return null;
+                }
+                if (!title || !description) {
+                    showToast(`Ngày ${dayNumber} thiếu Tiêu đề hoặc Mô tả chi tiết.`, 'error');
+                    return null;
+                }
+                daySet.add(dayNumber);
+
                 const hiddenUrl = row.querySelector('.itinerary-image-url-hidden');
                 const imageUrl = (hiddenUrl && hiddenUrl.value !== '[[PENDING]]')
                     ? (hiddenUrl.value.trim() || null)
                     : null;
                 data.push({
-                    dayNumber: parseInt(row.querySelector('.i-day').value) || 1,
-                    title: row.querySelector('.i-title').value.trim(),
-                    description: row.querySelector('.i-desc').value.trim(),
+                    dayNumber: dayNumber,
+                    title: title,
+                    description: description,
                     transportation: row.querySelector('.i-transport')?.value.trim() || null,
                     meals: row.querySelector('.i-meals')?.value.trim() || null,
                     accommodation: row.querySelector('.i-accommodation')?.value.trim() || null,
@@ -691,17 +712,52 @@
             const fileInput = document.getElementById('tourImages');
 
             const itineraryData = await getItineraryDataAsync();
+            if (itineraryData === null) {
+                return;
+            }
             if (itineraryData.length === 0) {
                 showToast('Please add at least one itinerary day!', 'error');
                 return;
             }
+            
             // Validation
-            if (!tourName || isNaN(price) || price <= 0 || isNaN(duration) || duration <= 0 || !startLocation || !endLocation || !transportType) {
-                showToast('Please fill all required fields correctly (numbers must be > 0)', 'error');
+            if (!tourName) {
+                showToast('Tên tour không được để trống.', 'error');
+                return;
+            }
+            if (tourName.length > 255) {
+                showToast('Tên tour vượt quá độ dài tối đa (255 ký tự).', 'error');
+                return;
+            }
+            if (isNaN(price) || price <= 0) {
+                showToast('Giá tour phải lớn hơn 0.', 'error');
+                return;
+            }
+            if (price > 99999999) {
+                showToast('Giá tối đa cho phép là 99,999,999 VNĐ.', 'error');
+                return;
+            }
+            if (isNaN(duration) || duration <= 0) {
+                showToast('Số ngày đi phải lớn hơn 0.', 'error');
+                return;
+            }
+            if (duration > 60) {
+                showToast('Số ngày tối đa là 60.', 'error');
+                return;
+            }
+            if (!startLocation || !endLocation) {
+                showToast('Vui lòng nhập Điểm khởi hành và Điểm đến.', 'error');
+                return;
+            }
+            if (!transportType) {
+                showToast('Vui lòng nhập Phương tiện di chuyển.', 'error');
                 return;
             }
 
             const schedules = getScheduleData();
+            if (schedules === null) {
+                return;
+            }
             if (schedules.length === 0) {
                 showToast('Please add at least one valid future schedule!', 'error');
                 return;
@@ -759,7 +815,8 @@
                 transportType: transportType,
                 categoryId: categoryId ? parseInt(categoryId) : null,
                 imageUrls: finalImageUrls.length > 0 ? finalImageUrls : null,
-                schedules: getScheduleData()
+                schedules: getScheduleData(),
+                itineraryDays: itineraryData
             };
 
             let url = currentEditId ? `${API}/${currentEditId}` : API;
@@ -770,29 +827,6 @@
                     method: method,
                     body: JSON.stringify(tourData)
                 });
-
-                const savedTourId = currentEditId || res.data.id;
-
-                // Now save itinerary
-                // First delete existing itinerary if updating
-                if (currentEditId) {
-                    try {
-                        const existingRes = await TB.apiFetch(`/api/v1/tours/${savedTourId}/itinerary`);
-                        if (existingRes.data && existingRes.data.length > 0) {
-                            for (const existingDay of existingRes.data) {
-                                await TB.apiFetch(`/api/v1/admin/tours/${savedTourId}/itinerary/${existingDay.id}`, { method: 'DELETE' });
-                            }
-                        }
-                    } catch (e) { console.error("Error clearing old itinerary", e); }
-                }
-
-                // Then POST new itinerary days
-                for (const day of itineraryData) {
-                    await TB.apiFetch(`/api/v1/admin/tours/${savedTourId}/itinerary`, {
-                        method: 'POST',
-                        body: JSON.stringify(day)
-                    });
-                }
 
                 closeModal();
                 loadTours();
@@ -882,21 +916,34 @@
         function getScheduleData() {
             const rows = document.querySelectorAll('.schedule-row');
             const schedules = [];
-            rows.forEach(row => {
+            const schedSet = new Set();
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
                 const startDate = row.querySelector('.schedule-start').value;
                 const endDate = row.querySelector('.schedule-end').value;
                 const departureTime = row.querySelector('.schedule-time').value;
-                const maxSlots = parseInt(row.querySelector('.schedule-max').value);
+                const maxSlotsStr = row.querySelector('.schedule-max').value;
+                const maxSlots = parseInt(maxSlotsStr);
 
-                if (startDate && endDate && !isNaN(maxSlots)) {
-                    schedules.push({
-                        startDate: startDate,
-                        endDate: endDate,
-                        departureTime: departureTime ? departureTime : null,
-                        maxSlots: maxSlots
-                    });
+                if (!startDate || !endDate || !departureTime || isNaN(maxSlots) || maxSlots <= 0) {
+                    showToast(`Dòng lịch trình thứ ${i + 1} thiếu thông tin hoặc không hợp lệ.`, 'error');
+                    return null;
                 }
-            });
+                
+                const uniqueKey = startDate + '_' + departureTime;
+                if (schedSet.has(uniqueKey)) {
+                    showToast(`Dòng lịch trình thứ ${i + 1} bị trùng ngày và giờ khởi hành.`, 'error');
+                    return null;
+                }
+                schedSet.add(uniqueKey);
+
+                schedules.push({
+                    startDate: startDate,
+                    endDate: endDate,
+                    departureTime: departureTime,
+                    maxSlots: maxSlots
+                });
+            }
             return schedules;
         }
 
@@ -955,6 +1002,10 @@
 
             if (!departureTime || isNaN(maxSlots) || maxSlots <= 0) {
                 showToast('Please fill departure time and valid max slots.', 'error');
+                return;
+            }
+            if (maxSlots > 500) {
+                showToast('Max slots không được vượt quá 500.', 'error');
                 return;
             }
 

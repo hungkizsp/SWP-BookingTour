@@ -137,6 +137,31 @@ public class TourServiceImpl implements TourService {
             tour.setSchedules(schedules);
         }
 
+        // Handle Itinerary
+        if (request.getItineraryDays() != null) {
+            java.util.Set<Integer> dayNumbers = new java.util.HashSet<>();
+            for (com.tourbooking.booking.backend.model.dto.request.TourItineraryDayRequest dayReq : request.getItineraryDays()) {
+                if (!dayNumbers.add(dayReq.getDayNumber())) {
+                    throw new IllegalArgumentException("Ngày lịch trình bị trùng lặp: " + dayReq.getDayNumber());
+                }
+            }
+            List<com.tourbooking.booking.backend.model.entity.TourItineraryDay> itineraryDays = request.getItineraryDays().stream()
+                    .map(dayReq -> {
+                        com.tourbooking.booking.backend.model.entity.TourItineraryDay day = new com.tourbooking.booking.backend.model.entity.TourItineraryDay();
+                        day.setDayNumber(dayReq.getDayNumber());
+                        day.setTitle(dayReq.getTitle());
+                        day.setDescription(dayReq.getDescription());
+                        day.setAccommodation(dayReq.getAccommodation());
+                        day.setMeals(dayReq.getMeals());
+                        day.setTransportation(dayReq.getTransportation());
+                        day.setHighlights(dayReq.getHighlights());
+                        day.setImageUrl(dayReq.getImageUrl());
+                        day.setTour(tour);
+                        return day;
+                    }).toList();
+            tour.setItineraryDays(itineraryDays);
+        }
+
         Tour savedTour = tourRepo.save(tour);
         return TourMapper.toResponse(savedTour);
     }
@@ -224,6 +249,47 @@ public class TourServiceImpl implements TourService {
                     existingTour.getSchedules().add(schedule);
                 }
             });
+        }
+
+        // Handle Itinerary
+        if (request.getItineraryDays() != null) {
+            java.util.Set<Integer> dayNumbers = new java.util.HashSet<>();
+            for (com.tourbooking.booking.backend.model.dto.request.TourItineraryDayRequest dayReq : request.getItineraryDays()) {
+                if (!dayNumbers.add(dayReq.getDayNumber())) {
+                    throw new IllegalArgumentException("Ngày lịch trình bị trùng lặp: " + dayReq.getDayNumber());
+                }
+            }
+            
+            if (existingTour.getItineraryDays() != null) {
+                existingTour.getItineraryDays().clear();
+            }
+            
+            java.util.List<com.tourbooking.booking.backend.model.entity.TourItineraryDay> oldDays = itineraryDayRepo.findByTourIdOrderByDayNumberAsc(existingTour.getId());
+            if (!oldDays.isEmpty()) {
+                itineraryDayRepo.deleteAll(oldDays);
+                itineraryDayRepo.flush(); // Force DELETE statements to execute before new INSERTs
+            }
+            
+            List<com.tourbooking.booking.backend.model.entity.TourItineraryDay> newItineraryDays = request.getItineraryDays().stream()
+                    .map(dayReq -> {
+                        com.tourbooking.booking.backend.model.entity.TourItineraryDay day = new com.tourbooking.booking.backend.model.entity.TourItineraryDay();
+                        day.setDayNumber(dayReq.getDayNumber());
+                        day.setTitle(dayReq.getTitle());
+                        day.setDescription(dayReq.getDescription());
+                        day.setAccommodation(dayReq.getAccommodation());
+                        day.setMeals(dayReq.getMeals());
+                        day.setTransportation(dayReq.getTransportation());
+                        day.setHighlights(dayReq.getHighlights());
+                        day.setImageUrl(dayReq.getImageUrl());
+                        day.setTour(existingTour);
+                        return day;
+                    }).toList();
+                    
+            if (existingTour.getItineraryDays() != null) {
+                existingTour.getItineraryDays().addAll(newItineraryDays);
+            } else {
+                existingTour.setItineraryDays(newItineraryDays);
+            }
         }
 
         Tour updatedTour = tourRepo.save(existingTour);

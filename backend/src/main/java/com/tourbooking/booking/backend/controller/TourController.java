@@ -139,7 +139,7 @@ public class TourController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<TourResponse> createTour(@RequestBody TourRequest request) {
+    public ApiResponse<TourResponse> createTour(@jakarta.validation.Valid @RequestBody TourRequest request) {
         return ApiResponse.<TourResponse>builder()
                 .code(HttpStatus.CREATED.value())
                 .message("Tour created successfully")
@@ -148,7 +148,7 @@ public class TourController {
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<TourResponse> updateTour(@PathVariable Long id, @RequestBody TourRequest request) {
+    public ApiResponse<TourResponse> updateTour(@PathVariable Long id, @jakarta.validation.Valid @RequestBody TourRequest request) {
         return ApiResponse.<TourResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Tour updated successfully")
