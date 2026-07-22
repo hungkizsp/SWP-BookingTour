@@ -74,7 +74,7 @@ function renderBookingsPage() {
         if (b.guideFullName) {
             guideColumnHtml = `<td>${b.guideFullName}</td>`;
         } else if (b.status === 'CONFIRMED' || b.status === 'PAID') {
-            guideColumnHtml = `<td><button class="action-btn" style="background: #3b82f6" onclick="openAssignModal(${b.scheduleId})">👤 Assign</button></td>`;
+            guideColumnHtml = `<td><button class="btn btn-sm btn-primary" onclick="openAssignModal(${b.scheduleId})">👤 Assign Guide</button></td>`;
         }
 
         const row = document.createElement('tr');
@@ -86,11 +86,11 @@ function renderBookingsPage() {
             <td><span class="status-badge ${statusClass}">${b.status}</span></td>
             ${guideColumnHtml}
             <td>
-                <button class="action-btn" style="background: #0f766e" onclick="window.open('/pages/client/group-chat.html?scheduleId=${b.scheduleId}', '_blank')">💬 Chat</button>
+                <button class="btn btn-sm btn-teal" onclick="window.open('/pages/client/group-chat.html?scheduleId=${b.scheduleId}', '_blank')">💬 Chat</button>
             </td>
-            <td>
-                ${isPendingCash ? `<button class="action-btn" onclick="confirmBooking(${b.id})">Confirm</button>` : ''}
-                ${(b.status === 'CONFIRMED' || b.status === 'PAID') ? `<button class="action-btn" style="background:#dc2626;" onclick="openCancelModal(${b.id})">Hủy đặt tour</button>` : ''}
+            <td style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                ${isPendingCash ? `<button class="btn btn-sm btn-success" onclick="confirmBooking(${b.id})">✓ Confirm</button>` : ''}
+                ${(b.status === 'CONFIRMED' || b.status === 'PAID') ? `<button class="btn btn-sm btn-danger" onclick="openCancelModal(${b.id})">✕ Hủy tour</button>` : ''}
             </td>
         `;
         tbody.appendChild(row);
