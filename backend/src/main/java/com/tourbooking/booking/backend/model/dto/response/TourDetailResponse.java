@@ -28,6 +28,17 @@ public class TourDetailResponse {
     private String externalId;
     private List<String> highlights;
     private List<TourScheduleSummary> schedules;
+    private List<String> destinations;
+    private List<TourItineraryDayResponse> itineraryDayList;
+    
+    // New metrics for Comparison Engine
+    private Integer reviewCount;
+    private Integer itineraryDaysCount;
+    private Integer closestScheduleSlots;
+    private BigDecimal pricePerDay;
+    private String meals;
+    private String accommodation;
+    private Integer maxGroupSize;
 
     @Data
     public static class TourScheduleSummary {
@@ -41,5 +52,6 @@ public class TourDetailResponse {
         private String status;
         /** ISO-8601 datetime string for the booking deadline. */
         private LocalDateTime bookingDeadline;
+        private Boolean isExpired;
     }
 }

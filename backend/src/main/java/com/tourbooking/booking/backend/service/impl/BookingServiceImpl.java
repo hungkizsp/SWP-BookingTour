@@ -78,6 +78,7 @@ public class BookingServiceImpl implements BookingService {
 
     private final com.tourbooking.booking.backend.repository.DiscountPolicyRepository discountPolicyRepository;
     private final ReviewRepository reviewRepository;
+    private final com.tourbooking.booking.backend.service.LoyaltyService loyaltyService;
 
     @Override
     @Transactional(readOnly = true)
@@ -97,12 +98,14 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<BookingResponse> getAllBookingsPaginated(int page, int size) {
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,
+                        "createdAt"));
         org.springframework.data.domain.Page<Booking> bookingPage = bookingRepository.findAll(pageable);
         List<Booking> bookings = bookingPage.getContent();
         Map<Long, com.tourbooking.booking.backend.model.entity.RefundRequest> refundMap = loadLatestRefundsByBookingId(
                 bookings.stream().map(Booking::getId).toList());
-        
+
         return bookingPage.map(booking -> {
             BookingResponse response = BookingMapper.toResponse(booking);
             enrichRefundInfo(response, booking.getId(), refundMap);
@@ -117,7 +120,7 @@ public class BookingServiceImpl implements BookingService {
                 .map(BookingMapper::toResponse)
                 .toList();
     }
-    
+
     /**
      * UC18: Get booking history with filters, search, and statistics
      */
@@ -133,10 +136,10 @@ public class BookingServiceImpl implements BookingService {
             java.math.BigDecimal priceMax,
             int page,
             int size) {
-        
-        log.info("[UC18] Fetching booking history for customer: {}, search: {}, page: {}, size: {}", 
-                 customerId, search, page, size);
-        
+
+        log.info("[UC18] Fetching booking history for customer: {}, search: {}, page: {}, size: {}",
+                customerId, search, page, size);
+
         // Convert status strings to enums
         List<BookingStatus> statuses = null;
         if (statusStrings != null && !statusStrings.isEmpty()) {
@@ -152,30 +155,30 @@ public class BookingServiceImpl implements BookingService {
                     .filter(s -> s != null)
                     .toList();
         }
-        
+
         // Create pageable with sorting by booking date descending (most recent first)
         org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
-                page, size, 
-                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "bookingDate")
-        );
-        
+                page, size,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC,
+                        "bookingDate"));
+
         // Fetch bookings with filters
         org.springframework.data.domain.Page<Booking> bookingPage = bookingRepository.findBookingHistoryWithFilters(
-                customerId, search, statuses, dateFrom, dateTo, priceMin, priceMax, pageable
-        );
-        
+                customerId, search, statuses, dateFrom, dateTo, priceMin, priceMax, pageable);
+
         // Convert to DTOs
-        org.springframework.data.domain.Page<com.tourbooking.booking.backend.model.dto.response.BookingResponse> responsePage = 
-                bookingPage.map(BookingMapper::toResponse);
-        
+        org.springframework.data.domain.Page<com.tourbooking.booking.backend.model.dto.response.BookingResponse> responsePage = bookingPage
+                .map(BookingMapper::toResponse);
+
         // Calculate statistics
-        com.tourbooking.booking.backend.model.dto.response.BookingStatistics statistics = calculateStatistics(customerId);
-        
+        com.tourbooking.booking.backend.model.dto.response.BookingStatistics statistics = calculateStatistics(
+                customerId);
+
         log.info("[UC18] Found {} bookings for customer {}", bookingPage.getTotalElements(), customerId);
-        
+
         return com.tourbooking.booking.backend.model.dto.response.BookingHistoryResponse.from(responsePage, statistics);
     }
-    
+
     /**
      * Calculate booking statistics for a customer
      */
@@ -185,13 +188,12 @@ public class BookingServiceImpl implements BookingService {
         long pendingBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.PENDING);
         long cancelledBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.CANCELLED);
         long completedBookings = bookingRepository.countByUserIdAndStatus(customerId, BookingStatus.COMPLETED);
-        
+
         // Calculate total spent (confirmed + completed bookings only)
         BigDecimal totalSpent = bookingRepository.sumTotalPriceByUserIdAndStatusIn(
-                customerId, 
-                List.of(BookingStatus.CONFIRMED, BookingStatus.COMPLETED)
-        );
-        
+                customerId,
+                List.of(BookingStatus.CONFIRMED, BookingStatus.COMPLETED));
+
         return com.tourbooking.booking.backend.model.dto.response.BookingStatistics.builder()
                 .totalBookings(totalBookings)
                 .confirmedBookings(confirmedBookings)
@@ -208,9 +210,11 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
-        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails) {
-            String email = ((org.springframework.security.core.userdetails.UserDetails) auth.getPrincipal()).getUsername();
+            String email = ((org.springframework.security.core.userdetails.UserDetails) auth.getPrincipal())
+                    .getUsername();
             boolean isStaffOrAdmin = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
             if (!isStaffOrAdmin) {
@@ -229,24 +233,25 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse getBookingDetail(Long bookingId, Long customerId) {
+    public com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse getBookingDetail(Long bookingId,
+            Long customerId) {
         // Fetch booking with all relationships
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
-        
+
         // Authorization check: verify customer owns this booking
         if (!booking.getUser().getId().equals(customerId)) {
-            log.warn("[UC19] Authorization failed: Customer {} tried to access booking {} owned by customer {}", 
-                     customerId, bookingId, booking.getUser().getId());
+            log.warn("[UC19] Authorization failed: Customer {} tried to access booking {} owned by customer {}",
+                    customerId, bookingId, booking.getUser().getId());
             throw new AppException(ErrorCode.FORBIDDEN);
         }
-        
+
         log.info("[UC19] Fetching booking detail for booking: {}, customer: {}", bookingId, customerId);
-        
+
         // Build tour info
         TourSchedule schedule = booking.getSchedule();
         com.tourbooking.booking.backend.model.entity.Tour tour = schedule != null ? schedule.getTour() : null;
-        
+
         com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.TourInfo tourInfo = null;
         if (tour != null) {
             tourInfo = com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.TourInfo.builder()
@@ -258,57 +263,57 @@ public class BookingServiceImpl implements BookingService {
                     .returnDate(schedule.getEndDate())
                     .duration(tour.getDuration())
                     .numberOfParticipants(booking.getNumberOfPeople())
-                    .includedServices(List.of()) // TODO: implement if tour has services
+                    .includedServices(List.of())
                     .imageUrl(resolveTourImageUrl(tour))
                     .build();
         }
-        
+
         // Build customer info
         User user = booking.getUser();
         List<Passenger> passengers = passengerRepository.findByBookingId(bookingId);
-        List<com.tourbooking.booking.backend.model.dto.response.PassengerResponse> passengerResponses = 
-                passengers.stream()
-                        .map(p -> {
-                            com.tourbooking.booking.backend.model.dto.response.PassengerResponse pr = 
-                                    new com.tourbooking.booking.backend.model.dto.response.PassengerResponse();
-                            pr.setFullName(p.getFullName());
-                            pr.setDateOfBirth(p.getDateOfBirth());
-                            pr.setIdNumber(p.getIdNumber());
-                            pr.setPassengerType(p.getPassengerType());
-                            return pr;
-                        })
-                        .toList();
-        
-        com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.CustomerInfo customerInfo = 
-                com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.CustomerInfo.builder()
-                        .customerId(user.getId())
-                        .fullName(user.getFullName())
-                        .email(user.getEmail())
-                        .phone(user.getPhoneNumber())
-                        .numberOfParticipants(booking.getNumberOfPeople())
-                        .passengers(passengerResponses)
-                        .build();
-        
+        List<com.tourbooking.booking.backend.model.dto.response.PassengerResponse> passengerResponses = passengers
+                .stream()
+                .map(p -> {
+                    com.tourbooking.booking.backend.model.dto.response.PassengerResponse pr = new com.tourbooking.booking.backend.model.dto.response.PassengerResponse();
+                    pr.setFullName(p.getFullName());
+                    pr.setDateOfBirth(p.getDateOfBirth());
+                    pr.setIdNumber(p.getIdNumber());
+                    pr.setPassengerType(p.getPassengerType());
+                    return pr;
+                })
+                .toList();
+
+        com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.CustomerInfo customerInfo = com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.CustomerInfo
+                .builder()
+                .customerId(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhoneNumber())
+                .numberOfParticipants(booking.getNumberOfPeople())
+                .passengers(passengerResponses)
+                .build();
+
         // Build payment info
         Payment payment = booking.getPayment();
         com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.PaymentInfo paymentInfo = null;
         if (payment != null) {
-            BigDecimal subtotal = booking.getTotalPrice().add(booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO);
+            BigDecimal subtotal = booking.getTotalPrice()
+                    .add(booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO);
             paymentInfo = com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.PaymentInfo.builder()
                     .paymentStatus(payment.getStatus() != null ? payment.getStatus().name() : "PENDING")
                     .transactionReference(payment.getTransactionCode())
                     .paymentMethod(payment.getPaymentMethod())
                     .paymentDate(payment.getPaymentDate())
                     .subtotal(subtotal)
-                    .serviceFee(BigDecimal.ZERO) // TODO: implement if service fee exists
-                    .tax(BigDecimal.ZERO) // TODO: implement if tax exists
+                    .serviceFee(BigDecimal.ZERO)
+                    .tax(BigDecimal.ZERO)
                     .discount(booking.getDiscountAmount())
                     .totalAmount(booking.getTotalPrice())
                     .build();
         }
 
-        List<com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.StatusHistoryItem> statusHistory =
-                List.of(com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.StatusHistoryItem.builder()
+        List<com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.StatusHistoryItem> statusHistory = List
+                .of(com.tourbooking.booking.backend.model.dto.response.BookingDetailResponse.StatusHistoryItem.builder()
                         .status(booking.getStatus())
                         .description("Trạng thái hiện tại")
                         .timestamp(booking.getUpdatedAt())
@@ -401,7 +406,8 @@ public class BookingServiceImpl implements BookingService {
         if (remaining == 0
                 && schedule.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN) {
             schedule.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT);
-            log.info("[BOOKING] Schedule #{} marked SOLD_OUT after deduction of {} slots.", schedule.getId(), slotsToDeduct);
+            log.info("[BOOKING] Schedule #{} marked SOLD_OUT after deduction of {} slots.", schedule.getId(),
+                    slotsToDeduct);
         }
         tourScheduleRepository.save(schedule);
 
@@ -441,16 +447,16 @@ public class BookingServiceImpl implements BookingService {
         applyDiscountIfPresent(saved, request.getDiscountCode());
 
         Booking savedBooking = bookingRepository.save(saved);
-        
+
         try {
-            mailService.sendBookingCreatedEmail(user.getEmail(), user.getFullName(), savedBooking.getId(), savedBooking.getTotalPrice());
+            mailService.sendBookingCreatedEmail(user.getEmail(), user.getFullName(), savedBooking.getId(),
+                    savedBooking.getTotalPrice());
         } catch (Exception e) {
             log.warn("Could not send booking creation email: " + e.getMessage());
         }
-        
+
         return BookingMapper.toResponse(savedBooking);
     }
-
 
     private BigDecimal calculatePassengerTotalPrice(
             BigDecimal tourPrice,
@@ -492,16 +498,29 @@ public class BookingServiceImpl implements BookingService {
             if (discount != null && discount.getIsActive()
                     && (discount.getStartDate() == null || !LocalDateTime.now().isBefore(discount.getStartDate()))
                     && (discount.getEndDate() == null || !LocalDateTime.now().isAfter(discount.getEndDate()))
-                    && (discount.getUsageLimit() == null || discount.getCurrentUsage() < discount.getUsageLimit())) {
+                    && (discount.getUsageLimit() == null || discount.getCurrentUsage() < discount.getUsageLimit())
+                    && (discount.getApplicableTour() == null
+                            || discount.getApplicableTour().getId().equals(saved.getSchedule().getTour().getId()))) {
 
                 if (discount.getDiscountType() == DiscountType.PERCENTAGE) {
                     discountAmt = saved.getTotalPrice().multiply(discount.getValue())
                             .divide(new BigDecimal(100), 0, RoundingMode.HALF_UP);
+                    if (discount.getMaxDiscountAmount() != null
+                            && discountAmt.compareTo(discount.getMaxDiscountAmount()) > 0) {
+                        discountAmt = discount.getMaxDiscountAmount();
+                    }
                 } else {
                     discountAmt = discount.getValue();
                 }
+
+                // Track discount ID and Code
+                saved.setDiscount(discount);
                 saved.setDiscountCode(discount.getCode());
                 applied = true;
+
+                // Tăng usedCount sau khi áp dụng thành công
+                discount.setCurrentUsage(discount.getCurrentUsage() + 1);
+                discountRepository.save(discount);
             }
         }
 
@@ -597,10 +616,12 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void deleteBooking(Long id) {
-        if (!bookingRepository.existsById(id)) {
-            throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
-        }
-        bookingRepository.deleteById(id);
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancellationReason("Deleted by admin");
+        bookingRepository.save(booking);
     }
 
     @Override
@@ -679,12 +700,15 @@ public class BookingServiceImpl implements BookingService {
 
                     long bookingCount = periodPayments.size();
 
-                    // Revenue = tổng Payment.amount của các payment SUCCESS, nếu REFUNDED thì tính là giá trị âm
+                    // Revenue = tổng Payment.amount của các payment SUCCESS, nếu REFUNDED thì tính
+                    // là giá trị âm
                     BigDecimal revenue = periodPayments.stream()
                             .map(p -> {
-                                if (p.getAmount() == null) return BigDecimal.ZERO;
+                                if (p.getAmount() == null)
+                                    return BigDecimal.ZERO;
                                 boolean isRefund = p.getStatus() == PaymentStatus.REFUNDED ||
-                                                   (p.getBooking() != null && p.getBooking().getStatus() == BookingStatus.REFUNDED);
+                                        (p.getBooking() != null
+                                                && p.getBooking().getStatus() == BookingStatus.REFUNDED);
                                 return isRefund ? p.getAmount().negate() : p.getAmount();
                             })
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -725,13 +749,13 @@ public class BookingServiceImpl implements BookingService {
 
     /**
      * Lọc payment cho báo cáo tài chính.
-     * Cập nhật mới: Lấy TẤT CẢ các trạng thái payment. 
+     * Cập nhật mới: Lấy TẤT CẢ các trạng thái payment.
      */
     private boolean matchesFinancialReportPayment(
             Payment payment, String statusFilter, boolean includeTestData, boolean devProfile) {
         boolean isTestData = "TEST_DATA".equals(payment.getPaymentMethod());
 
-        // Nếu status filter khác rỗng và không phải là "all" hay "COMPLETED", 
+        // Nếu status filter khác rỗng và không phải là "all" hay "COMPLETED",
         // ta có thể filter theo request nếu cần. Mặc định giờ báo cáo muốn all.
         if (!includeTestData && isTestData) {
             return false;
@@ -807,13 +831,20 @@ public class BookingServiceImpl implements BookingService {
                         && request.getCurrentTotal().compareTo(discount.getMinimumBookingAmount()) < 0) {
                     message = "Đơn hàng chưa đạt giá trị tối thiểu " + discount.getMinimumBookingAmount().longValue()
                             + "đ";
+                } else if (discount.getApplicableTour() != null && request.getTourId() != null
+                        && !discount.getApplicableTour().getId().equals(request.getTourId())) {
+                    message = "Mã giảm giá không áp dụng cho tour này";
                 } else {
                     // Valid!
                     isValid = true;
                     if (discount.getDiscountType() == DiscountType.PERCENTAGE) {
                         discountAmount = request.getCurrentTotal().multiply(discount.getValue())
                                 .divide(new BigDecimal(100), 0, RoundingMode.HALF_UP);
-                        message = "Áp dụng mã thành công (-" + discount.getValue() + "%)";
+                        if (discount.getMaxDiscountAmount() != null
+                                && discountAmount.compareTo(discount.getMaxDiscountAmount()) > 0) {
+                            discountAmount = discount.getMaxDiscountAmount();
+                        }
+                        message = "Áp dụng mã thành công (-" + discountAmount.longValue() + "đ)";
                     } else {
                         discountAmount = discount.getValue();
                         message = "Áp dụng mã thành công (-" + discountAmount.longValue() + "đ)";
@@ -852,6 +883,61 @@ public class BookingServiceImpl implements BookingService {
         }
 
         bookingRepository.save(booking);
+
+        if (schedule != null) {
+            tourScheduleService.releaseGuideIfNoActiveBookings(schedule.getId());
+        }
+
+        return BookingMapper.toResponse(booking);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse cancelBooking(Long id,
+            com.tourbooking.booking.backend.model.dto.request.CancelBookingRequest request) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        if (booking.getStatus() == BookingStatus.CANCELLED || booking.getStatus() == BookingStatus.COMPLETED
+                || booking.getStatus() == BookingStatus.COMPANY_CANCELED) {
+            throw new AppException(ErrorCode.INVALID_REQUEST);
+        }
+
+        BookingStatus originalStatus = booking.getStatus();
+        booking.setStatus(BookingStatus.COMPANY_CANCELED);
+        booking.setCancellationReason(request != null && request.getReason() != null ? request.getReason()
+                : "Hủy do sự cố khách quan từ phía công ty.");
+
+        // If they paid, process refund request (similar to tour schedule cancel)
+        if (originalStatus == BookingStatus.CONFIRMED || originalStatus == BookingStatus.PAID) {
+            com.tourbooking.booking.backend.model.entity.RefundRequest refund = new com.tourbooking.booking.backend.model.entity.RefundRequest();
+            refund.setBooking(booking);
+            refund.setAmount(booking.getTotalPrice());
+            refund.setReason("Công ty hủy đặt tour. Lý do: " + booking.getCancellationReason());
+            refund.setStatus(com.tourbooking.booking.backend.model.entity.enums.RefundStatus.APPROVED);
+            refund.setOriginalBookingStatus(originalStatus);
+            refund.setProcessedAt(java.time.LocalDateTime.now());
+            refund.setStaffNote("Hoàn tiền 100% do công ty hủy order");
+            refundRequestRepository.save(refund);
+        }
+
+        TourSchedule schedule = booking.getSchedule();
+        if (schedule != null) {
+            tourScheduleService.releaseAvailableSlots(schedule.getId(), resolveOccupiedSlots(booking));
+        }
+
+        bookingRepository.save(booking);
+
+        if (schedule != null) {
+            tourScheduleService.releaseGuideIfNoActiveBookings(schedule.getId());
+        }
+
+        // Send email
+        String tourName = (schedule != null && schedule.getTour() != null) ? schedule.getTour().getTourName() : "N/A";
+        if (booking.getUser() != null && booking.getUser().getEmail() != null) {
+            mailService.sendTourCancellationEmail(booking.getUser().getEmail(), booking.getUser().getFullName(),
+                    booking.getId(), tourName, booking.getCancellationReason());
+        }
+
         return BookingMapper.toResponse(booking);
     }
 
@@ -903,6 +989,96 @@ public class BookingServiceImpl implements BookingService {
         log.info("[Refund] BookingID={} | RefundAmount={} | OriginalStatus={} | Reason={}",
                 id, refundAmount, originalStatus, fullReason);
         return BookingMapper.toResponse(booking);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse rescheduleBooking(
+            com.tourbooking.booking.backend.model.dto.request.RescheduleRequest request) {
+        Booking booking = bookingRepository.findById(request.getBookingId())
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.PAID) {
+            throw new AppException(ErrorCode.INVALID_REQUEST,
+                    "Chỉ có thể đổi ngày với đơn ở trạng thái CONFIRMED hoặc PAID.");
+        }
+
+        TourSchedule oldSchedule = tourScheduleRepository.findByIdWithLock(booking.getSchedule().getId())
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.LocalDateTime oldDeparture = oldSchedule.getDepartureDateTime();
+        if (oldDeparture != null && !now.isBefore(oldDeparture)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST,
+                    "Tour cũ đã khởi hành hoặc đã kết thúc, không thể đổi ngày nữa.");
+        }
+
+        TourSchedule newSchedule = tourScheduleRepository.findByIdWithLock(request.getNewScheduleId())
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+        java.time.LocalDateTime newDeparture = newSchedule.getDepartureDateTime();
+        if (newDeparture != null && !now.isBefore(newDeparture)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Lịch trình mới đã bắt đầu, vui lòng chọn lịch khác.");
+        }
+
+        int occupied = resolveOccupiedSlots(booking);
+        if (newSchedule.getAvailableSlots() == null || newSchedule.getAvailableSlots() < occupied) {
+            throw new AppException(ErrorCode.INSUFFICIENT_SLOTS, "Lịch trình mới không đủ chỗ trống.");
+        }
+
+        // Release old
+        oldSchedule.setAvailableSlots(oldSchedule.getAvailableSlots() + occupied);
+        tourScheduleRepository.save(oldSchedule);
+
+        // Deduct new
+        newSchedule.setAvailableSlots(newSchedule.getAvailableSlots() - occupied);
+        if (newSchedule.getAvailableSlots() == 0
+                && newSchedule.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN) {
+            newSchedule.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT);
+        }
+        tourScheduleRepository.save(newSchedule);
+
+        booking.setSchedule(newSchedule);
+        bookingRepository.save(booking);
+
+        return BookingMapper.toResponse(booking);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse> getRescheduleCandidates(
+            Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+
+        if (booking.getSchedule() == null || booking.getSchedule().getTour() == null) {
+            return java.util.Collections.emptyList();
+        }
+
+        Long tourId = booking.getSchedule().getTour().getId();
+        Long currentScheduleId = booking.getSchedule().getId();
+        int requiredSlots = resolveOccupiedSlots(booking);
+
+        // Use VN timezone so the date boundary matches the user's clock, not UTC server
+        // time
+        java.time.ZoneId vnZone = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+        java.time.LocalDate today = java.time.LocalDate.now(vnZone);
+        java.time.LocalTime nowTime = java.time.LocalTime.now(vnZone);
+
+        return tourScheduleRepository
+                .findAvailableSchedulesToReschedule(tourId, currentScheduleId, today, nowTime)
+                .stream()
+                // Slot check in Java — avoids CAST(time AS localTime) in SQL
+                .filter(s -> s.getAvailableSlots() != null && s.getAvailableSlots() >= requiredSlots)
+                .map(s -> com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse.builder()
+                        .id(s.getId())
+                        .startDate(s.getStartDate())
+                        .endDate(s.getEndDate())
+                        .departureTime(s.getDepartureTime())
+                        .availableSlots(s.getAvailableSlots())
+                        .status(s.getStatus() != null ? s.getStatus().name() : null)
+                        .build())
+                .toList();
     }
 
     /**
@@ -1022,40 +1198,41 @@ public class BookingServiceImpl implements BookingService {
             throw new RuntimeException("Could not generate invoice PDF", e);
         }
     }
-    
+
     /**
      * UC22: Generate invoice PDF with validation and authorization
      */
     @Override
     public byte[] generateInvoice(Long bookingId, Long customerId) {
         log.info("[UC22] Generating invoice for booking {} requested by customer {}", bookingId, customerId);
-        
+
         // Fetch booking
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
-        
+
         // Authorization check
         if (!booking.getUser().getId().equals(customerId)) {
-            log.warn("[UC22] Authorization failed: Customer {} cannot download invoice for booking {} owned by {}", 
-                     customerId, bookingId, booking.getUser().getId());
+            log.warn("[UC22] Authorization failed: Customer {} cannot download invoice for booking {} owned by {}",
+                    customerId, bookingId, booking.getUser().getId());
             throw new AppException(ErrorCode.FORBIDDEN);
         }
-        
+
         // Business rule: Can only download invoice for CONFIRMED or COMPLETED bookings
         if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.COMPLETED) {
-            throw new AppException(ErrorCode.INVALID_REQUEST, 
-                    "Invoice is only available for confirmed or completed bookings. Current status: " + booking.getStatus());
+            throw new AppException(ErrorCode.INVALID_REQUEST,
+                    "Invoice is only available for confirmed or completed bookings. Current status: "
+                            + booking.getStatus());
         }
-        
+
         try (PDDocument doc = new PDDocument()) {
             PDPage page = new PDPage(PDRectangle.A4);
             doc.addPage(page);
-            
+
             try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
                 float yPosition = 770;
                 float leftMargin = 50;
                 float rightMargin = 545;
-                
+
                 // Header - Company Name
                 cs.beginText();
                 cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 24);
@@ -1063,7 +1240,7 @@ public class BookingServiceImpl implements BookingService {
                 cs.showText("TOURBOOKING");
                 cs.endText();
                 yPosition -= 20;
-                
+
                 // Invoice Title
                 cs.beginText();
                 cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
@@ -1071,7 +1248,7 @@ public class BookingServiceImpl implements BookingService {
                 cs.showText("INVOICE");
                 cs.endText();
                 yPosition -= 30;
-                
+
                 // Invoice metadata
                 cs.beginText();
                 cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
@@ -1085,7 +1262,7 @@ public class BookingServiceImpl implements BookingService {
                 cs.showText("Status: " + normalizeForPdf(booking.getStatus().name()));
                 cs.endText();
                 yPosition -= 60;
-                
+
                 // Bill To section
                 yPosition -= 10;
                 cs.beginText();
@@ -1094,7 +1271,7 @@ public class BookingServiceImpl implements BookingService {
                 cs.showText("BILL TO:");
                 cs.endText();
                 yPosition -= 18;
-                
+
                 User customer = booking.getUser();
                 cs.beginText();
                 cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
@@ -1106,7 +1283,7 @@ public class BookingServiceImpl implements BookingService {
                 cs.showText("Phone: " + (customer.getPhoneNumber() != null ? customer.getPhoneNumber() : "N/A"));
                 cs.endText();
                 yPosition -= 60;
-                
+
                 // Tour Details section
                 yPosition -= 10;
                 cs.beginText();
@@ -1115,7 +1292,7 @@ public class BookingServiceImpl implements BookingService {
                 cs.showText("TOUR DETAILS:");
                 cs.endText();
                 yPosition -= 18;
-                
+
                 TourSchedule schedule = booking.getSchedule();
                 if (schedule != null && schedule.getTour() != null) {
                     cs.beginText();
@@ -1133,7 +1310,7 @@ public class BookingServiceImpl implements BookingService {
                     cs.endText();
                     yPosition -= 90;
                 }
-                
+
                 // Payment Details
                 yPosition -= 10;
                 cs.beginText();
@@ -1142,13 +1319,14 @@ public class BookingServiceImpl implements BookingService {
                 cs.showText("PAYMENT DETAILS:");
                 cs.endText();
                 yPosition -= 18;
-                
+
                 BigDecimal subtotal = booking.getTotalPrice();
-                BigDecimal discount = booking.getDiscountAmount() != null ? booking.getDiscountAmount() : BigDecimal.ZERO;
+                BigDecimal discount = booking.getDiscountAmount() != null ? booking.getDiscountAmount()
+                        : BigDecimal.ZERO;
                 if (discount.compareTo(BigDecimal.ZERO) > 0) {
                     subtotal = subtotal.add(discount);
                 }
-                
+
                 cs.beginText();
                 cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
                 cs.newLineAtOffset(leftMargin, yPosition);
@@ -1156,21 +1334,21 @@ public class BookingServiceImpl implements BookingService {
                 cs.newLineAtOffset(rightMargin - leftMargin - 100, 0);
                 cs.showText(subtotal.toString() + " VND");
                 cs.newLineAtOffset(-(rightMargin - leftMargin - 100), -15);
-                
+
                 if (discount.compareTo(BigDecimal.ZERO) > 0) {
                     cs.showText("Discount:");
                     cs.newLineAtOffset(rightMargin - leftMargin - 100, 0);
                     cs.showText("-" + discount.toString() + " VND");
                     cs.newLineAtOffset(-(rightMargin - leftMargin - 100), -15);
                 }
-                
+
                 cs.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
                 cs.showText("Total:");
                 cs.newLineAtOffset(rightMargin - leftMargin - 100, 0);
                 cs.showText(booking.getTotalPrice().toString() + " VND");
                 cs.endText();
                 yPosition -= 50;
-                
+
                 // Footer
                 yPosition = 50;
                 cs.beginText();
@@ -1181,13 +1359,13 @@ public class BookingServiceImpl implements BookingService {
                 cs.showText("For any questions, please contact support@tourbooking.com");
                 cs.endText();
             }
-            
+
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             doc.save(baos);
-            
+
             log.info("[UC22] Invoice generated successfully for booking {}", bookingId);
             return baos.toByteArray();
-            
+
         } catch (Exception e) {
             log.error("[UC22] Error generating PDF for booking {}", bookingId, e);
             throw new RuntimeException("Could not generate invoice PDF: " + e.getMessage(), e);

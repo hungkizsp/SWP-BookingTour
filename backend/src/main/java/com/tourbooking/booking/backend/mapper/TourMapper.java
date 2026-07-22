@@ -34,6 +34,11 @@ public class TourMapper {
         }
         response.setExternalId(tour.getExternalId());
 
+        if (tour.getCategory() != null) {
+            response.setCategoryId(tour.getCategory().getId());
+            response.setCategoryName(tour.getCategory().getCategoryName());
+        }
+
         return response;
     }
 
@@ -79,10 +84,26 @@ public class TourMapper {
         response.setWhyChooseUs(tour.getWhyChooseUs());
         response.setExternalId(tour.getExternalId());
 
+        // Comparison metrics — reviewCount set by Service via ReviewRepository
+        response.setReviewCount(0); // default; overridden in Service
+        response.setItineraryDaysCount(tour.getItineraryDays() != null ? tour.getItineraryDays().size() : 0);
+        if (response.getSchedules() != null && !response.getSchedules().isEmpty()) {
+            TourDetailResponse.TourScheduleSummary closest = null;
+            for (TourDetailResponse.TourScheduleSummary s : response.getSchedules()) {
+                if (!Boolean.TRUE.equals(s.getIsExpired())
+                        && (closest == null || s.getStartDate().isBefore(closest.getStartDate()))) {
+                    closest = s;
+                }
+            }
+            response.setClosestScheduleSlots(closest != null ? closest.getAvailableSlots() : 0);
+        } else {
+            response.setClosestScheduleSlots(0);
+        }
+
         return response;
     }
 
-    private static TourDetailResponse.TourScheduleSummary toScheduleSummary(TourSchedule schedule) {
+    public static TourDetailResponse.TourScheduleSummary toScheduleSummary(TourSchedule schedule) {
         TourDetailResponse.TourScheduleSummary s = new TourDetailResponse.TourScheduleSummary();
         s.setScheduleId(schedule.getId());
         s.setStartDate(schedule.getStartDate());
@@ -93,6 +114,23 @@ public class TourMapper {
         s.setMaxSlots(schedule.getMaxSlots());
         s.setStatus(schedule.getStatus() == null ? null : schedule.getStatus().name());
         s.setBookingDeadline(schedule.getEffectiveBookingDeadline());
+
+        boolean isExpired = false;
+        if (schedule.getStartDate() != null) {
+            java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+            if (schedule.getStartDate().isBefore(today)) {
+                isExpired = true;
+            } else if (schedule.getStartDate().isEqual(today)) {
+                if (schedule.getDepartureTime() != null) {
+                    java.time.LocalTime now = java.time.LocalTime.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+                    if (!schedule.getDepartureTime().isAfter(now)) {
+                        isExpired = true;
+                    }
+                }
+            }
+        }
+        s.setIsExpired(isExpired);
+
         return s;
     }
 

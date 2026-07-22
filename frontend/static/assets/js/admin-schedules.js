@@ -61,17 +61,16 @@ function renderSchedulesPage() {
             IN_PROGRESS:    'background:#dbeafe; color:#2563eb;',
             COMPLETED:      'background:#f1f5f9; color:#64748b;',
             CANCELLED:      'background:#f3f4f6; color:#9ca3af;',
+            EXPIRED_NO_BOOKING: 'background:#e5e7eb; color:#6b7280;',
         };
         const statusKey = String(s.status || '').toUpperCase();
         const statusStyle = STATUS_STYLE[statusKey] || 'background:#f3f4f6; color:#6b7280;';
         const STATUS_LABELS = {
             OPEN: 'Mở đặt', BOOKING_CLOSED: 'Đóng đặt', SOLD_OUT: 'Hết chỗ',
             IN_PROGRESS: 'Đang diễn ra', COMPLETED: 'Hoàn thành', CANCELLED: 'Đã hủy',
+            EXPIRED_NO_BOOKING: 'Đã hết hạn - 0 khách',
         };
         const statusLabel = STATUS_LABELS[statusKey] || s.status;
-        const NON_ASSIGNABLE = ['COMPLETED', 'IN_PROGRESS', 'CANCELLED'];
-        const canAssign = !NON_ASSIGNABLE.includes(statusKey);
-
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>SD-${s.id}</td>
@@ -79,13 +78,6 @@ function renderSchedulesPage() {
             <td>${s.startDate} - ${s.endDate}</td>
             <td>${s.guideId ? 'Guide #' + s.guideId : '<span style="color:#d97706">Unassigned</span>'}</td>
             <td><span style="display:inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; ${statusStyle}">${statusLabel}</span></td>
-            <td>
-                ${canAssign
-                    ? `<button class="action-btn" onclick="openAssignModal(${s.id})">Assign</button>`
-                    : `<button class="action-btn" style="background: #cbd5e1; color: #64748b; cursor: not-allowed;" disabled title="Cannot assign: ${statusLabel}">Assign</button>`}
-                <button class="action-btn" style="background: #64748b" onclick="openDetailsModal(${s.id})">Details</button>
-                <button class="action-btn" style="background: #0f766e" onclick="window.open('/pages/client/group-chat.html?scheduleId=${s.id}&readonly=1', '_blank')">💬 Chat</button>
-            </td>
         `;
         tbody.appendChild(row);
     });
@@ -210,6 +202,11 @@ window.closeModal = function() {
 
 window.submitAssignment = async function() {
     const guideId = document.getElementById('guideSelect').value;
+    const btn = document.querySelector('#assignModal .btn:not(.btn-secondary)');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Assigning...';
+    }
     try {
         await TB.apiFetch(`/api/v1/staff/schedules/${currentScheduleId}/assign-guide?guideId=${guideId}`, { method: 'PATCH' });
         alert('Guide Assigned Successfully!');
@@ -218,6 +215,11 @@ window.submitAssignment = async function() {
     } catch (err) {
         alert('Mocked: Error -> ' + err.message + '. But Guide ID ' + guideId + ' assigned in UI.');
         closeModal();
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = 'Assign';
+        }
     }
 };
 

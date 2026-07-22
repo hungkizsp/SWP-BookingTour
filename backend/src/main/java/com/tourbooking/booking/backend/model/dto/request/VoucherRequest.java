@@ -7,4 +7,5 @@ import java.math.BigDecimal;
 public class VoucherRequest {
     private String voucherCode;
     private BigDecimal currentTotal;
+    private Long tourId;
 }

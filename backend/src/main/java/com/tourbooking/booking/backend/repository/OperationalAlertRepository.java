@@ -14,4 +14,7 @@ public interface OperationalAlertRepository extends JpaRepository<OperationalAle
 
     /** Returns the most recent alert for a schedule+window combo (for read APIs). */
     Optional<OperationalAlert> findByScheduleIdAndAlertWindow(Long scheduleId, String alertWindow);
+
+    /** Deletes all alert records for a schedule — used when a zero-booking schedule is purged. */
+    void deleteByScheduleId(Long scheduleId);
 }

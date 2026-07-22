@@ -23,6 +23,7 @@ public class BookingResponse {
     private BigDecimal discountAmount;
     private String discountCode;
     private BookingStatus status;
+    private String cancellationReason;
     private String refundReason;
     private String refundStatus;
     private BigDecimal refundAmount;

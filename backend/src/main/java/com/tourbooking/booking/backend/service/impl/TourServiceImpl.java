@@ -22,10 +22,10 @@ import com.tourbooking.booking.backend.model.entity.TourImage;
 import com.tourbooking.booking.backend.model.entity.TourSchedule;
 import com.tourbooking.booking.backend.repository.CategoryRepository;
 import com.tourbooking.booking.backend.repository.CityRepository;
+import com.tourbooking.booking.backend.repository.ReviewRepository;
+import com.tourbooking.booking.backend.repository.TourItineraryDayRepository;
 import com.tourbooking.booking.backend.repository.TourRepository;
 import com.tourbooking.booking.backend.service.TourService;
-
-import lombok.RequiredArgsConstructor;
 
 @Service
 public class TourServiceImpl implements TourService {
@@ -34,18 +34,25 @@ public class TourServiceImpl implements TourService {
     private final CategoryRepository categoryRepo;
     private final CityRepository cityRepository;
     private final com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo;
+    private final ReviewRepository reviewRepo;
+    private final TourItineraryDayRepository itineraryDayRepo;
 
-    public TourServiceImpl(TourRepository tourRepo, CategoryRepository categoryRepo, CityRepository cityRepository, com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo) {
+    public TourServiceImpl(TourRepository tourRepo, CategoryRepository categoryRepo, CityRepository cityRepository,
+            com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo,
+            ReviewRepository reviewRepo,
+            TourItineraryDayRepository itineraryDayRepo) {
         this.tourRepo = tourRepo;
         this.categoryRepo = categoryRepo;
         this.cityRepository = cityRepository;
         this.tourScheduleRepo = tourScheduleRepo;
+        this.reviewRepo = reviewRepo;
+        this.itineraryDayRepo = itineraryDayRepo;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<TourResponse> getAllTours() {
-        return tourRepo.findAll().stream()
+        return tourRepo.findAllWithBasicDetails().stream()
                 .map(TourMapper::toResponse)
                 .toList();
     }
@@ -55,7 +62,10 @@ public class TourServiceImpl implements TourService {
     public TourDetailResponse getTourById(Long id) {
         Tour tour = tourRepo.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
-        return TourMapper.toDetailResponse(tour);
+        TourDetailResponse resp = TourMapper.toDetailResponse(tour);
+        resp.setReviewCount((int) reviewRepo.findByTourId(id).size());
+        resp.setItineraryDaysCount((int) itineraryDayRepo.findByTourIdOrderByDayNumberAsc(id).size());
+        return resp;
     }
 
     @Override
@@ -78,7 +88,7 @@ public class TourServiceImpl implements TourService {
     @Transactional
     public TourResponse createTour(TourRequest request) {
         Tour tour = TourMapper.toEntity(request);
-        
+
         Long categoryId = request.getCategoryId();
         if (categoryId != null) {
             Category category = categoryRepo.findById(categoryId)
@@ -112,13 +122,44 @@ public class TourServiceImpl implements TourService {
 
         // Handle Schedules
         if (request.getSchedules() != null) {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalTime now = java.time.LocalTime.now();
             List<TourSchedule> schedules = request.getSchedules().stream()
                     .map(sReq -> {
+                        if (sReq.getStartDate() != null && sReq.getStartDate().equals(today) && 
+                            sReq.getDepartureTime() != null && sReq.getDepartureTime().isBefore(now)) {
+                            throw new IllegalArgumentException("Giờ khởi hành cho ngày hôm nay phải lớn hơn giờ hiện tại!");
+                        }
                         TourSchedule schedule = TourMapper.toScheduleEntity(sReq);
                         schedule.setTour(tour);
                         return schedule;
                     }).toList();
             tour.setSchedules(schedules);
+        }
+
+        // Handle Itinerary
+        if (request.getItineraryDays() != null) {
+            java.util.Set<Integer> dayNumbers = new java.util.HashSet<>();
+            for (com.tourbooking.booking.backend.model.dto.request.TourItineraryDayRequest dayReq : request.getItineraryDays()) {
+                if (!dayNumbers.add(dayReq.getDayNumber())) {
+                    throw new IllegalArgumentException("Ngày lịch trình bị trùng lặp: " + dayReq.getDayNumber());
+                }
+            }
+            List<com.tourbooking.booking.backend.model.entity.TourItineraryDay> itineraryDays = request.getItineraryDays().stream()
+                    .map(dayReq -> {
+                        com.tourbooking.booking.backend.model.entity.TourItineraryDay day = new com.tourbooking.booking.backend.model.entity.TourItineraryDay();
+                        day.setDayNumber(dayReq.getDayNumber());
+                        day.setTitle(dayReq.getTitle());
+                        day.setDescription(dayReq.getDescription());
+                        day.setAccommodation(dayReq.getAccommodation());
+                        day.setMeals(dayReq.getMeals());
+                        day.setTransportation(dayReq.getTransportation());
+                        day.setHighlights(dayReq.getHighlights());
+                        day.setImageUrl(dayReq.getImageUrl());
+                        day.setTour(tour);
+                        return day;
+                    }).toList();
+            tour.setItineraryDays(itineraryDays);
         }
 
         Tour savedTour = tourRepo.save(tour);
@@ -168,34 +209,87 @@ public class TourServiceImpl implements TourService {
                     .map(com.tourbooking.booking.backend.model.dto.request.TourScheduleRequest::getId)
                     .filter(java.util.Objects::nonNull)
                     .collect(java.util.stream.Collectors.toSet());
-                    
+
             for (TourSchedule existingSchedule : existingTour.getSchedules()) {
                 if (!incomingIds.contains(existingSchedule.getId())) {
                     existingSchedule.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED);
                 }
             }
-            
+
+            java.time.LocalDate today = java.time.LocalDate.now();
+            java.time.LocalTime now = java.time.LocalTime.now();
+
             request.getSchedules().forEach(sReq -> {
+                if (sReq.getStartDate() != null && sReq.getStartDate().equals(today) && 
+                    sReq.getDepartureTime() != null && sReq.getDepartureTime().isBefore(now)) {
+                    throw new IllegalArgumentException("Giờ khởi hành cho ngày hôm nay phải lớn hơn giờ hiện tại!");
+                }
+
                 if (sReq.getId() != null) {
                     existingTour.getSchedules().stream()
-                        .filter(s -> s.getId().equals(sReq.getId()))
-                        .findFirst()
-                        .ifPresent(existing -> {
-                            existing.setStartDate(sReq.getStartDate());
-                            existing.setEndDate(sReq.getEndDate());
-                            if (sReq.getDepartureTime() != null) existing.setDepartureTime(sReq.getDepartureTime());
-                            if (sReq.getReturnTime() != null) existing.setReturnTime(sReq.getReturnTime());
-                            if (sReq.getBookingDeadline() != null) existing.setBookingDeadline(sReq.getBookingDeadline());
-                            existing.setMaxSlots(sReq.getMaxSlots());
-                            if (sReq.getAvailableSlots() != null) existing.setAvailableSlots(sReq.getAvailableSlots());
-                            existing.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN);
-                        });
+                            .filter(s -> s.getId().equals(sReq.getId()))
+                            .findFirst()
+                            .ifPresent(existing -> {
+                                existing.setStartDate(sReq.getStartDate());
+                                existing.setEndDate(sReq.getEndDate());
+                                if (sReq.getDepartureTime() != null)
+                                    existing.setDepartureTime(sReq.getDepartureTime());
+                                if (sReq.getReturnTime() != null)
+                                    existing.setReturnTime(sReq.getReturnTime());
+                                if (sReq.getBookingDeadline() != null)
+                                    existing.setBookingDeadline(sReq.getBookingDeadline());
+                                existing.setMaxSlots(sReq.getMaxSlots());
+                                if (sReq.getAvailableSlots() != null)
+                                    existing.setAvailableSlots(sReq.getAvailableSlots());
+                                existing.setStatus(com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN);
+                            });
                 } else {
                     TourSchedule schedule = TourMapper.toScheduleEntity(sReq);
                     schedule.setTour(existingTour);
                     existingTour.getSchedules().add(schedule);
                 }
             });
+        }
+
+        // Handle Itinerary
+        if (request.getItineraryDays() != null) {
+            java.util.Set<Integer> dayNumbers = new java.util.HashSet<>();
+            for (com.tourbooking.booking.backend.model.dto.request.TourItineraryDayRequest dayReq : request.getItineraryDays()) {
+                if (!dayNumbers.add(dayReq.getDayNumber())) {
+                    throw new IllegalArgumentException("Ngày lịch trình bị trùng lặp: " + dayReq.getDayNumber());
+                }
+            }
+            
+            if (existingTour.getItineraryDays() != null) {
+                existingTour.getItineraryDays().clear();
+            }
+            
+            java.util.List<com.tourbooking.booking.backend.model.entity.TourItineraryDay> oldDays = itineraryDayRepo.findByTourIdOrderByDayNumberAsc(existingTour.getId());
+            if (!oldDays.isEmpty()) {
+                itineraryDayRepo.deleteAll(oldDays);
+                itineraryDayRepo.flush(); // Force DELETE statements to execute before new INSERTs
+            }
+            
+            List<com.tourbooking.booking.backend.model.entity.TourItineraryDay> newItineraryDays = request.getItineraryDays().stream()
+                    .map(dayReq -> {
+                        com.tourbooking.booking.backend.model.entity.TourItineraryDay day = new com.tourbooking.booking.backend.model.entity.TourItineraryDay();
+                        day.setDayNumber(dayReq.getDayNumber());
+                        day.setTitle(dayReq.getTitle());
+                        day.setDescription(dayReq.getDescription());
+                        day.setAccommodation(dayReq.getAccommodation());
+                        day.setMeals(dayReq.getMeals());
+                        day.setTransportation(dayReq.getTransportation());
+                        day.setHighlights(dayReq.getHighlights());
+                        day.setImageUrl(dayReq.getImageUrl());
+                        day.setTour(existingTour);
+                        return day;
+                    }).toList();
+                    
+            if (existingTour.getItineraryDays() != null) {
+                existingTour.getItineraryDays().addAll(newItineraryDays);
+            } else {
+                existingTour.setItineraryDays(newItineraryDays);
+            }
         }
 
         Tour updatedTour = tourRepo.save(existingTour);
@@ -213,7 +307,8 @@ public class TourServiceImpl implements TourService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TourResponse> searchToursWithFilters(String keyword, java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice, Double minRating, java.time.LocalDate startDate) {
+    public List<TourResponse> searchToursWithFilters(String keyword, java.math.BigDecimal minPrice,
+            java.math.BigDecimal maxPrice, Double minRating, java.time.LocalDate startDate) {
         return tourRepo.searchToursWithFilters(keyword, minPrice, maxPrice, minRating, startDate).stream()
                 .distinct()
                 .map(TourMapper::toResponse)
@@ -223,31 +318,35 @@ public class TourServiceImpl implements TourService {
     @Override
     @Transactional(readOnly = true)
     public PagedResponse<TourResponse> browseTours(String keyword,
-                                                  java.math.BigDecimal minPrice,
-                                                  java.math.BigDecimal maxPrice,
-                                                  Double minRating,
-                                                  java.time.LocalDate startDate,
-                                                  Long categoryId,
-                                                  String transportType,
-                                                  Long cityId,
-                                                  Double lat,
-                                                  Double lng,
-                                                  String sortBy,
-                                                  String sortDir,
-                                                  Pageable pageable) {
+            java.math.BigDecimal minPrice,
+            java.math.BigDecimal maxPrice,
+            Double minRating,
+            java.time.LocalDate startDate,
+            Long categoryId,
+            String transportType,
+            Long cityId,
+            Double lat,
+            Double lng,
+            String sortBy,
+            String sortDir,
+            Pageable pageable) {
         String normalizedSortBy = sortBy == null ? "" : sortBy.trim().toLowerCase();
-        
+
         // Prepare keyword patterns
-        String pattern = (keyword == null || keyword.trim().isEmpty()) ? null : "%" + keyword.trim().toLowerCase() + "%";
+        String pattern = (keyword == null || keyword.trim().isEmpty()) ? null
+                : "%" + keyword.trim().toLowerCase() + "%";
 
         Page<Tour> page;
         if ("popularity".equals(normalizedSortBy)) {
-            page = tourRepo.browseToursByPopularity(keyword, minPrice, maxPrice, minRating, startDate, categoryId, transportType, pageable);
+            page = tourRepo.browseToursByPopularity(keyword, minPrice, maxPrice, minRating, startDate, categoryId,
+                    transportType, pageable);
         } else if ("distance".equals(normalizedSortBy)) {
             double[] coords = resolveCoords(cityId, lat, lng);
-            page = tourRepo.browseToursByDistance(keyword, minPrice, maxPrice, minRating, startDate, categoryId, transportType, coords[0], coords[1], pageable);
+            page = tourRepo.browseToursByDistance(keyword, minPrice, maxPrice, minRating, startDate, categoryId,
+                    transportType, coords[0], coords[1], pageable);
         } else {
-            page = tourRepo.browseTours(keyword, pattern, minPrice, maxPrice, minRating, startDate, categoryId, transportType, pageable);
+            page = tourRepo.browseTours(keyword, pattern, minPrice, maxPrice, minRating, startDate, categoryId,
+                    transportType, pageable);
         }
         return PagedResponse.<TourResponse>builder()
                 .content(page.getContent().stream().map(TourMapper::toResponse).toList())
@@ -262,14 +361,14 @@ public class TourServiceImpl implements TourService {
 
     private double[] resolveCoords(Long cityId, Double lat, Double lng) {
         if (lat != null && lng != null) {
-            return new double[]{lat, lng};
+            return new double[] { lat, lng };
         }
         if (cityId != null) {
             City city = cityRepository.findById(cityId)
                     .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
-            return new double[]{city.getCenterLatitude().doubleValue(), city.getCenterLongitude().doubleValue()};
+            return new double[] { city.getCenterLatitude().doubleValue(), city.getCenterLongitude().doubleValue() };
         }
-        return new double[]{0.0, 0.0};
+        return new double[] { 0.0, 0.0 };
     }
 
     @Override
@@ -279,7 +378,69 @@ public class TourServiceImpl implements TourService {
             return List.of();
         }
         return tourRepo.findAllById(ids).stream()
-                .map(TourMapper::toDetailResponse)
+                .map(tour -> {
+                    TourDetailResponse resp = TourMapper.toDetailResponse(tour);
+                    resp.setReviewCount(reviewRepo.findByTourId(tour.getId()).size());
+                    
+                    java.util.List<com.tourbooking.booking.backend.model.entity.TourItineraryDay> days = itineraryDayRepo.findByTourIdOrderByDayNumberAsc(tour.getId());
+                    resp.setItineraryDaysCount(days.size());
+                    
+                    if (tour.getPrice() != null && tour.getDuration() != null && tour.getDuration() > 0) {
+                        resp.setPricePerDay(tour.getPrice().divide(java.math.BigDecimal.valueOf(tour.getDuration()), java.math.RoundingMode.HALF_UP));
+                    }
+                    
+                    if (!days.isEmpty()) {
+                        java.util.Set<String> mealSet = new java.util.HashSet<>();
+                        java.util.Set<String> accSet = new java.util.HashSet<>();
+                        for (com.tourbooking.booking.backend.model.entity.TourItineraryDay day : days) {
+                            if (day.getMeals() != null && !day.getMeals().isBlank()) mealSet.add(day.getMeals().trim());
+                            if (day.getAccommodation() != null && !day.getAccommodation().isBlank()) accSet.add(day.getAccommodation().trim());
+                        }
+                        resp.setMeals(mealSet.isEmpty() ? "Tự túc" : String.join(", ", mealSet));
+                        resp.setAccommodation(accSet.isEmpty() ? "Không có" : String.join(", ", accSet));
+                    } else {
+                        resp.setMeals("Đang cập nhật");
+                        resp.setAccommodation("Đang cập nhật");
+                    }
+                    
+                    int maxGroup = 0;
+                    if (tour.getSchedules() != null) {
+                        for (com.tourbooking.booking.backend.model.entity.TourSchedule ts : tour.getSchedules()) {
+                            if (ts.getMaxSlots() != null && ts.getMaxSlots() > maxGroup) {
+                                maxGroup = ts.getMaxSlots();
+                            }
+                        }
+                    }
+                    resp.setMaxGroupSize(maxGroup > 0 ? maxGroup : 30);
+                    
+                    // Map itinerary days
+                    java.util.List<com.tourbooking.booking.backend.model.dto.response.TourItineraryDayResponse> dayResponses = days.stream()
+                        .map(d -> com.tourbooking.booking.backend.model.dto.response.TourItineraryDayResponse.builder()
+                            .id(d.getId())
+                            .tourId(tour.getId())
+                            .dayNumber(d.getDayNumber())
+                            .title(d.getTitle())
+                            .description(d.getDescription())
+                            .accommodation(d.getAccommodation())
+                            .meals(d.getMeals())
+                            .transportation(d.getTransportation())
+                            .highlights(d.getHighlights())
+                            .imageUrl(d.getImageUrl())
+                            .build())
+                        .toList();
+                    resp.setItineraryDayList(dayResponses);
+                    
+                    // Map destinations
+                    java.util.List<String> dests = new java.util.ArrayList<>();
+                    if (tour.getStartLocation() != null && !tour.getStartLocation().isBlank()) dests.add(tour.getStartLocation().trim());
+                    if (tour.getEndLocation() != null && !tour.getEndLocation().isBlank() && !dests.contains(tour.getEndLocation().trim())) dests.add(tour.getEndLocation().trim());
+                    if (tour.getCity() != null && tour.getCity().getCityName() != null && !tour.getCity().getCityName().isBlank() && !dests.contains(tour.getCity().getCityName().trim())) {
+                        dests.add(tour.getCity().getCityName().trim());
+                    }
+                    resp.setDestinations(dests);
+                    
+                    return resp;
+                })
                 .toList();
     }
 

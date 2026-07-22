@@ -96,22 +96,42 @@
                 alert("Xác thực thất bại hoặc link đã hết hạn.");
             }
 
-            google.accounts.id.initialize({ 
-                client_id: "27844399753-b0u9h8gj7g5rsr9km9mcadt5oc4gcj51.apps.googleusercontent.com", 
-                callback: handleGoogleLogin, 
-                auto_select: false,
-                use_fedcm_for_prompt: true 
-            });
-            google.accounts.id.renderButton(
-                document.getElementById("googleBtn"),
-                { 
-                    theme: "outline", 
-                    size: "large", 
-                    width: 400, 
-                    text: "continue_with",
-                    shape: "rectangular"
+            // Guard: only init Google Sign-In if the library loaded successfully
+            function initGoogleSignIn() {
+                if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+                    console.warn('[GSI] Google Sign-In library not available (origin may not be authorized).');
+                    document.getElementById('googleBtn').style.display = 'none';
+                    return;
                 }
-            );
+                try {
+                    google.accounts.id.initialize({ 
+                        client_id: "27844399753-b0u9h8gj7g5rsr9km9mcadt5oc4gcj51.apps.googleusercontent.com", 
+                        callback: handleGoogleLogin, 
+                        auto_select: false,
+                        use_fedcm_for_prompt: true 
+                    });
+                    google.accounts.id.renderButton(
+                        document.getElementById("googleBtn"),
+                        { 
+                            theme: "outline", 
+                            size: "large", 
+                            width: 400, 
+                            text: "continue_with",
+                            shape: "rectangular"
+                        }
+                    );
+                } catch (e) {
+                    console.warn('[GSI] Google Sign-In init failed:', e.message);
+                    document.getElementById('googleBtn').style.display = 'none';
+                }
+            }
+
+            // The GSI script uses async/defer; poll briefly until ready
+            if (document.readyState === 'complete') {
+                initGoogleSignIn();
+            } else {
+                window.addEventListener('load', initGoogleSignIn);
+            }
         };
 
         async function handleGoogleLogin(response) {

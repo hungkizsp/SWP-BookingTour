@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -12,20 +12,7 @@
 
 <body>
     <div class="admin-layout">
-        <aside class="sidebar">
-            <a href="./dashboard.html" class="logo">TourBooking</a>
-            <nav>
-                <a href="./dashboard.html" class="nav-item">Dashboard</a>
-                <a href="./manageTours.html" class="nav-item">Tours</a>
-                <a href="./manageCategories.html" class="nav-item">Categories</a>
-                <a href="./manageBookings.html" class="nav-item">Bookings</a>
-                <a href="./manageUsers.html" class="nav-item">Users</a>
-                <a href="./manageReview.html" class="nav-item active">Reviews</a>
-                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
-                <a href="./financialReport.html" class="nav-item">Financial Report</a>
-                <a href="./manageDiscounts.html" class="nav-item">Manage Discount</a>
-            </nav>
-        </aside>
+        <aside class="sidebar"></aside>
 
         <main class="main-content">
             <header>
@@ -36,6 +23,7 @@
                 </div>
             </header>
 
+            <!-- Stats -->
             <div class="card" style="margin-bottom: 2rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                     <h2>Review Statistics</h2>
@@ -47,23 +35,24 @@
                     </div>
                     <div class="stat-card" style="background: var(--bg-light); padding: 1rem; border-radius: 0.5rem; text-align: center;">
                         <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Avg Rating</small>
-                        <strong id="avgRating" style="font-size: 1.5rem; color: var(--warning);">0</strong>
+                        <strong id="avgRating" style="font-size: 1.5rem; color: var(--warning);">-</strong>
                     </div>
                     <div class="stat-card" style="background: var(--bg-light); padding: 0.5rem; border-radius: 0.5rem; text-align: center;">
                         <small style="color: var(--text-muted);">5 Stars</small>
-                        <strong id="rating5" style="display: block; color: var(--success);">0</strong>
+                        <strong id="rating5" style="display: block; color: var(--success);">-</strong>
                     </div>
                     <div class="stat-card" style="background: var(--bg-light); padding: 0.5rem; border-radius: 0.5rem; text-align: center;">
                         <small style="color: var(--text-muted);">4 Stars</small>
-                        <strong id="rating4" style="display: block; color: var(--primary);">0</strong>
+                        <strong id="rating4" style="display: block; color: var(--primary);">-</strong>
                     </div>
                     <div class="stat-card" style="background: var(--bg-light); padding: 0.5rem; border-radius: 0.5rem; text-align: center;">
                         <small style="color: var(--text-muted);">3 Stars</small>
-                        <strong id="rating3" style="display: block; color: var(--warning);">0</strong>
+                        <strong id="rating3" style="display: block; color: var(--warning);">-</strong>
                     </div>
                 </div>
             </div>
 
+            <!-- Table -->
             <div class="card">
                 <div class="filter-bar" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
                     <div class="form-group" style="margin-bottom: 0; min-width: 150px;">
@@ -87,16 +76,17 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>User</th>
+                                <th>Kh&aacute;ch h&agrave;ng</th>
                                 <th>Tour</th>
                                 <th>Rating</th>
-                                <th>Comment</th>
-                                <th>Date</th>
+                                <th>N&#7897;i dung</th>
+                                <th>Ng&agrave;y t&#7841;o</th>
+                                <th>H&agrave;nh &#273;&#7897;ng</th>
                             </tr>
                         </thead>
                         <tbody id="reviewTable">
                             <tr>
-                                <td colspan="6" style="text-align: center; padding: 2rem;">Loading reviews...</td>
+                                <td colspan="7" style="text-align: center; padding: 2rem;">&#272;ang t&#7843;i...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -130,119 +120,158 @@
         });
 
         let currentPage = 0;
-        let pageSize = 10;
+        const pageSize = 10;
 
         async function loadReviews(page = 0) {
             currentPage = page;
             const reviewTable = document.getElementById("reviewTable");
+            reviewTable.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">&#272;ang t&#7843;i d&#7919; li&#7879;u...</td></tr>';
+
             const rating = document.getElementById('ratingFilter').value;
-            const tourId = document.getElementById('tourFilter').value;
-            
+            const tourId = document.getElementById('tourFilter').value.trim();
+
             try {
                 let url = `${API}?page=${page}&size=${pageSize}`;
-                if (rating && rating !== 'all') {
-                    url += `&rating=${rating}`;
-                }
-                if (tourId) {
-                    url += `&tourId=${tourId}`;
-                }
+                if (rating && rating !== 'all') url += `&rating=${rating}`;
+                if (tourId) url += `&tourId=${tourId}`;
+
                 const response = await TB.apiFetch(url);
+                // Structure: { code, message, data: { content:[], page, totalPages, totalElements, ... } }
                 const data = response.data;
                 const reviews = data.content;
 
                 if (!reviews || reviews.length === 0) {
-                    reviewTable.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">No reviews found.</td></tr>';
-                    updateStatsFromPagedData(data);
+                    reviewTable.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;">Kh&#244;ng c&#243; review n&#224;o.</td></tr>';
+                    updateStats(tourId);
                     renderPagination(0, 0);
                     return;
                 }
 
                 let html = "";
                 reviews.forEach(r => {
+                    // ReviewResponse fields: reviewId, userId, userName, bookingId, tourId, tourName, rating, comment, createdAt
+                    const nameDisplay = r.userName || ('User #' + r.userId) || '&mdash;';
+                    const tourDisplay = r.tourName
+                        ? `<span style="font-size:0.8rem;color:var(--text-muted);">#${r.tourId}</span><br><strong>${escapeHtml(r.tourName)}</strong>`
+                        : (r.tourId ? '#' + r.tourId : '&mdash;');
+
                     html += `
                         <tr>
                             <td>${r.reviewId}</td>
-                            <td><strong>${r.userId || '—'}</strong></td>
-                            <td><span style="font-size: 0.8rem;">${r.tourId || '—'}</span><br><strong>${escapeHtml(r.tourName || '—')}</strong></td>
+                            <td><strong>${escapeHtml(nameDisplay)}</strong></td>
+                            <td>${tourDisplay}</td>
                             <td>${renderStars(r.rating)}</td>
-                            <td style="max-width: 300px; font-size: 0.9rem;">${escapeHtml(r.comment || '—')}</td>
-                            <td>${formatDate(r.createdAt)}</td>
-                        </tr>
-                    `;
+                            <td style="max-width:260px;font-size:0.9rem;">${escapeHtml(r.comment || '')}</td>
+                            <td style="white-space:nowrap;">${formatDate(r.createdAt)}</td>
+                            <td>
+                                <button class="btn btn-danger btn-sm"
+                                        onclick="deleteReviewById(${r.reviewId})"
+                                        style="padding:4px 10px;font-size:0.82rem;">
+                                    X&#243;a
+                                </button>
+                            </td>
+                        </tr>`;
                 });
                 reviewTable.innerHTML = html;
-                updateStatsFromPagedData(data);
+                updateStats(tourId);
                 renderPagination(data.totalPages, data.page);
+
             } catch (error) {
                 console.error('Error loading reviews:', error);
-                reviewTable.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--danger);">Error loading reviews: ${error.message}</td></tr>`;
+                reviewTable.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--danger);">L&#7895;i t&#7843;i d&#7919; li&#7879;u: ${error.message}</td></tr>`;
             }
         }
 
+        /**
+         * Render star rating using HTML entities to avoid encoding issues.
+         * &#9733; = filled star (★), &#9734; = empty star (☆)
+         */
         function renderStars(rating) {
+            const r = Math.round(rating) || 0;
             let stars = '';
             for (let i = 1; i <= 5; i++) {
-                stars += i <= rating ? '★' : '☆';
+                stars += i <= r ? '&#9733;' : '&#9734;';
             }
-            const colorClass = rating >= 4 ? 'success' : (rating >= 3 ? 'warning' : 'danger');
-            return `<span class="badge badge-${colorClass}" style="letter-spacing: 2px;">${stars}</span>`;
+            const colorClass = r >= 4 ? 'success' : (r >= 3 ? 'warning' : 'danger');
+            return `<span class="badge badge-${colorClass}" style="letter-spacing:2px;font-size:1rem;">${stars} ${r}/5</span>`;
         }
 
-        function updateStatsFromPagedData(data) {
-            document.getElementById('totalReviews').innerText = data.totalElements || 0;
-            // Statistics like Avg Rating would need a separate summary API or be included in PagedResponse
-            // For now, I'll clear them or keep them as '-'
-            document.getElementById('avgRating').innerText = '-';
-            document.getElementById('rating5').innerText = '-';
-            document.getElementById('rating4').innerText = '-';
-            document.getElementById('rating3').innerText = '-';
+        async function updateStats(tourId = '') {
+            try {
+                // Fetch max 10000 reviews to calculate stats accurately across pages
+                let url = `${API}?page=0&size=10000`;
+                if (tourId) url += `&tourId=${tourId}`;
+                
+                const response = await TB.apiFetch(url);
+                const reviews = response.data?.content || [];
+                
+                document.getElementById('totalReviews').innerText = response.data?.totalElements ?? 0;
+                
+                if (reviews.length === 0) {
+                    document.getElementById('avgRating').innerText = '&mdash;';
+                    document.getElementById('rating5').innerText = '0';
+                    document.getElementById('rating4').innerText = '0';
+                    document.getElementById('rating3').innerText = '0';
+                    return;
+                }
+
+                let sum = 0;
+                let count5 = 0, count4 = 0, count3 = 0;
+                
+                reviews.forEach(r => {
+                    const rating = r.rating || 0;
+                    sum += rating;
+                    if (rating === 5) count5++;
+                    else if (rating === 4) count4++;
+                    else if (rating === 3) count3++;
+                });
+
+                const avg = sum / reviews.length;
+                document.getElementById('avgRating').innerText = avg.toFixed(1);
+                document.getElementById('rating5').innerText = count5.toString();
+                document.getElementById('rating4').innerText = count4.toString();
+                document.getElementById('rating3').innerText = count3.toString();
+            } catch (err) {
+                console.error('L&#7895;i t&#7843;i th&#7889;ng k&#234;:', err);
+            }
         }
 
         function renderPagination(totalPages, page) {
             const container = document.getElementById('pagination');
-            const totalPagesSafe = Math.max(totalPages, 1);
-            if (totalPages <= 0) {
+            if (!totalPages || totalPages <= 1) {
                 container.style.display = 'none';
                 container.innerHTML = '';
                 return;
             }
             container.style.display = 'flex';
 
-            let html = `
-                <button class="page-btn" ${page === 0 ? 'disabled' : ''} onclick="loadReviews(${page - 1})">&laquo;</button>
-            `;
-
-            for (let i = 0; i < totalPagesSafe; i++) {
-                if (i === 0 || i === totalPagesSafe - 1 || (i >= page - 2 && i <= page + 2)) {
+            let html = `<button class="page-btn" ${page === 0 ? 'disabled' : ''} onclick="loadReviews(${page - 1})">&laquo;</button>`;
+            for (let i = 0; i < totalPages; i++) {
+                if (i === 0 || i === totalPages - 1 || (i >= page - 2 && i <= page + 2)) {
                     html += `<button class="page-btn ${i === page ? 'active' : ''}" onclick="loadReviews(${i})">${i + 1}</button>`;
                 } else if (i === page - 3 || i === page + 3) {
                     html += `<span class="page-info">...</span>`;
                 }
             }
-
             html += `
-                <button class="page-btn" ${page >= totalPagesSafe - 1 ? 'disabled' : ''} onclick="loadReviews(${page + 1})">&raquo;</button>
-                <span class="page-info">Trang ${page + 1} / ${totalPagesSafe}</span>
-            `;
+                <button class="page-btn" ${page >= totalPages - 1 ? 'disabled' : ''} onclick="loadReviews(${page + 1})">&raquo;</button>
+                <span class="page-info">Trang ${page + 1} / ${totalPages}</span>`;
             container.innerHTML = html;
         }
 
         async function deleteReviewById(id) {
-            if (confirm('Delete this review permanently?')) {
-                try {
-                    await TB.apiFetch(`${API}/${id}`, {
-                        method: "DELETE"
-                    });
-                    showToast('Review deleted successfully!', 'success');
-                    loadReviews(currentPage);
-                } catch (error) {
-                    showToast('Error: ' + error.message, 'error');
-                }
+            if (!confirm('X\u00f3a review n\u00e0y v\u0129nh vi\u1ec5n?')) return;
+            try {
+                await TB.apiFetch(`${API}/${id}`, { method: 'DELETE' });
+                showToast('X\u00f3a review th\u00e0nh c\u00f4ng!', 'success');
+                loadReviews(currentPage);
+            } catch (error) {
+                showToast('L\u1ed7i: ' + error.message, 'error');
             }
         }
 
         function formatDate(dateString) {
-            if (!dateString) return '—';
+            if (!dateString) return '&mdash;';
             return new Date(dateString).toLocaleDateString('vi-VN');
         }
 
@@ -255,6 +284,8 @@
 
         loadReviews();
     </script>
+<script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>
+

@@ -12,20 +12,7 @@
 
 <body>
     <div class="admin-layout">
-        <aside class="sidebar">
-            <a href="./dashboard.html" class="logo">TourBooking</a>
-            <nav>
-                <a href="./dashboard.html" class="nav-item">Dashboard</a>
-                <a href="./manageTours.html" class="nav-item active">Tours</a>
-                <a href="./manageCategories.html" class="nav-item">Categories</a>
-                <a href="./manageBookings.html" class="nav-item">Bookings</a>
-                <a href="./manageUsers.html" class="nav-item">Users</a>
-                <a href="./manageReview.html" class="nav-item">Reviews</a>
-                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
-                <a href="./financialReport.html" class="nav-item">Financial Report</a>
-                <a href="./manageDiscounts.html" class="nav-item">Manage Discount</a>
-            </nav>
-        </aside>
+        <aside class="sidebar"></aside>
 
         <main class="main-content">
             <header>
@@ -48,6 +35,7 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Tour Name</th>
+                                <th>Category</th>
                                 <th>Price</th>
                                 <th>Duration (Days)</th>
                                 <th>Location</th>
@@ -56,7 +44,7 @@
                         </thead>
                         <tbody id="tourTable">
                             <tr>
-                                <td colspan="6" style="text-align: center; padding: 2rem;">Loading tours...</td>
+                                <td colspan="7" style="text-align: center; padding: 2rem;">Loading tours...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -113,22 +101,27 @@
                 <input type="text" id="transportType" class="form-control" placeholder="e.g., Bus, Plane">
             </div>
 
-
-
             <div class="form-group">
                 <label>Description</label>
                 <textarea id="description" class="form-control" rows="3"
                     placeholder="Enter tour description"></textarea>
             </div>
 
-            <div class="form-group">
-                <label>Itinerary *</label>
-                <textarea id="itinerary" class="form-control" rows="3" placeholder="Enter tour itinerary"></textarea>
+            <div class="form-group" style="border-top: 1px solid var(--border); padding-top: 1rem; margin-top: 1rem;">
+                <label style="font-weight: bold; margin-bottom: 10px; display: block;">Tour Itinerary (Lịch Trình Tham
+                    Quan)</label>
+                <div id="itineraryContainer" style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Itinerary days will be injected here -->
+                </div>
+                <button type="button" onclick="addItineraryRow()" class="btn btn-secondary btn-sm"
+                    style="margin-top: 10px;">+ Add Day (Thêm Ngày)</button>
             </div>
 
             <div class="form-group">
-                <label>Category ID (Optional)</label>
-                <input type="number" id="categoryId" class="form-control" placeholder="Category ID" min="1">
+                <label>Category (Optional)</label>
+                <select id="categoryId" class="form-control">
+                    <option value="">-- Select Category --</option>
+                </select>
                 <small>Leave empty if no category</small>
             </div>
 
@@ -151,6 +144,84 @@
             <div class="modal-buttons">
                 <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
                 <button onclick="saveTour()" class="btn btn-primary">Save Tour</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Schedule Modal -->
+    <div id="bulkScheduleModal" class="modal">
+        <div class="modal-content">
+            <h3>Clone / Bulk Schedule Tour #<span id="bulkTourIdDisplay"></span></h3>
+            <input type="hidden" id="bulkTourId">
+
+            <div class="form-group" style="margin-bottom: 15px;">
+                <label>Recurrence Mode</label>
+                <div style="display: flex; gap: 15px; margin-top: 10px;">
+                    <label style="display: flex; align-items: center; gap: 5px;"><input type="radio"
+                            name="recurrenceMode" value="single" checked onchange="toggleRecurrence()"> Single
+                        Date</label>
+                    <label style="display: flex; align-items: center; gap: 5px;"><input type="radio"
+                            name="recurrenceMode" value="recurring" onchange="toggleRecurrence()"> Recurring Schedule
+                        (Lặp lại)</label>
+                </div>
+            </div>
+
+            <div id="singleDateBlock" style="display: block; margin-bottom: 15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Start Date *</label>
+                        <input type="date" id="singleStartDate" class="form-control">
+                    </div>
+                </div>
+            </div>
+
+            <div id="recurringBlock"
+                style="display: none; margin-bottom: 15px; border: 1px solid var(--border); padding: 15px; border-radius: 5px; background: var(--bg-light);">
+                <div class="form-group">
+                    <label>Days of Week (Thứ trong tuần)</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="MONDAY"> Mon</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="TUESDAY"> Tue</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="WEDNESDAY"> Wed</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="THURSDAY"> Thu</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="FRIDAY"> Fri</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="SATURDAY"> Sat</label>
+                        <label style="display: flex; align-items: center; gap: 5px;"><input type="checkbox"
+                                name="daysOfWeek" value="SUNDAY"> Sun</label>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Range Start (Bắt đầu lặp) *</label>
+                        <input type="date" id="bulkStartDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Range End (Kết thúc lặp) *</label>
+                        <input type="date" id="bulkEndDate" class="form-control">
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Departure Time *</label>
+                    <input type="time" id="bulkDepartureTime" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Max Slots *</label>
+                    <input type="number" id="bulkMaxSlots" class="form-control" min="1" value="20">
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button onclick="closeBulkModal()" class="btn btn-secondary">Cancel</button>
+                <button onclick="submitBulkSchedule()" class="btn btn-primary">Save Schedules</button>
             </div>
         </div>
     </div>
@@ -214,7 +285,7 @@
         async function loadTours(page = 0) {
             currentPage = page;
             const tourTable = document.getElementById("tourTable");
-            
+
             try {
                 const response = await TB.apiFetch(`${PUBLIC_API}/browse?page=${page}&size=${pageSize}&sortBy=tourName&sortDir=asc`);
                 const data = response.data;
@@ -237,12 +308,14 @@
                         <tr>
                             <td>${t.id}</td>
                             <td><strong>${escapeHtml(t.tourName)}</strong></td>
+                            <td>${escapeHtml(t.categoryName || '-')}</td>
                             <td>${formatPrice(t.price)}</td>
                             <td>${t.duration || '-'} days</td>
                             <td>${escapeHtml(location)}</td>
                             <td class="action-buttons">
                                 <button onclick="viewTour(${t.id})" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">View</button>
                                 <button onclick="showEditModal(${t.id})" class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Edit</button>
+                                <button onclick="showBulkScheduleModal(${t.id})" class="btn btn-info" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background-color: var(--primary); color: white; border-color: var(--primary);">Clone Schedule</button>
                                 <button onclick="deleteTour(${t.id})" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Delete</button>
                             </td>
                         </tr>
@@ -267,11 +340,11 @@
                 return;
             }
             container.style.display = 'flex';
-            
+
             let html = `
                 <button class="page-btn" ${currentPage === 0 ? 'disabled' : ''} onclick="loadTours(${currentPage - 1})">&laquo;</button>
             `;
-            
+
             for (let i = 0; i < totalPages; i++) {
                 if (i === 0 || i === totalPages - 1 || (i >= currentPage - 2 && i <= currentPage + 2)) {
                     html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="loadTours(${i})">${i + 1}</button>`;
@@ -279,7 +352,7 @@
                     html += `<span class="page-info">...</span>`;
                 }
             }
-            
+
             html += `
                 <button class="page-btn" ${currentPage === totalPages - 1 ? 'disabled' : ''} onclick="loadTours(${currentPage + 1})">&raquo;</button>
             `;
@@ -328,13 +401,12 @@
             document.getElementById('endLocation').value = '';
             document.getElementById('transportType').value = '';
             document.getElementById('description').value = '';
-            document.getElementById('itinerary').value = '';
+            document.getElementById('itineraryContainer').innerHTML = '';
             document.getElementById('categoryId').value = '';
-            
-            // Set min check for schedules row to tomorrow
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            window.minDateStr = tomorrow.toISOString().split('T')[0];
+
+            // Set min check for schedules row to today
+            const today = new Date();
+            window.minDateStr = today.toISOString().split('T')[0];
             document.getElementById('tourImages').value = '';
             document.getElementById('imagePreviewContainer').innerHTML = '';
             document.getElementById('existingImages').value = '';
@@ -347,44 +419,52 @@
             try {
                 const response = await TB.apiFetch(`${PUBLIC_API}/${id}`);
                 const t = response.data;
-                    currentEditId = id;
-                    document.getElementById('modalTitle').innerText = 'Edit Tour';
-                    document.getElementById('tourId').value = t.id;
-                    document.getElementById('tourName').value = t.tourName || '';
-                    document.getElementById('price').value = t.price || '';
-                    document.getElementById('duration').value = t.duration || '';
-                    document.getElementById('startLocation').value = t.startLocation || '';
-                    document.getElementById('endLocation').value = t.endLocation || '';
-                    document.getElementById('transportType').value = t.transportType || '';
-                    document.getElementById('description').value = t.description || '';
-                    document.getElementById('itinerary').value = t.itinerary || '';
-                    document.getElementById('categoryId').value = t.categoryId || '';
+                currentEditId = id;
+                document.getElementById('modalTitle').innerText = 'Edit Tour';
+                document.getElementById('tourId').value = t.id;
+                document.getElementById('tourName').value = t.tourName || '';
+                document.getElementById('price').value = t.price || '';
+                document.getElementById('duration').value = t.duration || '';
+                document.getElementById('startLocation').value = t.startLocation || '';
+                document.getElementById('endLocation').value = t.endLocation || '';
+                document.getElementById('transportType').value = t.transportType || '';
+                document.getElementById('description').value = t.description || '';
+                document.getElementById('categoryId').value = t.categoryId || '';
 
-                    document.getElementById('tourImages').value = '';
-                    document.getElementById('existingImages').value = (t.imageUrls && t.imageUrls.length > 0) ? JSON.stringify(t.imageUrls) : '';
-
-                    // Schedules
-                    const scheduleContainer = document.getElementById('scheduleContainer');
-                    scheduleContainer.innerHTML = '';
-                    if (t.schedules && t.schedules.length > 0) {
-                        t.schedules.forEach(s => addScheduleRow(s));
+                // Fetch itinerary
+                document.getElementById('itineraryContainer').innerHTML = '';
+                try {
+                    const itineraryRes = await TB.apiFetch(`/api/v1/tours/${id}/itinerary`);
+                    if (itineraryRes.data && itineraryRes.data.length > 0) {
+                        itineraryRes.data.forEach(day => addItineraryRow(day));
                     }
+                } catch (e) { console.warn("Failed to load itinerary for edit"); }
 
-                    const previewContainer = document.getElementById('imagePreviewContainer');
-                    previewContainer.innerHTML = '';
-                    if (t.imageUrls && t.imageUrls.length > 0) {
-                        t.imageUrls.forEach(urlOrData => {
-                            const img = document.createElement('img');
-                            img.src = TB.normalizeImageUrl(urlOrData);
-                            img.className = 'preview-img';
-                            img.style.width = '80px';
-                            img.style.height = '80px';
-                            img.style.objectFit = 'cover';
-                            img.style.borderRadius = '4px';
-                            img.style.border = '1px solid #ddd';
-                            previewContainer.appendChild(img);
-                        });
-                    }
+                document.getElementById('tourImages').value = '';
+                document.getElementById('existingImages').value = (t.imageUrls && t.imageUrls.length > 0) ? JSON.stringify(t.imageUrls) : '';
+
+                // Schedules
+                const scheduleContainer = document.getElementById('scheduleContainer');
+                scheduleContainer.innerHTML = '';
+                if (t.schedules && t.schedules.length > 0) {
+                    t.schedules.forEach(s => addScheduleRow(s));
+                }
+
+                const previewContainer = document.getElementById('imagePreviewContainer');
+                previewContainer.innerHTML = '';
+                if (t.imageUrls && t.imageUrls.length > 0) {
+                    t.imageUrls.forEach(urlOrData => {
+                        const img = document.createElement('img');
+                        img.src = TB.normalizeImageUrl(urlOrData);
+                        img.className = 'preview-img';
+                        img.style.width = '80px';
+                        img.style.height = '80px';
+                        img.style.objectFit = 'cover';
+                        img.style.borderRadius = '4px';
+                        img.style.border = '1px solid #ddd';
+                        previewContainer.appendChild(img);
+                    });
+                }
 
                 document.getElementById('tourModal').style.display = 'flex';
             } catch (error) {
@@ -417,6 +497,208 @@
             }
         }
 
+        // Itinerary UI functions
+        let itineraryRowIndex = 0;
+        function addItineraryRow(dayData = null) {
+            const container = document.getElementById('itineraryContainer');
+            const row = document.createElement('div');
+            row.className = 'itinerary-row';
+            row.style = 'border: 1px solid var(--border); padding: 15px; border-radius: 8px; background: #f8fafc; position: relative;';
+            row.innerHTML = `
+                <button type="button" onclick="this.parentElement.remove()" style="position: absolute; right: 10px; top: 10px; background: #ef4444; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 0.8rem;">X</button>
+                <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div>
+                        <label>Ngày Tháng</label>
+                        <input type="number" class="form-control i-day" value="${dayData?.dayNumber || (container.children.length + 1)}" min="1" required>
+                    </div>
+                    <div>
+                        <label>Tiêu Đề</label>
+                        <input type="text" class="form-control i-title" value="${dayData?.title || ''}" placeholder="Vd: Vui Choi Tham Quan" required>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div>
+                        <label>Phương Tiện</label>
+                        <input type="text" class="form-control i-transport" value="${dayData?.transportation || ''}" placeholder="Vd: Xe bus">
+                    </div>
+                    <div>
+                        <label>Bữa Ăn</label>
+                        <input type="text" class="form-control i-meals" value="${dayData?.meals || ''}" placeholder="Vd: Sáng, Trưa">
+                    </div>
+                    <div>
+                        <label>Nơi Ở</label>
+                        <input type="text" class="form-control i-accommodation" value="${dayData?.accommodation || ''}" placeholder="Vd: Khách Sạn 4 sao">
+                    </div>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>Điểm Nổi Bật</label>
+                    <input type="text" class="form-control i-highlights" value="${dayData?.highlights || ''}" placeholder="Vd: Bà Nà Hills, Cầu Vàng...">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>Mô Tả Chi Tiết</label>
+                    <textarea class="form-control i-desc" rows="2" placeholder="Nhập Chi Tiết Lịch Trình..." required>${dayData?.description || ''}</textarea>
+                </div>
+                <div>
+                    <label>&#7843;nh L&#7883;ch tr&#236;nh (T&#249;y ch&#7885;n)</label>
+                    <div class="itinerary-image-upload" style="border:2px dashed #cbd5e1;border-radius:8px;background:#f8fafc;overflow:hidden;">
+                        <input type="file" class="itinerary-file-input" accept="image/jpeg,image/png,image/webp" style="display:none">
+                        <div class="itinerary-image-preview-box"
+                             style="padding:16px;text-align:center;cursor:pointer;min-height:100px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;">
+                            <img class="itinerary-preview-img"
+                                 src="${dayData?.imageUrl || ''}"
+                                 alt=""
+                                 style="display:${dayData?.imageUrl ? 'block' : 'none'};max-width:180px;max-height:120px;border-radius:6px;object-fit:cover;">
+                            <div class="itinerary-upload-placeholder" style="display:${dayData?.imageUrl ? 'none' : 'flex'};flex-direction:column;align-items:center;gap:4px;">
+                                <span style="font-size:28px;">&#128444;&#65039;</span>
+                                <span style="font-size:0.85rem;">Click &#273;&#7875; ch&#7885;n &#7843;nh</span>
+                                <small style="color:#888;">JPG, PNG, WebP &mdash; t&#7889;i &#273;a 5MB</small>
+                            </div>
+                        </div>
+                        <div class="itinerary-image-actions" style="display:${dayData?.imageUrl ? 'flex' : 'none'};gap:8px;align-items:center;padding:6px 12px;border-top:1px solid #e2e8f0;background:#fff;">
+                            <span class="itinerary-filename" style="font-size:12px;color:#555;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                ${dayData?.imageUrl ? dayData.imageUrl.split('/').pop() : ''}
+                            </span>
+                            <button type="button" class="itinerary-clear-btn"
+                                    style="font-size:12px;color:#ef4444;background:none;border:none;cursor:pointer;white-space:nowrap;">
+                                &times; X&#243;a
+                            </button>
+                        </div>
+                        <input type="hidden" class="itinerary-image-url-hidden" value="${dayData?.imageUrl || ''}">
+                    </div>
+                </div>
+            `;
+            container.appendChild(row);
+        }
+
+        // -- Itinerary image upload � event delegation (works for dynamically added rows) --
+        document.addEventListener('click', function (e) {
+            // Click on preview box triggers file picker
+            const box = e.target.closest('.itinerary-image-preview-box');
+            if (box) {
+                box.closest('.itinerary-image-upload').querySelector('.itinerary-file-input').click();
+                return;
+            }
+            // Clear button
+            if (e.target.classList.contains('itinerary-clear-btn')) {
+                const wrapper = e.target.closest('.itinerary-image-upload');
+                wrapper.querySelector('.itinerary-file-input').value = '';
+                wrapper.querySelector('.itinerary-preview-img').style.display = 'none';
+                wrapper.querySelector('.itinerary-upload-placeholder').style.display = 'flex';
+                wrapper.querySelector('.itinerary-image-actions').style.display = 'none';
+                wrapper.querySelector('.itinerary-image-url-hidden').value = '';
+                wrapper.querySelector('.itinerary-filename').textContent = '';
+            }
+        });
+
+        document.addEventListener('change', async function (e) {
+            if (!e.target.classList.contains('itinerary-file-input')) return;
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                alert('&#7272;nh kh&#244;ng &#273;&#432;&#7907;c v&#432;&#7907;t qu&#225; 5MB');
+                e.target.value = '';
+                return;
+            }
+
+            const wrapper = e.target.closest('.itinerary-image-upload');
+            const previewBox = wrapper.querySelector('.itinerary-image-preview-box');
+            const previewImg = wrapper.querySelector('.itinerary-preview-img');
+            const placeholder = wrapper.querySelector('.itinerary-upload-placeholder');
+            const actions = wrapper.querySelector('.itinerary-image-actions');
+            const filenameEl = wrapper.querySelector('.itinerary-filename');
+            const hiddenUrl = wrapper.querySelector('.itinerary-image-url-hidden');
+
+            // Instant local preview
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                previewImg.src = ev.target.result;
+                previewImg.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+
+            // Upload to server using existing tour upload endpoint
+            // Use TB.apiFetch so the URL is correctly routed to the backend (port 8080)
+            try {
+                previewBox.style.opacity = '0.6';
+                hiddenUrl.value = '[[PENDING]]'; // temporary marker
+                const formData = new FormData();
+                formData.append('files', file);
+                // TB.apiFetch auto-prepends http://localhost:8080 when on dev port,
+                // and injects the Bearer token � no need to set headers manually.
+                const resData = await TB.apiFetch('/api/v1/admin/tours/upload', {
+                    method: 'POST',
+                    body: formData
+                    // Do NOT set Content-Type � browser sets it with multipart boundary
+                });
+                // Response: { code, message, data: ["url"] }
+                if (resData.code === 200 && resData.data && resData.data.length > 0) {
+                    hiddenUrl.value = resData.data[0];
+                    filenameEl.textContent = file.name;
+                    actions.style.display = 'flex';
+                } else {
+                    throw new Error('Response l&#7895;i');
+                }
+            } catch (err) {
+                console.error('Itinerary image upload error:', err);
+                alert('Upload &#7843;nh th&#7845;t b&#7841;i: ' + err.message);
+                previewImg.style.display = 'none';
+                placeholder.style.display = 'flex';
+                hiddenUrl.value = '';
+                e.target.value = '';
+            } finally {
+                previewBox.style.opacity = '1';
+            }
+        });
+
+        /**
+         * Collect itinerary data. Reads imageUrl from the hidden field
+         * (already uploaded by the change listener above).
+         */
+        async function getItineraryDataAsync() {
+            const rows = document.querySelectorAll('.itinerary-row');
+            const data = [];
+            const daySet = new Set();
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const dayNumberStr = row.querySelector('.i-day').value;
+                const dayNumber = parseInt(dayNumberStr);
+                const title = row.querySelector('.i-title').value.trim();
+                const description = row.querySelector('.i-desc').value.trim();
+                
+                if (isNaN(dayNumber) || dayNumber <= 0) {
+                    showToast(`Ngày lịch trình thứ ${i + 1} phải là số nguyên dương hợp lệ.`, 'error');
+                    return null;
+                }
+                if (daySet.has(dayNumber)) {
+                    showToast(`Ngày ${dayNumber} bị trùng lặp, vui lòng kiểm tra lại lịch trình.`, 'error');
+                    return null;
+                }
+                if (!title || !description) {
+                    showToast(`Ngày ${dayNumber} thiếu Tiêu đề hoặc Mô tả chi tiết.`, 'error');
+                    return null;
+                }
+                daySet.add(dayNumber);
+
+                const hiddenUrl = row.querySelector('.itinerary-image-url-hidden');
+                const imageUrl = (hiddenUrl && hiddenUrl.value !== '[[PENDING]]')
+                    ? (hiddenUrl.value.trim() || null)
+                    : null;
+                data.push({
+                    dayNumber: dayNumber,
+                    title: title,
+                    description: description,
+                    transportation: row.querySelector('.i-transport')?.value.trim() || null,
+                    meals: row.querySelector('.i-meals')?.value.trim() || null,
+                    accommodation: row.querySelector('.i-accommodation')?.value.trim() || null,
+                    highlights: row.querySelector('.i-highlights')?.value.trim() || null,
+                    imageUrl: imageUrl
+                });
+            }
+            return data.sort((a, b) => a.dayNumber - b.dayNumber);
+        }
+
         // SAVE TOUR (CREATE OR UPDATE)
         async function saveTour() {
             const tourName = document.getElementById('tourName').value.trim();
@@ -426,20 +708,68 @@
             const endLocation = document.getElementById('endLocation').value.trim();
             const transportType = document.getElementById('transportType').value.trim();
             const description = document.getElementById('description').value.trim();
-            const itinerary = document.getElementById('itinerary').value.trim();
             const categoryId = document.getElementById('categoryId').value;
             const fileInput = document.getElementById('tourImages');
 
+            const itineraryData = await getItineraryDataAsync();
+            if (itineraryData === null) {
+                return;
+            }
+            if (itineraryData.length === 0) {
+                showToast('Please add at least one itinerary day!', 'error');
+                return;
+            }
+            
             // Validation
-            if (!tourName || isNaN(price) || price <= 0 || isNaN(duration) || duration <= 0 || !startLocation || !endLocation || !itinerary || !transportType) {
-                showToast('Please fill all required fields correctly (numbers must be > 0)', 'error');
+            if (!tourName) {
+                showToast('Tên tour không được để trống.', 'error');
+                return;
+            }
+            if (tourName.length > 255) {
+                showToast('Tên tour vượt quá độ dài tối đa (255 ký tự).', 'error');
+                return;
+            }
+            if (isNaN(price) || price <= 0) {
+                showToast('Giá tour phải lớn hơn 0.', 'error');
+                return;
+            }
+            if (price > 99999999) {
+                showToast('Giá tối đa cho phép là 99,999,999 VNĐ.', 'error');
+                return;
+            }
+            if (isNaN(duration) || duration <= 0) {
+                showToast('Số ngày đi phải lớn hơn 0.', 'error');
+                return;
+            }
+            if (duration > 60) {
+                showToast('Số ngày tối đa là 60.', 'error');
+                return;
+            }
+            if (!startLocation || !endLocation) {
+                showToast('Vui lòng nhập Điểm khởi hành và Điểm đến.', 'error');
+                return;
+            }
+            if (!transportType) {
+                showToast('Vui lòng nhập Phương tiện di chuyển.', 'error');
                 return;
             }
 
             const schedules = getScheduleData();
+            if (schedules === null) {
+                return;
+            }
             if (schedules.length === 0) {
                 showToast('Please add at least one valid future schedule!', 'error');
                 return;
+            }
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toTimeString().substring(0, 5);
+            for (const s of schedules) {
+                if (s.startDate === todayStr && s.departureTime && s.departureTime < nowTime) {
+                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
+                    return;
+                }
             }
 
             let finalImageUrls = [];
@@ -477,7 +807,7 @@
             const tourData = {
                 tourName: tourName,
                 description: description || null,
-                itinerary: itinerary || null,
+                itinerary: "NEW_API", // legacy field
                 price: price,
                 duration: duration,
                 startLocation: startLocation,
@@ -485,17 +815,19 @@
                 transportType: transportType,
                 categoryId: categoryId ? parseInt(categoryId) : null,
                 imageUrls: finalImageUrls.length > 0 ? finalImageUrls : null,
-                schedules: getScheduleData()
+                schedules: getScheduleData(),
+                itineraryDays: itineraryData
             };
 
             let url = currentEditId ? `${API}/${currentEditId}` : API;
             let method = currentEditId ? 'PUT' : 'POST';
 
             try {
-                await TB.apiFetch(url, {
+                const res = await TB.apiFetch(url, {
                     method: method,
                     body: JSON.stringify(tourData)
                 });
+
                 closeModal();
                 loadTours();
                 showToast(currentEditId ? 'Tour updated successfully!' : 'Tour created successfully!', 'success');
@@ -527,22 +859,50 @@
             const row = document.createElement('div');
             row.className = 'schedule-row';
             row.style.display = 'grid';
-            row.style.gridTemplateColumns = '1fr 1fr 80px 40px';
+            row.style.gridTemplateColumns = '1fr 1fr 100px 80px 40px';
             row.style.gap = '10px';
             row.style.marginBottom = '10px';
             row.style.alignItems = 'center';
 
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const minDate = tomorrow.toISOString().split('T')[0];
+            const today = new Date();
+            const minDate = today.toISOString().split('T')[0];
+
+            let depTime = '';
+            if (data && data.departureTime) {
+                // Keep only HH:mm
+                depTime = data.departureTime.substring(0, 5);
+            }
 
             row.innerHTML = `
-                <input type="date" class="form-control schedule-start" value="${data ? data.startDate : ''}" min="${minDate}" onchange="updateMinEndDate(this)" placeholder="Start Date">
-                <input type="date" class="form-control schedule-end" value="${data ? data.endDate : ''}" min="${data ? data.startDate : minDate}" placeholder="End Date">
-                <input type="number" class="form-control schedule-max" value="${data ? data.maxSlots || data.availableSlots : ''}" min="1" placeholder="Max Slots">
-                <button type="button" onclick="this.parentElement.remove()" class="btn btn-danger btn-sm" style="padding: 2px 5px;">&times;</button>
+                <input type="date" class="form-control schedule-start" value="${data ? data.startDate : ''}" min="${minDate}" onchange="updateMinEndDate(this)" title="Start Date">
+                <input type="date" class="form-control schedule-end" value="${data ? data.endDate : ''}" min="${data ? data.startDate : minDate}" title="End Date">
+                <input type="time" class="form-control schedule-time" value="${depTime}" title="Departure Time">
+                <input type="number" class="form-control schedule-max" value="${data ? data.maxSlots || data.availableSlots : ''}" min="1" placeholder="Slots" title="Max Slots">
+                ${data && data.id
+                    ? (['CANCELLED', 'CANCELLED_BY_OPERATOR', 'EXPIRED_NO_BOOKING'].includes(data.status)
+                        ? '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">Đã hủy</span>'
+                        : '<button type="button" onclick="cancelSchedule(' + data.id + ', this)" class="btn btn-danger btn-sm" style="padding: 2px 5px;" title="Hủy lịch trình (Hoàn tiền 100%)">Hủy</button>')
+                    : '<button type="button" onclick="this.parentElement.remove()" class="btn btn-danger btn-sm" style="padding: 2px 5px;">&times;</button>'}
             `;
             container.appendChild(row);
+        }
+
+        async function cancelSchedule(scheduleId, btn) {
+            if (!confirm("Bạn có chắc chắn muốn hủy lịch trình này? Toàn bộ booking liên quan sẽ bị hủy và hoàn tiền 100%.")) {
+                return;
+            }
+            try {
+                const response = await TB.apiFetch(`/api/v1/admin/tour-schedules/${scheduleId}/cancel`, {
+                    method: 'PUT'
+                });
+
+                showToast('Lịch trình đã được hủy và hoàn tiền thành công!', 'success');
+                btn.outerHTML = '<span class="badge bg-danger" style="font-size: 0.7rem; align-self: center; padding: 5px;">Đã hủy</span>';
+
+            } catch (error) {
+                console.error('Error cancelling schedule:', error);
+                showToast(error.message || 'Lỗi khi hủy lịch trình', 'error');
+            }
         }
 
         function updateMinEndDate(startInput) {
@@ -556,19 +916,34 @@
         function getScheduleData() {
             const rows = document.querySelectorAll('.schedule-row');
             const schedules = [];
-            rows.forEach(row => {
+            const schedSet = new Set();
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
                 const startDate = row.querySelector('.schedule-start').value;
                 const endDate = row.querySelector('.schedule-end').value;
-                const maxSlots = parseInt(row.querySelector('.schedule-max').value);
+                const departureTime = row.querySelector('.schedule-time').value;
+                const maxSlotsStr = row.querySelector('.schedule-max').value;
+                const maxSlots = parseInt(maxSlotsStr);
 
-                if (startDate && endDate && !isNaN(maxSlots)) {
-                    schedules.push({
-                        startDate: startDate,
-                        endDate: endDate,
-                        maxSlots: maxSlots
-                    });
+                if (!startDate || !endDate || !departureTime || isNaN(maxSlots) || maxSlots <= 0) {
+                    showToast(`Dòng lịch trình thứ ${i + 1} thiếu thông tin hoặc không hợp lệ.`, 'error');
+                    return null;
                 }
-            });
+                
+                const uniqueKey = startDate + '_' + departureTime;
+                if (schedSet.has(uniqueKey)) {
+                    showToast(`Dòng lịch trình thứ ${i + 1} bị trùng ngày và giờ khởi hành.`, 'error');
+                    return null;
+                }
+                schedSet.add(uniqueKey);
+
+                schedules.push({
+                    startDate: startDate,
+                    endDate: endDate,
+                    departureTime: departureTime,
+                    maxSlots: maxSlots
+                });
+            }
             return schedules;
         }
 
@@ -578,10 +953,138 @@
             currentEditId = null;
         }
 
+        function closeBulkModal() {
+            document.getElementById('bulkScheduleModal').style.display = 'none';
+        }
+
         window.onclick = function (event) {
             const modal = document.getElementById('tourModal');
+            const bulkModal = document.getElementById('bulkScheduleModal');
             if (event.target === modal) {
                 closeModal();
+            } else if (event.target === bulkModal) {
+                closeBulkModal();
+            }
+        }
+
+        function toggleRecurrence() {
+            const mode = document.querySelector('input[name="recurrenceMode"]:checked').value;
+            if (mode === 'single') {
+                document.getElementById('singleDateBlock').style.display = 'block';
+                document.getElementById('recurringBlock').style.display = 'none';
+            } else {
+                document.getElementById('singleDateBlock').style.display = 'none';
+                document.getElementById('recurringBlock').style.display = 'block';
+            }
+        }
+
+        function showBulkScheduleModal(tourId) {
+            document.getElementById('bulkTourId').value = tourId;
+            document.getElementById('bulkTourIdDisplay').innerText = tourId;
+
+            document.getElementById('singleStartDate').value = '';
+            document.getElementById('bulkStartDate').value = '';
+            document.getElementById('bulkEndDate').value = '';
+            document.getElementById('bulkDepartureTime').value = '';
+            document.getElementById('bulkMaxSlots').value = '20';
+
+            const checkboxes = document.querySelectorAll('input[name="daysOfWeek"]');
+            checkboxes.forEach(cb => cb.checked = false);
+
+            document.getElementById('bulkScheduleModal').style.display = 'flex';
+        }
+
+        async function submitBulkSchedule() {
+            const tourId = document.getElementById('bulkTourId').value;
+            const mode = document.querySelector('input[name="recurrenceMode"]:checked').value;
+            const departureTime = document.getElementById('bulkDepartureTime').value;
+            const maxSlots = parseInt(document.getElementById('bulkMaxSlots').value);
+
+            if (!departureTime || isNaN(maxSlots) || maxSlots <= 0) {
+                showToast('Please fill departure time and valid max slots.', 'error');
+                return;
+            }
+            if (maxSlots > 500) {
+                showToast('Max slots không được vượt quá 500.', 'error');
+                return;
+            }
+
+            let payload = {
+                tourId: parseInt(tourId),
+                departureTime: departureTime + ':00', // ensure HH:mm:ss format for backend
+                maxSlots: maxSlots,
+                daysOfWeek: []
+            };
+
+            const todayStr = new Date().toISOString().split('T')[0];
+            const nowTime = new Date().toTimeString().substring(0, 5);
+
+            if (mode === 'single') {
+                const startDate = document.getElementById('singleStartDate').value;
+                if (!startDate) {
+                    showToast('Vui lòng chọn ngày bắt đầu (Please select a start date).', 'error');
+                    return;
+                }
+                if (startDate < todayStr) {
+                    showToast('Ngày bắt đầu không được nằm trong quá khứ (Start date cannot be in the past).', 'error');
+                    return;
+                }
+                if (startDate === todayStr && departureTime.substring(0, 5) < nowTime) {
+                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
+                    return;
+                }
+                payload.rangeStartDate = startDate;
+                payload.rangeEndDate = startDate;
+            } else {
+                const startDate = document.getElementById('bulkStartDate').value;
+                const endDate = document.getElementById('bulkEndDate').value;
+                if (!startDate || !endDate) {
+                    showToast('Vui lòng chọn cả ngày bắt đầu và ngày kết thúc (Please select both range start and end dates).', 'error');
+                    return;
+                }
+                if (startDate < todayStr || endDate < todayStr) {
+                    showToast('Ngày bắt đầu và kết thúc không được nằm trong quá khứ (Dates cannot be in the past).', 'error');
+                    return;
+                }
+                if (startDate > endDate) {
+                    showToast('Ngày bắt đầu không được lớn hơn ngày kết thúc (Start date cannot be after end date).', 'error');
+                    return;
+                }
+                if (startDate === todayStr && departureTime.substring(0, 5) < nowTime) {
+                    showToast('Giờ khởi hành không được nhỏ hơn giờ hiện tại đối với lịch trình hôm nay!', 'error');
+                    return;
+                }
+
+                const startObj = new Date(startDate);
+                const endObj = new Date(endDate);
+                const diffTime = Math.abs(endObj - startObj);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays > 365) {
+                    showToast('Khoảng thời gian lặp lại không được vượt quá 1 năm (Duration cannot exceed 365 days).', 'error');
+                    return;
+                }
+
+                const checkboxes = document.querySelectorAll('input[name="daysOfWeek"]:checked');
+                if (checkboxes.length === 0) {
+                    showToast('Vui lòng chọn ít nhất một thứ trong tuần để lặp lại (Please select at least one day).', 'error');
+                    return;
+                }
+                checkboxes.forEach(cb => payload.daysOfWeek.push(cb.value));
+
+                payload.rangeStartDate = startDate;
+                payload.rangeEndDate = endDate;
+            }
+
+            try {
+                const response = await TB.apiFetch('/api/v1/admin/tours/schedules/bulk', {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                showToast('Schedules created successfully!', 'success');
+                closeBulkModal();
+            } catch (error) {
+                console.error('Error creating bulk schedules:', error);
+                showToast('Error: ' + error.message, 'error');
             }
         }
 
@@ -600,11 +1103,35 @@
             return div.innerHTML;
         }
 
+        async function loadCategories() {
+            try {
+                const response = await TB.apiFetch(`/api/v1/categories?size=1000`);
+                let cats = [];
+                if (response.data && response.data.content) {
+                    cats = response.data.content;
+                } else if (Array.isArray(response.data)) {
+                    cats = response.data;
+                } else if (Array.isArray(response)) {
+                    cats = response;
+                }
+                const select = document.getElementById('categoryId');
+                let html = '<option value="">-- Select Category --</option>';
+                cats.forEach(c => {
+                    html += `<option value="${c.id}">${escapeHtml(c.categoryName)}</option>`;
+                });
+                select.innerHTML = html;
+            } catch (e) {
+                console.error("Error loading categories", e);
+            }
+        }
+
         // Init
         if (checkAuth()) {
+            loadCategories();
             loadTours();
         }
     </script>
+    <script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>

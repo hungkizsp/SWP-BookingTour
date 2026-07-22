@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -17,20 +17,7 @@
 
 <body>
     <div class="admin-layout">
-        <aside class="sidebar">
-            <a href="./dashboard.html" class="logo">TourBooking</a>
-            <nav>
-                <a href="./dashboard.html" class="nav-item">Dashboard</a>
-                <a href="./manageTours.html" class="nav-item">Tours</a>
-                <a href="./manageCategories.html" class="nav-item">Categories</a>
-                <a href="./manageBookings.html" class="nav-item">Bookings</a>
-                <a href="./manageUsers.html" class="nav-item">Users</a>
-                <a href="./manageReview.html" class="nav-item">Reviews</a>
-                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
-                <a href="./financialReport.html" class="nav-item active">Financial Report</a>
-                <a href="./manageDiscounts.html" class="nav-item">Manage Discount</a>
-            </nav>
-        </aside>
+        <aside class="sidebar"></aside>
 
         <main class="main-content">
             <header>
@@ -67,29 +54,44 @@
                             <option value="CANCELLED">Cancellations Only</option>
                         </select>
                     </div>
-                    <button onclick="loadReport()" class="btn btn-primary" style="padding: 0 25px; min-height: 48px;">Generate</button>
-                    <button onclick="seedTestData()" class="btn btn-secondary" style="margin-left: 0.5rem; opacity: 0.7;" title="Chỉ dùng để demo/kiểm thử — không ảnh hưởng khi vừa mở trang">Seed Test Data</button>
+                    <button onclick="loadReport()" class="btn btn-primary"
+                        style="padding: 0 25px; min-height: 48px;">Generate</button>
+                    <button onclick="seedTestData()" class="btn btn-secondary"
+                        style="margin-left: 0.5rem; opacity: 0.7;"
+                        title="Ch�0 dùng �Ồ demo/kiỒm thử � không ảnh hư�xng khi vừa m�x trang">Seed Test
+                        Data</button>
                     <div style="flex: 1;"></div>
-                    <button onclick="exportToExcel()" class="btn btn-success" style="padding: 0 20px; min-height: 40px;">Excel</button>
-                    <button onclick="exportToPDF()" class="btn btn-danger" style="padding: 0 20px; min-height: 40px;">PDF</button>
+                    <button onclick="exportToExcel()" class="btn btn-success"
+                        style="padding: 0 20px; min-height: 40px;">Excel</button>
+                    <button onclick="exportToPDF()" class="btn btn-danger"
+                        style="padding: 0 20px; min-height: 40px;">PDF</button>
                 </div>
             </div>
 
-            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="stats-grid"
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                 <div class="card" style="text-align: center; border-top: 4px solid var(--primary); padding: 2rem;">
-                    <small style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Total Revenue</small>
-                    <h2 id="totalRevenue" style="margin: 0.5rem 0; color: var(--primary); font-size: 2rem;">₫0</h2>
+                    <small
+                        style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Total
+                        Revenue</small>
+                    <h2 id="totalRevenue" style="margin: 0.5rem 0; color: var(--primary); font-size: 2rem;">0</h2>
                 </div>
                 <div class="card" style="text-align: center; border-top: 4px solid var(--success); padding: 2rem;">
-                    <small style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Total Bookings</small>
+                    <small
+                        style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Total
+                        Bookings</small>
                     <h2 id="totalBookings" style="margin: 0.5rem 0; color: var(--success); font-size: 2rem;">0</h2>
                 </div>
                 <div class="card" style="text-align: center; border-top: 4px solid var(--warning); padding: 2rem;">
-                    <small style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Avg. Booking Value</small>
-                    <h2 id="avgBookingValue" style="margin: 0.5rem 0; color: var(--warning); font-size: 2rem;">₫0</h2>
+                    <small
+                        style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Avg.
+                        Booking Value</small>
+                    <h2 id="avgBookingValue" style="margin: 0.5rem 0; color: var(--warning); font-size: 2rem;">0</h2>
                 </div>
                 <div class="card" style="text-align: center; border-top: 4px solid var(--danger); padding: 2rem;">
-                    <small style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Cancel Rate</small>
+                    <small
+                        style="color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Cancel
+                        Rate</small>
                     <h2 id="cancelRate" style="margin: 0.5rem 0; color: var(--danger); font-size: 2rem;">0%</h2>
                 </div>
             </div>
@@ -99,8 +101,9 @@
                     <h3 style="margin-bottom: 1.5rem;">Revenue Trends</h3>
                     <div style="height: 350px; position: relative;">
                         <canvas id="revenueChart"></canvas>
-                        <div id="chartEmptyMessage" style="display: none; position: absolute; inset: 0; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.95rem; text-align: center; padding: 1rem; pointer-events: none;">
-                            Chưa có dữ liệu doanh thu thực tế trong khoảng thời gian này
+                        <div id="chartEmptyMessage"
+                            style="display: none; position: absolute; inset: 0; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.95rem; text-align: center; padding: 1rem; pointer-events: none;">
+                            Chưa có dữ li�!u doanh thu thực tế trong khoảng thời gian này
                         </div>
                     </div>
                 </div>
@@ -120,7 +123,8 @@
                         </thead>
                         <tbody id="reportBody">
                             <tr>
-                                <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">Đang tải báo cáo...</td>
+                                <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                                    Đang tải báo cáo...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -129,5 +133,7 @@
         </main>
     </div>
 
+<script src="../../assets/js/admin/sidebar.js"></script>
 </body>
+
 </html>

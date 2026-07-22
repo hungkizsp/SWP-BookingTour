@@ -12,20 +12,7 @@
 
 <body>
     <div class="admin-layout">
-        <aside class="sidebar">
-            <a href="./dashboard.html" class="logo">TourBooking</a>
-            <nav>
-                <a href="./dashboard.html" class="nav-item">Dashboard</a>
-                <a href="./manageTours.html" class="nav-item">Tours</a>
-                <a href="./manageCategories.html" class="nav-item">Categories</a>
-                <a href="./manageBookings.html" class="nav-item active">Bookings</a>
-                <a href="./manageUsers.html" class="nav-item">Users</a>
-                <a href="./manageReview.html" class="nav-item">Reviews</a>
-                <a href="./manageNewsletter.html" class="nav-item">Newsletters</a>
-                <a href="./financialReport.html" class="nav-item">Financial Report</a>
-                <a href="./manageDiscounts.html" class="nav-item">Manage Discount</a>
-            </nav>
-        </aside>
+        <aside class="sidebar"></aside>
 
         <main class="main-content">
             <header>
@@ -45,7 +32,7 @@
                             <option value="PENDING">Pending</option>
                             <option value="PENDING_CASH">Pending Cash</option>
                             <option value="CONFIRMED">Confirmed</option>
-                            <option value="REFUND_REQUESTED">Refund Requested ⚠️</option>
+                            <option value="REFUND_REQUESTED">Refund Requested �a�️</option>
                             <option value="CANCELLED">Cancelled</option>
                             <option value="SUCCESS">Success / Paid</option>
                         </select>
@@ -62,13 +49,14 @@
                                 <th>Booking Date</th>
                                 <th>Total</th>
                                 <th>Status</th>
+                                <th>Guide</th>
                                 <th>Refund Info</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="bookingTable">
                             <tr>
-                                <td colspan="8" style="text-align: center; padding: 2rem;">Loading bookings...</td>
+                                <td colspan="9" style="text-align: center; padding: 2rem;">Loading bookings...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -76,6 +64,65 @@
                 <div id="pagination" class="pagination-container"></div>
             </div>
         </main>
+    </div>
+
+
+    <!-- Assign Guide Modal -->
+    <div class="modal" id="assignModal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 12px; width: 450px; max-width: 95%;">
+            <h2 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">Assign Tour Guide</h2>
+            <p id="targetScheduleId" style="margin-bottom:10px; color:#475569;"></p>
+            <p style="margin-bottom:15px; font-size:0.9em; color:#dc2626; font-weight:bold;">
+                Lưu ý: Guide này sẽ áp dụng cho toàn bộ Schedule này, bao gồm tất cả các booking (khách hàng) trong
+                schedule đó.
+            </p>
+            <select id="guideSelect"
+                style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc;"></select>
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeAssignModal()" style="padding: 8px 16px;">Đóng</button>
+                <button class="btn btn-primary" onclick="submitAssignment()"
+                    style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">Assign</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Booking Modal -->
+    <div class="modal" id="cancelModal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 12px; width: 450px; max-width: 95%;">
+            <h2 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">Hủy Đặt tour</h2>
+            <p style="margin-bottom: 1rem; color: #475569;">Vui lòng cung cấp lý do hủy. Lý do này sẽ được gửi email cho
+                khách hàng.</p>
+            <textarea id="cancelReason" rows="4" oninput="onReasonChange()" placeholder="Nhập lý do hủy (bắt buộc)..."
+                style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 1rem; resize: vertical; font-family: inherit;"></textarea>
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="btn btn-secondary" onclick="closeCancelModal()" style="padding: 8px 16px;">Đóng</button>
+                <button id="confirmCancelBtn" class="btn btn-danger" onclick="submitCancelBooking()"
+                    style="padding: 8px 16px;" disabled>Xác nhận hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancel Entire Schedule Modal -->
+    <div class="modal" id="cancelScheduleModal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 12px; width: 500px; max-width: 95%;">
+            <h2 style="margin-top: 0; margin-bottom: 1rem; color: #991b1b;">Hủy Toàn Bộ Chuyến Đi</h2>
+            <p id="cancelScheduleTarget" style="margin-bottom: 0.75rem; color: #475569; font-weight: 600;"></p>
+            <p id="cancelScheduleWarning" style="margin-bottom: 1rem; color: #991b1b; font-size: 0.9rem; line-height: 1.5; background: #fef2f2; padding: 12px; border-radius: 8px; border: 1px solid #fecaca;"></p>
+            <p style="margin-bottom: 0.5rem; color: #64748b; font-size: 0.85rem;">
+                Dùng khi tour bị hủy do vận hành/thời tiết (ảnh hưởng toàn bộ đoàn). Khác với "Hủy Đặt Tour" — chỉ hủy 1 khách.
+            </p>
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem;">
+                <button class="btn btn-secondary" onclick="closeCancelScheduleModal()" style="padding: 8px 16px;">Đóng</button>
+                <button id="confirmCancelScheduleBtn" class="btn btn-danger" onclick="submitCancelSchedule()"
+                    style="padding: 8px 16px;">Xác nhận hủy toàn bộ chuyến</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -103,6 +150,12 @@
                 || 'N/A';
         }
 
+        const ACTIVE_BOOKING_STATUSES = ['CONFIRMED', 'PAID', 'PENDING', 'PENDING_CASH'];
+
+        function countActiveBookingsForSchedule(scheduleId) {
+            return allBookings.filter(b => b.scheduleId == scheduleId && ACTIVE_BOOKING_STATUSES.includes(b.status)).length;
+        }
+
         function formatBookingDate(value) {
             if (!value) return 'N/A';
             const date = new Date(value);
@@ -126,7 +179,7 @@
                 parts.push(`<span class="badge badge-warning">${escapeHtml(item.refundStatus)}</span>`);
             }
             if (item.refundAmount != null) {
-                parts.push(`<strong>${Number(item.refundAmount).toLocaleString('vi-VN')}đ</strong>`);
+                parts.push(`<strong>${Number(item.refundAmount).toLocaleString('vi-VN')}VNĐ</strong>`);
             }
             if (item.refundReason) {
                 parts.push(`<span style="color:#666;">${escapeHtml(item.refundReason)}</span>`);
@@ -182,7 +235,7 @@
             const pageItems = allBookings.slice(start, start + PAGE_SIZE);
 
             if (!pageItems.length) {
-                table.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">No bookings found.</td></tr>';
+                table.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem;">No bookings found.</td></tr>';
                 renderPagination(0, 0);
                 return;
             }
@@ -196,17 +249,26 @@
                         </td>
                         <td>${escapeHtml(item.tourName || 'N/A')}</td>
                         <td style="font-size:0.85rem; white-space:nowrap;">${formatBookingDate(item.bookingDate)}</td>
-                        <td style="font-weight:800; color:var(--price);">${Number(item.totalPrice).toLocaleString('vi-VN')}đ</td>
+                        <td style="font-weight:800; color:var(--price);">${Number(item.totalPrice).toLocaleString('vi-VN')}VNĐ</td>
                         <td><span class="badge ${getStatusClass(item.status)}">${item.status}</span></td>
+                        ${(() => {
+                    if (item.guideFullName) return `<td>${escapeHtml(item.guideFullName)}</td>`;
+                    if (item.status === 'CONFIRMED' || item.status === 'PAID') return `<td><button class="btn btn-sm" style="background: #3b82f6; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;" onclick="openAssignModal(${item.scheduleId})">👤 Assign</button></td>`;
+                    return '<td>-</td>';
+                })()}
                         <td style="font-size:0.8rem; max-width:220px; line-height:1.4;">${formatRefundInfo(item)}</td>
                         <td>
-                            <div style="display:flex; gap:5px;">
+                            <div style="display:flex; gap:5px; flex-wrap:wrap;">
                                 ${item.status === 'REFUND_REQUESTED' ? `
                                     <button onclick="updateStatus(${item.id}, 'CANCELLED')" class="btn btn-danger btn-sm">Approve Cancel</button>
                                     <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-secondary btn-sm">Reject</button>
                                 ` : ''}
                                 ${item.status === 'PENDING_CASH' ? `
                                     <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-success btn-sm">Confirm</button>
+                                ` : ''}
+                                ${(item.status === 'CONFIRMED' || item.status === 'PAID') ? `
+                                    <button onclick="openCancelModal(${item.id})" class="btn btn-danger btn-sm">Hủy Đặt Tour</button>
+                                    <button onclick="openCancelScheduleModal(${item.scheduleId}, '${escapeHtml(item.tourName || 'N/A')}')" class="btn btn-sm" style="background:#7f1d1d; color:white; border:none;">Hủy Toàn Bộ Chuyến</button>
                                 ` : ''}
 
                             </div>
@@ -257,6 +319,153 @@
                 loadBookings(currentPage);
             } catch (err) {
                 showToast('Update failed: ' + err.message, 'error');
+            }
+        }
+
+
+        // ==========================================
+        // ASSIGN GUIDE LOGIC
+        // ==========================================
+        async function openAssignModal(scheduleId) {
+            document.getElementById('targetScheduleId').innerText = 'Schedule ID: SD-' + scheduleId;
+            document.getElementById('targetScheduleId').dataset.sid = scheduleId;
+            document.getElementById('assignModal').style.display = 'flex';
+
+            try {
+                const select = document.getElementById('guideSelect');
+                select.innerHTML = '<option value="">-- Đang tải danh sách Guide --</option>';
+                const res = await TB.apiFetch('/api/v1/staff/guides');
+                select.innerHTML = '<option value="">-- Chọn Guide --</option>';
+                if (res.code === 200 && res.data) {
+                    res.data.forEach(g => {
+                        const opt = document.createElement('option');
+                        opt.value = g.id;
+                        opt.textContent = g.fullName + ' (' + g.email + ')';
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading guides:', e);
+                document.getElementById('guideSelect').innerHTML = '<option value="">Lỗi khi tải danh sách Guide</option>';
+            }
+        }
+
+        function closeAssignModal() {
+            document.getElementById('assignModal').style.display = 'none';
+        }
+
+        async function submitAssignment() {
+            const sid = document.getElementById('targetScheduleId').dataset.sid;
+            const gid = document.getElementById('guideSelect').value;
+
+            if (!gid) {
+                if (typeof showToast === 'function') showToast('Vui lòng chọn 1 Guide!', 'error');
+                return;
+            }
+
+            try {
+                const res = await TB.apiFetch('/api/v1/staff/schedules/' + sid + '/assign-guide?guideId=' + gid, {
+                    method: 'PATCH'
+                });
+
+                if (res.code === 200) {
+                    if (typeof showToast === 'function') showToast('Gán Guide thành công!', 'success');
+                    closeAssignModal();
+                    const selectEl = document.getElementById('guideSelect');
+                    const selectedText = selectEl.options[selectEl.selectedIndex].text.split('(')[0].trim();
+                    allBookings.forEach(b => {
+                        if (b.scheduleId == sid) {
+                            b.guideFullName = selectedText;
+                        }
+                    });
+                    renderBookingsPage();
+                } else {
+                    if (typeof showToast === 'function') showToast('Lỗi gán Guide: ' + res.message, 'error');
+                }
+            } catch (e) {
+                const serverMsg = e.message || 'Lỗi hệ thống khi gán Guide.';
+                if (typeof showToast === 'function') showToast('❌ ' + serverMsg, 'error');
+                else alert('❌ ' + serverMsg);
+                console.error('[AssignGuide]', e);
+            }
+        }
+
+        let currentCancelId = null;
+
+        function openCancelModal(id) {
+            currentCancelId = id;
+            document.getElementById('cancelReason').value = '';
+            document.getElementById('confirmCancelBtn').disabled = true;
+            document.getElementById('cancelModal').style.display = 'flex';
+        }
+
+        function closeCancelModal() {
+            document.getElementById('cancelModal').style.display = 'none';
+            currentCancelId = null;
+        }
+
+        function onReasonChange() {
+            const reason = document.getElementById('cancelReason').value.trim();
+            document.getElementById('confirmCancelBtn').disabled = reason.length === 0;
+        }
+
+        async function submitCancelBooking() {
+            if (!currentCancelId) return;
+            const reason = document.getElementById('cancelReason').value.trim();
+            if (!reason) return;
+
+            try {
+                await TB.apiFetch(`/api/v1/admin/bookings/${currentCancelId}/cancel`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ reason: reason })
+                });
+                showToast('Hủy tour thành công', 'success');
+                closeCancelModal();
+                loadBookings(currentPage);
+            } catch (err) {
+                showToast('Lỗi khi hủy: ' + err.message, 'error');
+            }
+        }
+
+        let currentCancelScheduleId = null;
+
+        async function openCancelScheduleModal(scheduleId, tourName) {
+            currentCancelScheduleId = scheduleId;
+            document.getElementById('cancelScheduleTarget').textContent = `Schedule #${scheduleId} — ${tourName}`;
+            document.getElementById('cancelScheduleWarning').textContent = 'Đang tải số lượng khách...';
+            document.getElementById('cancelScheduleModal').style.display = 'flex';
+
+            try {
+                const res = await TB.apiFetch('/api/v1/bookings');
+                const activeCount = (res.data || []).filter(
+                    b => b.scheduleId == scheduleId && ACTIVE_BOOKING_STATUSES.includes(b.status)
+                ).length;
+                document.getElementById('cancelScheduleWarning').textContent =
+                    `Hành động này sẽ hủy TOÀN BỘ ${activeCount} khách trong chuyến đi này và hoàn tiền cho tất cả, không thể hoàn tác.`;
+            } catch (e) {
+                document.getElementById('cancelScheduleWarning').textContent =
+                    'Hành động này sẽ hủy TOÀN BỘ khách trong chuyến đi này và hoàn tiền cho tất cả, không thể hoàn tác.';
+            }
+        }
+
+        function closeCancelScheduleModal() {
+            document.getElementById('cancelScheduleModal').style.display = 'none';
+            currentCancelScheduleId = null;
+        }
+
+        async function submitCancelSchedule() {
+            if (!currentCancelScheduleId) return;
+            if (!confirm('Bạn chắc chắn muốn hủy TOÀN BỘ chuyến đi này? Hành động không thể hoàn tác.')) return;
+
+            try {
+                await TB.apiFetch(`/api/v1/admin/tour-schedules/${currentCancelScheduleId}/cancel`, {
+                    method: 'PUT'
+                });
+                showToast('Hủy toàn bộ chuyến đi thành công', 'success');
+                closeCancelScheduleModal();
+                loadBookings(currentPage);
+            } catch (err) {
+                showToast('Lỗi khi hủy chuyến: ' + err.message, 'error');
             }
         }
 
@@ -328,6 +537,7 @@
             background: #f5f5f5;
         }
     </style>
+    <script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>

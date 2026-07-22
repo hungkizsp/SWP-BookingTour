@@ -214,6 +214,9 @@
             </div>
 
             <div id="bookingList"></div>
+            
+            <!-- Pagination Controls -->
+            <div id="paginationControls" style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;"></div>
 
           </div>
         </div>
@@ -379,47 +382,233 @@
   </div>
 
   <script src="../assets/js/api.js"></script>
+  <!-- Modal Đổi Ngày Khởi Hành -->
+  <div class="modal-overlay" id="rescheduleModal">
+    <div class="modal-box" style="max-width: 600px;">
+      <h3 style="margin-top:0;">Đổi ngày khởi hành</h3>
+      <p style="font-size:0.9rem; color:var(--text-faint);">Vui lòng chọn lịch trình mới cho chuyến đi của bạn.</p>
+      
+      <div id="rescheduleSchedulesList" style="margin-top:16px; display:flex; flex-direction:column; gap:12px; max-height:300px; overflow-y:auto; padding-right:10px;">
+          <!-- Lịch trình sẽ được load vào đây -->
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px;">
+        <button class="btn btn-secondary" onclick="closeModals()">Đóng</button>
+        <button class="btn" style="background:#8b5cf6; color:white;" onclick="confirmReschedule()">Xác Nhận Đổi Ngày</button>
+      </div>
+    </div>
+  </div>
+
   <script src="../assets/js/notification-bell.js"></script>
   <script>
     let allBookings = [];
     let currentBooking = null;
+    let rescheduleBookingId = null;
+    let rescheduleSelectedScheduleId = null;
+    
+    // Phân trang
+    let currentPage = 0;
+    const PAGE_SIZE = 5;
+    let currentFilter = 'all';
 
     const $ = (id) => document.getElementById(id);
+
+    async function openRescheduleModal(bookingId, tourId) {
+        rescheduleBookingId = bookingId;
+        rescheduleSelectedScheduleId = null;
+
+        $('rescheduleSchedulesList').innerHTML = '<div style="text-align:center;padding:20px;">Đang tải danh sách lịch trình...</div>';
+        $('rescheduleModal').style.display = 'flex';
+
+        try {
+            // Call the dedicated server-filtered endpoint — VN timezone-aware,
+            // excludes current schedule, already slot-checked.
+            const res = await TB.apiFetch(`/api/v1/bookings/${bookingId}/reschedule-candidates`);
+            const schedules = res?.data || [];
+
+            const listEl = $('rescheduleSchedulesList');
+            if (schedules.length === 0) {
+                listEl.innerHTML = '<div style="padding:10px; color:#ef4444; background:#fef2f2; border:1px solid #fca5a5; border-radius:6px;">Hiện không có lịch trình nào khác phù hợp cho tour này.</div>';
+            } else {
+                listEl.innerHTML = schedules.map(s => `
+                    <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.1); border-radius:8px; cursor:pointer;" onclick="rescheduleSelectedScheduleId = ${s.id}">
+                        <input type="radio" name="newScheduleRadio" value="${s.id}" style="width:18px; height:18px;" />
+                        <div>
+                            <strong style="display:block; color:#0369a1;">Khởi hành: ${s.startDate} ${s.departureTime ? s.departureTime.substring(0,5) : ''}</strong>
+                            <span style="font-size:0.85rem; color:#475569;">Còn trống: ${s.availableSlots} chỗ &nbsp;|&nbsp; Trở về: ${s.endDate || 'N/A'}</span>
+                        </div>
+                    </label>
+                `).join('');
+            }
+        } catch (e) {
+            $('rescheduleSchedulesList').innerHTML = `<div style="color:#ef4444;">Lỗi lấy lịch trình: ${e.message}</div>`;
+        }
+    }
+
+    async function confirmReschedule() {
+        if (!rescheduleSelectedScheduleId) {
+            alert('Vui lòng chọn một lịch trình mới!');
+            return;
+        }
+        if (!confirm('Bạn có chắc chắn muốn đổi sang lịch trình này?')) return;
+
+        try {
+            const btn = document.querySelector('#rescheduleModal .btn:not(.btn-secondary)');
+            btn.innerText = 'Đang xử lý...';
+            btn.disabled = true;
+
+            await TB.apiFetch('/api/v1/bookings/reschedule', {
+                method: 'POST',
+                body: JSON.stringify({
+                    bookingId: rescheduleBookingId,
+                    newScheduleId: rescheduleSelectedScheduleId
+                })
+            });
+
+            alert('Đổi ngày khởi hành thành công!');
+            closeModals();
+            loadBookings();
+        } catch (e) {
+            alert('Đổi ngày thất bại: ' + e.message);
+        } finally {
+            const btn = document.querySelector('#rescheduleModal .btn:not(.btn-secondary)');
+            btn.innerText = 'Xác Nhận Đổi Ngày';
+            btn.disabled = false;
+        }
+    }
 
     function formatCurrency(v) {
       const n = Number(v || 0);
       return n.toLocaleString('vi-VN') + ' ₫';
     }
 
-    function renderItinerary(itineraryStr) {
-      if (!itineraryStr) return '';
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function isNewApiItinerary(value) {
+      return String(value || '').trim().toUpperCase() === 'NEW_API';
+    }
+
+    function resolveTourId(booking) {
+      if (!booking) return null;
+      return booking.tourId
+        || (booking.schedule && (booking.schedule.tourId || (booking.schedule.tour && booking.schedule.tour.id)))
+        || null;
+    }
+
+    function buildItineraryDaysHtml(days) {
+      if (!days || days.length === 0) {
+        return '<div style="color:#94a3b8; font-style:italic;">Chưa có thông tin lịch trình chi tiết.</div>';
+      }
+      return days.map(day => {
+        const meta = [
+          day.transportation ? `🚌 ${escapeHtml(day.transportation)}` : '',
+          day.meals ? `🍽️ ${escapeHtml(day.meals)}` : '',
+          day.accommodation ? `🏨 ${escapeHtml(day.accommodation)}` : ''
+        ].filter(Boolean).join(' &nbsp;|&nbsp; ');
+        const highlights = day.highlights
+          ? `<div style="font-size:0.85rem; color:#64748b; margin-top:4px;">📍 ${escapeHtml(day.highlights)}</div>`
+          : '';
+        const image = day.imageUrl
+          ? `<img src="${TB.normalizeImageUrl(day.imageUrl)}" alt="${escapeHtml(day.title || '')}" style="width:100%; max-height:160px; object-fit:cover; border-radius:6px; margin:8px 0;" onerror="this.style.display='none'">`
+          : '';
+        return `
+          <div style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px dashed #e2e8f0;">
+            <strong style="color:var(--primary); font-size:0.95rem;">Ngày ${day.dayNumber}: ${escapeHtml(day.title || '')}</strong>
+            ${meta ? `<div style="font-size:0.82rem; color:#64748b; margin-top:4px;">${meta}</div>` : ''}
+            ${highlights}
+            ${image}
+            <div style="margin-top:6px; padding-left:10px; border-left:3px solid #cbd5e1; color:#334155; white-space:pre-line; font-size:0.9rem;">${escapeHtml(day.description || '')}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function itineraryContainerStyle() {
+      return 'margin-top:16px; font-size:0.9rem; color:#475569; max-height:250px; overflow-y:auto; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;';
+    }
+
+    function itineraryLoadingBlock(tourId) {
+      return `<div class="itinerary-block" data-tour-id="${tourId}" style="${itineraryContainerStyle()}">
+          <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình chi tiết:</strong>
+          <div class="itinerary-loading" style="color:#94a3b8; font-style:italic;">Đang tải lịch trình...</div>
+        </div>`;
+    }
+
+    function renderItinerary(itineraryStr, tourId) {
+      const normalized = String(itineraryStr || '').trim();
+
+      if (isNewApiItinerary(normalized) || !normalized) {
+        if (!tourId) return '';
+        return itineraryLoadingBlock(tourId);
+      }
+
       try {
-        const items = JSON.parse(itineraryStr);
+        const items = JSON.parse(normalized);
         if (Array.isArray(items)) {
           const listHtml = items.map(item => `
             <div style="margin-bottom:12px;">
-              <strong style="color:var(--primary); font-size:0.95rem;">${item.title || ''}</strong>
-              <div style="margin-top:4px; padding-left:10px; border-left:3px solid #cbd5e1; color:#334155;">${item.content || ''}</div>
+              <strong style="color:var(--primary); font-size:0.95rem;">${escapeHtml(item.title || '')}</strong>
+              <div style="margin-top:4px; padding-left:10px; border-left:3px solid #cbd5e1; color:#334155;">${escapeHtml(item.content || '')}</div>
             </div>
           `).join('');
-          return `<div style="margin-top:16px; font-size:0.9rem; color:#475569; max-height:250px; overflow-y:auto; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
-                    <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình chi tiết:</strong>
-                    ${listHtml}
-                  </div>`;
+          return `<div style="${itineraryContainerStyle()}">
+            <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình chi tiết:</strong>
+            ${listHtml}
+          </div>`;
         }
       } catch (e) {
-        return `<div style="margin-top:16px; font-size:0.9rem; color:#475569; max-height:150px; overflow-y:auto; padding:12px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
-                  <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình:</strong>
-                  ${itineraryStr.replace(/\\n/g, '<br>')}
-                </div>`;
+        if (isNewApiItinerary(normalized)) {
+          if (!tourId) return '';
+          return itineraryLoadingBlock(tourId);
+        }
+        return `<div style="${itineraryContainerStyle()}">
+          <strong style="display:block; margin-bottom:10px; font-size:1rem; color:#0f172a;">Lịch trình:</strong>
+          ${escapeHtml(normalized).replace(/\n/g, '<br>')}
+        </div>`;
       }
       return '';
+    }
+
+    const itineraryCache = new Map();
+
+    async function fetchTourItineraryDays(tourId) {
+      const key = String(tourId);
+      if (itineraryCache.has(key)) return itineraryCache.get(key);
+      const res = await TB.apiFetch(`/api/v1/tours/${tourId}/itinerary`);
+      const days = res?.data || [];
+      itineraryCache.set(key, days);
+      return days;
+    }
+
+    async function loadItineraryBlocks() {
+      const blocks = document.querySelectorAll('.itinerary-block[data-tour-id]');
+      await Promise.all([...blocks].map(async (block) => {
+        const tourId = block.dataset.tourId;
+        if (!tourId) return;
+        try {
+          const days = await fetchTourItineraryDays(tourId);
+          block.querySelector('.itinerary-loading')?.remove();
+          block.insertAdjacentHTML('beforeend', buildItineraryDaysHtml(days));
+        } catch (e) {
+          const loading = block.querySelector('.itinerary-loading');
+          if (loading) {
+            loading.textContent = 'Không tải được lịch trình. Vui lòng thử lại sau.';
+            loading.style.color = '#ef4444';
+          }
+        }
+      }));
     }
 
     function statusBadge(status) {
       const s = String(status || '').toUpperCase();
       if (s === 'CANCELLED') return { cls: 'cancelled', label: 'Đã hủy' };
       if (s === 'EXPIRED') return { cls: 'cancelled', label: 'Hết hạn thanh toán' };
+      if (s === 'COMPANY_CANCELED') return { cls: 'operator-cancelled', label: '🚫 Đã hủy bởi Ban quản lý' };
       if (s === 'CANCELLED_BY_OPERATOR') return { cls: 'operator-cancelled', label: '🚫 Hủy bởi Nhà điều hành' };
       if (s === 'REFUNDED') return { cls: 'refunded', label: '💰 Đã hoàn tiền' };
       if (s === 'REFUND_REQUESTED') return { cls: 'refunded', label: '⏳ Đang chờ hoàn tiền' };
@@ -441,8 +630,9 @@
         const bStatus = String(b.status || '').toUpperCase();
         const canCancel = bStatus === 'PENDING' || bStatus === 'CONFIRMED';
         const isCompleted = bStatus === 'COMPLETED';
-        const isOperatorCancelled = bStatus === 'CANCELLED_BY_OPERATOR';
+        const isOperatorCancelled = bStatus === 'CANCELLED_BY_OPERATOR' || bStatus === 'COMPANY_CANCELED';
         const isRefunded = bStatus === 'REFUNDED';
+        const isCompanyCanceled = bStatus === 'COMPANY_CANCELED';
         // b.reviewed is a boolean flag returned by the backend booking response
         const alreadyReviewed = isCompleted && Boolean(b.reviewed);
 
@@ -458,19 +648,22 @@
           }
         }
 
-        // Operator-Cancellation Banner (MODULE 5 — CANCELLED_BY_OPERATOR)
+        // Operator/Company-Cancellation Banner
+        const cancelReason = b.cancellationReason || 'Hủy do sự cố khách quan từ phía công ty.';
         const operatorCancelBanner = (isOperatorCancelled || isRefunded) ? `
           <div class="operator-cancel-banner">
             <div class="banner-icon">🚨</div>
             <div>
-              <div class="banner-title">Tour Cancelled by Operator</div>
+              <div class="banner-title">${isCompanyCanceled ? 'Đã hủy bởi Ban quản lý' : 'Tour Cancelled by Operator'}</div>
               <div class="banner-body">
-                This tour schedule was automatically cancelled because a tour guide could not be assigned before the scheduled departure.
-                <br><strong>Reason:</strong> Guide Not Assigned
-                <br><strong>Total Paid:</strong> ${formatCurrency(b.totalPrice)}
+                ${isCompanyCanceled
+                  ? `Lịch trình tour của quý khách đã bị hủy bởi ban quản lý.<br><strong>Lý do hủy:</strong> ${cancelReason}`
+                  : `This tour schedule was automatically cancelled because a tour guide could not be assigned before the scheduled departure.<br><strong>Reason:</strong> Guide Not Assigned`
+                }
+                <br><strong>${isCompanyCanceled ? 'Tổng tiền đã thanh toán' : 'Total Paid'}:</strong> ${formatCurrency(b.totalPrice)}
               </div>
               <div style="margin-top:8px;">
-                <span class="refund-chip">💰 Refund Status: ${isRefunded ? 'Refunded' : 'Processing'}</span>
+                <span class="refund-chip">💰 ${isCompanyCanceled ? 'Trạng thái hoàn tiền' : 'Refund Status'}: ${isRefunded ? (isCompanyCanceled ? 'Đã hoàn tiền' : 'Refunded') : (isCompanyCanceled ? 'Đang xử lý' : 'Processing')}</span>
                 ${isRefunded ? `<span class="refund-chip" style="background:#dcfce7;color:#166534;border-color:#86efac;">✅ Full Refund: ${formatCurrency(b.totalPrice)}</span>` : ''}
               </div>
             </div>
@@ -519,36 +712,70 @@
                         ${renderGuideCard(b, false)}
                     </div>
                 </div>
-                ${renderItinerary(b.tourItinerary)}
+                ${renderItinerary(b.tourItinerary, resolveTourId(b))}
                 ${operatorCancelBanner}
             </div>
             <div class="booking-actions">
               <button class="btn btn-secondary" onclick="downloadInvoice(${b.id})">Tải Hóa Đơn PDF</button>
               <button class="btn" style="background:#059669; color:white; border:none;" onclick="openDetailsModal(${b.id})">Xem Chi Tiết</button>
               ${canCancel ? `<button class="btn btn-secondary" style="color:#ef4444; border-color:#fee2e2; background:#fef2f2;" onclick="openCancelModal(${b.id})">Hủy Đặt Tour</button>` : ''}
+              ${(bStatus === 'CONFIRMED' || bStatus === 'PAID') && new Date(b.departureDate || b.schedule?.startDate) > new Date() ? `<button class="btn" style="background:#8b5cf6; color:white; border:none;" onclick="openRescheduleModal(${b.id}, ${b.tourId || (b.schedule && b.schedule.tour ? b.schedule.tour.id : null)})">Đổi ngày khởi hành</button>` : ''}
               ${reviewBtn}
             </div>
             ${repaymentBtn}
           </div>
         `;
       }).join('');
+      loadItineraryBlocks();
     }
 
+    function renderPagination(totalPages) {
+        const container = $('paginationControls');
+        if (!container) return;
+        
+        if (totalPages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let html = `<button class="btn btn-secondary" ${currentPage === 0 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">❮ Trước</button>`;
+        html += `<span style="display:flex; align-items:center; font-weight:600; margin: 0 10px;">Trang ${currentPage + 1} / ${totalPages}</span>`;
+        html += `<button class="btn btn-secondary" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Tiếp ❯</button>`;
+        
+        container.innerHTML = html;
+    }
+
+    window.goToPage = function(page) {
+        currentPage = page;
+        loadBookings();
+    };
+
     function applyFilter(kind) {
-      const k = String(kind || 'all');
-      if (k === 'pending') {
-        render(allBookings.filter(b => ['PENDING', 'CONFIRMED', 'REFUND_REQUESTED', 'IN_PROGRESS'].includes(String(b.status || '').toUpperCase())));
-        return;
+      currentFilter = kind;
+      currentPage = 0; // reset page khi đổi filter
+      
+      // Update UI active state
+      ['filterAll', 'filterPending', 'filterDone', 'filterCancelled'].forEach(id => {
+        $(id).className = 'btn btn-secondary';
+        $(id).style.background = '';
+        $(id).style.color = '';
+      });
+      
+      const activeBtnMap = {
+          'all': 'filterAll',
+          'pending': 'filterPending',
+          'done': 'filterDone',
+          'cancelled': 'filterCancelled'
+      };
+      
+      const activeBtn = $(activeBtnMap[kind]);
+      if (activeBtn) {
+          activeBtn.className = 'btn';
+          activeBtn.style.background = 'var(--primary)';
+          activeBtn.style.color = 'white';
       }
-      if (k === 'done') {
-        render(allBookings.filter(b => ['COMPLETED', 'SUCCESS'].includes(String(b.status || '').toUpperCase())));
-        return;
-      }
-      if (k === 'cancelled') {
-        render(allBookings.filter(b => ['CANCELLED', 'EXPIRED', 'CANCELLED_BY_OPERATOR', 'REFUNDED', 'REFUND_REQUESTED'].includes(String(b.status || '').toUpperCase())));
-        return;
-      }
-      render(allBookings);
+      
+      loadBookings();
     }
 
     async function loadBookings() {
@@ -557,9 +784,26 @@
         TB.goToLogin('Vui lòng đăng nhập để xem lịch sử đặt tour.');
         return;
       }
-      const res = await TB.apiFetch(`/api/v1/bookings/user/${encodeURIComponent(user.id)}`, { method: 'GET' });
-      allBookings = res?.data || [];
-      applyFilter('all');
+      
+      let statusQuery = '';
+      if (currentFilter === 'pending') {
+          statusQuery = '&status=PENDING&status=CONFIRMED&status=REFUND_REQUESTED&status=IN_PROGRESS';
+      } else if (currentFilter === 'done') {
+          statusQuery = '&status=COMPLETED&status=SUCCESS';
+      } else if (currentFilter === 'cancelled') {
+          statusQuery = '&status=CANCELLED&status=EXPIRED&status=CANCELLED_BY_OPERATOR&status=COMPANY_CANCELED&status=REFUNDED';
+      }
+
+      try {
+          const res = await TB.apiFetch(`/api/v1/bookings/history?page=${currentPage}&size=${PAGE_SIZE}${statusQuery}`, { method: 'GET' });
+          if (res?.data) {
+              allBookings = res.data.content || [];
+              render(allBookings);
+              renderPagination(res.data.totalPages || 1);
+          }
+      } catch (err) {
+          $('bookingList').innerHTML = `<div class="card panel" style="border-color:#fecaca;color:#991b1b;">${err.message || 'Không tải được lịch sử đặt tour'}</div>`;
+      }
     }
 
     async function downloadInvoice(bookingId) {
@@ -686,11 +930,15 @@
       ].filter(Boolean).join(' • ');
 
       const avatarSize = detailed ? 60 : 50;
+      const DEFAULT_AVATAR = '../assets/images/default-avatar.png';
+      const avatarSrc = (b.guideAvatar && b.guideAvatar.trim()) ? b.guideAvatar : DEFAULT_AVATAR;
 
       return `
     <div style="display:flex; align-items:center; gap: 12px; margin-top:8px; padding:12px; background:#f0fdf4; border-radius:8px; border:1px solid #bbf7d0;">
-      <img src="${b.guideAvatar || 'https://via.placeholder.com/' + avatarSize}" alt="Avatar"
-        style="width:${avatarSize}px; height:${avatarSize}px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+      <img src="${avatarSrc}"
+           alt="Avatar"
+           onerror="this.onerror=null;this.src='${DEFAULT_AVATAR}';"
+           style="width:${avatarSize}px; height:${avatarSize}px; border-radius:50%; object-fit:cover; flex-shrink:0;">
       <div>
         <div style="font-weight:600; color:#0f172a; font-size:${detailed ? '1.05rem' : '1rem'};">${b.guideFullName}</div>
         <div style="font-size:0.85rem; color:#166534; margin-top:2px;">📞 ${b.guidePhone || 'N/A'}</div>
@@ -701,6 +949,7 @@
   `;
     }
 
+
     async function openDetailsModal(bookingId) {
       $('detailsModal').style.display = 'flex';
       $('detailsContent').innerHTML = '<div style="text-align:center; padding: 20px;">Đang tải dữ liệu...</div>';
@@ -710,13 +959,37 @@
         if (!b) throw new Error("Không tìm thấy thông tin");
 
         let itHtml = '';
-        try {
-          const items = JSON.parse(b.tourItinerary || '[]');
-          if (Array.isArray(items)) {
-            itHtml = items.map(item => `<div style="margin-bottom:8px;"><strong>${item.title || ''}</strong><br><span style="color:#555;">${item.content || ''}</span></div>`).join('');
+        const detailTourId = resolveTourId(b);
+        const normalizedItinerary = String(b.tourItinerary || '').trim();
+        if (isNewApiItinerary(normalizedItinerary) || !normalizedItinerary) {
+          if (detailTourId) {
+            try {
+              const days = await fetchTourItineraryDays(detailTourId);
+              itHtml = buildItineraryDaysHtml(days);
+            } catch (e) {
+              itHtml = '<span style="color:#ef4444;">Không tải được lịch trình.</span>';
+            }
+          } else {
+            itHtml = '<span style="color:#94a3b8;">Chưa có thông tin lịch trình.</span>';
           }
-        } catch (e) {
-          itHtml = b.tourItinerary ? b.tourItinerary.replace(/\n/g, '<br>') : '';
+        } else {
+          try {
+            const items = JSON.parse(normalizedItinerary);
+            if (Array.isArray(items)) {
+              itHtml = items.map(item => `<div style="margin-bottom:8px;"><strong>${escapeHtml(item.title || '')}</strong><br><span style="color:#555;">${escapeHtml(item.content || '')}</span></div>`).join('');
+            }
+          } catch (e) {
+            if (isNewApiItinerary(normalizedItinerary) && detailTourId) {
+              try {
+                const days = await fetchTourItineraryDays(detailTourId);
+                itHtml = buildItineraryDaysHtml(days);
+              } catch (err) {
+                itHtml = '<span style="color:#ef4444;">Không tải được lịch trình.</span>';
+              }
+            } else {
+              itHtml = escapeHtml(normalizedItinerary).replace(/\n/g, '<br>');
+            }
+          }
         }
 
         const detailsHtml = `
@@ -747,6 +1020,7 @@
     function closeModals() {
       $('cancelModal').style.display = 'none';
       $('reviewModal').style.display = 'none';
+      $('rescheduleModal').style.display = 'none';
       if ($('detailsModal')) $('detailsModal').style.display = 'none';
       if ($('paymentMethodModal')) $('paymentMethodModal').style.display = 'none';
       if ($('bankName')) $('bankName').value = '';

@@ -21,6 +21,7 @@ import com.tourbooking.booking.backend.service.LoyaltyService;
 import com.tourbooking.booking.backend.service.MailService;
 import com.tourbooking.booking.backend.service.PayOSService;
 import com.tourbooking.booking.backend.service.PaymentService;
+import com.tourbooking.booking.backend.service.TourChatGroupService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -57,6 +58,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final MailService mailService;
     private final ObjectMapper objectMapper;
     private final DiscountRepository discountRepository;
+    private final TourChatGroupService tourChatGroupService;
 
     @Override
     @Transactional
@@ -121,7 +123,12 @@ public class PaymentServiceImpl implements PaymentService {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
 
-        BigDecimal payAmount = request.getAmount() != null ? request.getAmount() : booking.getTotalPrice();
+        BigDecimal baseAmount = booking.getTotalPrice();
+        if (booking.getDiscountAmount() != null) baseAmount = baseAmount.subtract(booking.getDiscountAmount());
+        if (booking.getLoyaltyDiscountAmount() != null) baseAmount = baseAmount.subtract(booking.getLoyaltyDiscountAmount());
+        if (baseAmount.compareTo(BigDecimal.ZERO) < 0) baseAmount = BigDecimal.ZERO;
+        
+        BigDecimal payAmount = request.getAmount() != null ? request.getAmount() : baseAmount;
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
@@ -163,7 +170,12 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
         Payment payment = getOrCreatePayment(booking);
-        payment.setAmount(booking.getTotalPrice());
+        BigDecimal payAmount = booking.getTotalPrice();
+        if (booking.getDiscountAmount() != null) payAmount = payAmount.subtract(booking.getDiscountAmount());
+        if (booking.getLoyaltyDiscountAmount() != null) payAmount = payAmount.subtract(booking.getLoyaltyDiscountAmount());
+        if (payAmount.compareTo(BigDecimal.ZERO) < 0) payAmount = BigDecimal.ZERO;
+        
+        payment.setAmount(payAmount);
         payment.setPaymentMethod("CASH");
         payment.setTransactionCode("CASH-" + System.currentTimeMillis());
         payment.setStatus(PaymentStatus.PENDING);
@@ -193,6 +205,9 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         BigDecimal payAmount = booking.getTotalPrice();
+        if (booking.getDiscountAmount() != null) payAmount = payAmount.subtract(booking.getDiscountAmount());
+        if (booking.getLoyaltyDiscountAmount() != null) payAmount = payAmount.subtract(booking.getLoyaltyDiscountAmount());
+        if (payAmount.compareTo(BigDecimal.ZERO) < 0) payAmount = BigDecimal.ZERO;
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
         }
@@ -560,6 +575,17 @@ public class PaymentServiceImpl implements PaymentService {
                 awardLoyaltyAndSendMail(booking, payment.getAmount());
                 savePaymentLog(payment, "Manual transfer confirmed by operator");
             }
+            // Auto-add to tour group chat
+            try {
+                if (booking.getSchedule() != null && booking.getUser() != null) {
+                    com.tourbooking.booking.backend.model.entity.TourChatGroup group =
+                            tourChatGroupService.getOrCreateGroup(booking.getSchedule().getId());
+                    tourChatGroupService.addMember(group.getId(), booking.getUser().getId());
+                }
+            } catch (Exception e) {
+                log.warn("[GroupChat] Could not add user to tour group chat for booking {}: {}",
+                        booking.getId(), e.getMessage());
+            }
         } else if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.IN_PROGRESS && booking.getStatus() != BookingStatus.COMPLETED) {
             booking.setStatus(BookingStatus.CONFIRMED);
             bookingRepository.save(booking);
@@ -615,6 +641,17 @@ public class PaymentServiceImpl implements PaymentService {
         paymentRepository.save(payment);
         awardLoyaltyAndSendMail(booking, payment.getAmount());
         savePaymentLog(payment, logMessage);
+        // Auto-add to tour group chat
+        try {
+            if (booking.getSchedule() != null && booking.getUser() != null) {
+                com.tourbooking.booking.backend.model.entity.TourChatGroup group =
+                        tourChatGroupService.getOrCreateGroup(booking.getSchedule().getId());
+                tourChatGroupService.addMember(group.getId(), booking.getUser().getId());
+            }
+        } catch (Exception e) {
+            log.warn("[GroupChat] Could not add user to tour group chat for booking {}: {}",
+                    booking.getId(), e.getMessage());
+        }
     }
 
     private static boolean isPayOsPaidFromWebhook(JsonNode root, JsonNode data) {

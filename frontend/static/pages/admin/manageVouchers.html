@@ -1,0 +1,327 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Vouchers - TourBooking</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/admin-common.css">
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/toast.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .panel { background: var(--bg-white); border-radius: 1.25rem; padding: 1.5rem; border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-top: 2rem; }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+        .panel-title { font-size: 1.2rem; font-weight: 700; color: var(--text-main); }
+        .btn-primary { background: #10b981; color: white; padding: 8px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-primary:hover { background: #059669; }
+        .btn-edit { background: #3b82f6; color: white; padding: 6px 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+        .btn-delete { background: #ef4444; color: white; padding: 6px 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.85rem; }
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+        th { background: #f8fafc; font-weight: 600; color: #475569; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; }
+        .badge-active { background: #dcfce7; color: #166534; }
+        .badge-inactive { background: #fee2e2; color: #991b1b; }
+        
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal { background: white; padding: 2rem; border-radius: 1rem; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; display: block; position: relative; }
+        .modal-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: #475569; }
+        .form-group input, .form-group select { width: 100%; padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; }
+        .btn-cancel { background: #f1f5f9; color: #475569; padding: 8px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar"></aside>
+
+        <main class="main-content">
+            <header>
+                <div>
+                    <h1>Manage Vouchers</h1>
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin-top:0.5rem;">Quản lý mã giảm giá, khuyến mãi cho khách hàng.</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <span id="userInfo" style="font-weight:600; font-size:0.9rem;"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Đăng xuất</button>
+                </div>
+            </header>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">Danh sách Voucher</span>
+                    <button class="btn-primary" onclick="openModal()">+ Tạo Voucher Mới</button>
+                </div>
+                
+                <div style="margin-bottom: 1rem;">
+                    <select id="filterActive" onchange="loadVouchers()" style="padding: 0.5rem; border: 1px solid #cbd5e1; border-radius: 0.5rem;">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="true">Đang hoạt động</option>
+                        <option value="false">Đã vô hiệu hóa</option>
+                    </select>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Loại</th>
+                                <th>Giá trị</th>
+                                <th>Đã dùng / Giới hạn</th>
+                                <th>Hạn dùng</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="voucherTableBody">
+                            <tr><td colspan="7" style="text-align: center;">Đang tải dữ liệu...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Form -->
+    <div class="modal-overlay" id="voucherModal">
+        <div class="modal">
+            <h2 class="modal-title" id="modalTitle">Tạo Voucher Mới</h2>
+            <form id="voucherForm" onsubmit="submitForm(event)">
+                <input type="hidden" id="voucherId">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Mã Voucher (Code) *</label>
+                        <input type="text" id="vCode" required style="text-transform: uppercase;">
+                    </div>
+                    <div class="form-group">
+                        <label>Trạng thái</label>
+                        <select id="vIsActive">
+                            <option value="true">Hoạt động</option>
+                            <option value="false">Vô hiệu hóa</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Loại giảm giá *</label>
+                        <select id="vDiscountType" required>
+                            <option value="PERCENTAGE">Phần trăm (%)</option>
+                            <option value="FIXED_AMOUNT">Số tiền cố định</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Giá trị giảm *</label>
+                        <input type="number" id="vValue" required step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Giảm tối đa (cho %) - Bỏ trống nếu ko có</label>
+                        <input type="number" id="vMaxDiscountAmount" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Đơn tối thiểu - Bỏ trống nếu ko có</label>
+                        <input type="number" id="vMinBookingAmount" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>Giới hạn số lần dùng - Bỏ trống nếu vô hạn</label>
+                        <input type="number" id="vUsageLimit">
+                    </div>
+                    <div class="form-group">
+                        <label>Áp dụng cho Tour ID - Bỏ trống nếu tất cả</label>
+                        <input type="number" id="vApplicableTourId">
+                    </div>
+                    <div class="form-group">
+                        <label>Ngày bắt đầu</label>
+                        <input type="datetime-local" id="vStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label>Ngày kết thúc</label>
+                        <input type="datetime-local" id="vEndDate">
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Hủy</button>
+                    <button type="submit" class="btn-primary">Lưu Voucher</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Auth Check
+        try {
+            const userStr = sessionStorage.getItem('user');
+            if (!userStr) { window.location.href = '/pages/auth/login.html'; throw new Error(); }
+            const user = JSON.parse(userStr);
+            if (!user || user.role !== 'ADMIN') { window.location.href = '/pages/auth/login.html'; throw new Error(); }
+            document.getElementById('userInfo').innerText = user.fullName || user.email || 'Admin';
+        } catch (e) {
+            setTimeout(() => window.location.href = '/pages/auth/login.html', 1500);
+        }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('token');
+            window.location.href = '/pages/auth/login.html';
+        });
+
+        let allVouchers = [];
+
+        async function loadVouchers() {
+            try {
+                const activeOnly = document.getElementById('filterActive').value;
+                let url = '/api/v1/admin/vouchers?size=100';
+                if (activeOnly !== '') {
+                    url += `&activeOnly=${activeOnly}`;
+                }
+                const res = await TB.apiFetch(url);
+                allVouchers = res.data.content || [];
+                renderTable();
+            } catch (error) {
+                console.error(error);
+                if (typeof showToast === 'function') showToast('Lỗi tải danh sách voucher', 'error');
+            }
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('voucherTableBody');
+            if (allVouchers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center;">Không có voucher nào.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            allVouchers.forEach(v => {
+                const typeStr = v.discountType === 'PERCENTAGE' ? '%' : 'VND';
+                const valStr = v.discountType === 'PERCENTAGE' ? v.value + '%' : v.value.toLocaleString() + 'đ';
+                const limitStr = v.usageLimit ? `${v.currentUsage} / ${v.usageLimit}` : `${v.currentUsage} / ∞`;
+                
+                let dateStr = '-';
+                if (v.startDate || v.endDate) {
+                    const s = v.startDate ? new Date(v.startDate).toLocaleDateString() : '...';
+                    const e = v.endDate ? new Date(v.endDate).toLocaleDateString() : '...';
+                    dateStr = `${s} → ${e}`;
+                }
+
+                let statusBadge = v.isActive 
+                    ? '<span class="badge badge-active">Hoạt động</span>' 
+                    : '<span class="badge badge-inactive">Vô hiệu</span>';
+
+                // Check expiration
+                if (v.isActive && v.endDate && new Date(v.endDate) < new Date()) {
+                    statusBadge = '<span class="badge badge-inactive">Hết hạn</span>';
+                }
+                if (v.isActive && v.usageLimit && v.currentUsage >= v.usageLimit) {
+                    statusBadge = '<span class="badge badge-inactive">Hết lượt</span>';
+                }
+
+                html += `
+                    <tr>
+                        <td style="font-weight: 600;">${v.code}</td>
+                        <td>${typeStr}</td>
+                        <td style="font-weight: 600; color: #059669;">${valStr}</td>
+                        <td>${limitStr}</td>
+                        <td>${dateStr}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <button class="btn-edit" onclick="editVoucher(${v.id})">Sửa</button>
+                            <button class="btn-delete" onclick="deleteVoucher(${v.id})" style="margin-left: 5px;">Xóa</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function openModal() {
+            document.getElementById('voucherForm').reset();
+            document.getElementById('voucherId').value = '';
+            document.getElementById('modalTitle').textContent = 'Tạo Voucher Mới';
+            document.getElementById('voucherModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('voucherModal').style.display = 'none';
+        }
+
+        function editVoucher(id) {
+            const v = allVouchers.find(x => x.id === id);
+            if (!v) return;
+
+            document.getElementById('voucherId').value = v.id;
+            document.getElementById('vCode').value = v.code;
+            document.getElementById('vDiscountType').value = v.discountType;
+            document.getElementById('vValue').value = v.value;
+            document.getElementById('vMaxDiscountAmount').value = v.maxDiscountAmount || '';
+            document.getElementById('vMinBookingAmount').value = v.minimumBookingAmount || '';
+            document.getElementById('vUsageLimit').value = v.usageLimit || '';
+            document.getElementById('vApplicableTourId').value = v.applicableTourId || '';
+            document.getElementById('vIsActive').value = v.isActive;
+            
+            document.getElementById('vStartDate').value = v.startDate ? v.startDate.slice(0, 16) : '';
+            document.getElementById('vEndDate').value = v.endDate ? v.endDate.slice(0, 16) : '';
+
+            document.getElementById('modalTitle').textContent = 'Sửa Voucher';
+            document.getElementById('voucherModal').style.display = 'flex';
+        }
+
+        async function submitForm(e) {
+            e.preventDefault();
+            
+            const payload = {
+                code: document.getElementById('vCode').value.trim(),
+                discountType: document.getElementById('vDiscountType').value,
+                value: parseFloat(document.getElementById('vValue').value),
+                maxDiscountAmount: document.getElementById('vMaxDiscountAmount').value ? parseFloat(document.getElementById('vMaxDiscountAmount').value) : null,
+                minimumBookingAmount: document.getElementById('vMinBookingAmount').value ? parseFloat(document.getElementById('vMinBookingAmount').value) : null,
+                usageLimit: document.getElementById('vUsageLimit').value ? parseInt(document.getElementById('vUsageLimit').value) : null,
+                applicableTourId: document.getElementById('vApplicableTourId').value ? parseInt(document.getElementById('vApplicableTourId').value) : null,
+                isActive: document.getElementById('vIsActive').value === 'true',
+                startDate: document.getElementById('vStartDate').value ? document.getElementById('vStartDate').value + ':00' : null,
+                endDate: document.getElementById('vEndDate').value ? document.getElementById('vEndDate').value + ':00' : null,
+            };
+
+            const id = document.getElementById('voucherId').value;
+            
+            try {
+                if (id) {
+                    await TB.apiFetch(`/api/v1/admin/vouchers/${id}`, {
+                        method: 'PUT',
+                        body: JSON.stringify(payload)
+                    });
+                    if (typeof showToast === 'function') showToast('Cập nhật voucher thành công', 'success');
+                } else {
+                    await TB.apiFetch(`/api/v1/admin/vouchers`, {
+                        method: 'POST',
+                        body: JSON.stringify(payload)
+                    });
+                    if (typeof showToast === 'function') showToast('Tạo voucher thành công', 'success');
+                }
+                closeModal();
+                loadVouchers();
+            } catch (err) {
+                alert(err.message || 'Có lỗi xảy ra');
+            }
+        }
+
+        async function deleteVoucher(id) {
+            if (!confirm('Bạn có chắc chắn muốn vô hiệu hóa/xóa voucher này không?')) return;
+            try {
+                await TB.apiFetch(`/api/v1/admin/vouchers/${id}`, { method: 'DELETE' });
+                if (typeof showToast === 'function') showToast('Đã xóa voucher', 'success');
+                loadVouchers();
+            } catch (err) {
+                alert(err.message || 'Lỗi khi xóa');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadVouchers);
+    </script>
+<script src="../../assets/js/admin/sidebar.js"></script>
+</body>
+</html>
+

@@ -239,4 +239,30 @@ public class BookingController {
                 .data(bookingService.updateBookingStatus(id, status))
                 .build();
     }
+
+    // Reschedule
+    @PostMapping("/reschedule")
+    public ApiResponse<BookingResponse> rescheduleBooking(
+            @Valid @RequestBody com.tourbooking.booking.backend.model.dto.request.RescheduleRequest request) {
+        return ApiResponse.<BookingResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Đổi ngày khởi hành thành công")
+                .data(bookingService.rescheduleBooking(request))
+                .build();
+    }
+
+    /**
+     * GET /api/v1/bookings/{bookingId}/reschedule-candidates
+     * Returns future-only schedules for the same tour, filtered by occupiedSlots.
+     * The frontend calls this so it gets a server-authoritative list rather than
+     * filtering the entire tour payload on the client.
+     */
+    @GetMapping("/{bookingId}/reschedule-candidates")
+    public ApiResponse<?> getRescheduleCandidates(@PathVariable Long bookingId) {
+        return ApiResponse.builder()
+                .code(HttpStatus.OK.value())
+                .message("Reschedule candidates retrieved")
+                .data(bookingService.getRescheduleCandidates(bookingId))
+                .build();
+    }
 }

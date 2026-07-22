@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -54,9 +54,7 @@
             transform: translate(20px, -20px);
         }
 
-        .stat-card.blue::after {
-            background: #3b82f6;
-        }
+        .stat-card.blue::after { background: #0284c7; }
 
         .stat-card.green::after {
             background: #10b981;
@@ -81,13 +79,9 @@
             flex-shrink: 0;
         }
 
-        .stat-icon.blue {
-            background: #eff6ff;
-        }
+        .stat-icon.blue { background: #e0f2fe; }
 
-        .stat-icon.green {
-            background: #ecfdf5;
-        }
+        .stat-icon.green { background: #ecfdf5; }
 
         .stat-icon.purple {
             background: #f5f3ff;
@@ -222,8 +216,7 @@
 
         .panel-badge {
             font-size: 0.75rem;
-            background: #eff6ff;
-            color: #1d4ed8;
+            background: #e0f2fe; color: #0369a1;
             padding: 0.25rem 0.65rem;
             border-radius: 9999px;
             font-weight: 600;
@@ -252,9 +245,7 @@
         }
 
         .quick-link:hover {
-            background: #eff6ff;
-            border-color: #bfdbfe;
-            color: #1d4ed8;
+            background: #e0f2fe; border-color: #7dd3fc; color: #0369a1;
         }
 
         .quick-link .link-icon {
@@ -385,7 +376,9 @@
             transition: transform 0.2s;
         }
 
-        .ops-metric-card:hover { transform: translateY(-2px); }
+        .ops-metric-card:hover {
+            transform: translateY(-2px);
+        }
 
         .ops-metric-card .ops-metric-val {
             font-size: 2rem;
@@ -402,10 +395,21 @@
             margin-top: 0.4rem;
         }
 
-        .ops-metric-card.red .ops-metric-val   { color: #dc2626; }
-        .ops-metric-card.amber .ops-metric-val { color: #d97706; }
-        .ops-metric-card.blue .ops-metric-val  { color: #2563eb; }
-        .ops-metric-card.purple .ops-metric-val{ color: #7c3aed; }
+        .ops-metric-card.red .ops-metric-val {
+            color: #dc2626;
+        }
+
+        .ops-metric-card.amber .ops-metric-val {
+            color: #d97706;
+        }
+
+        .ops-metric-card.blue .ops-metric-val {
+            color: #2563eb;
+        }
+
+        .ops-metric-card.purple .ops-metric-val {
+            color: #7c3aed;
+        }
 
         /* Alert cards */
         .alert-card {
@@ -418,7 +422,9 @@
             position: relative;
         }
 
-        .alert-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.07); }
+        .alert-card:hover {
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+        }
 
         .alert-card.urgent {
             border-color: #f87171;
@@ -448,9 +454,20 @@
             text-transform: uppercase;
         }
 
-        .alert-badge.urgent { background:#fee2e2; color:#991b1b; }
-        .alert-badge.warning { background:#fef3c7; color:#92400e; }
-        .alert-badge.early { background:#ede9fe; color:#5b21b6; }
+        .alert-badge.urgent {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .alert-badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .alert-badge.early {
+            background: #ede9fe;
+            color: #5b21b6;
+        }
 
         .alert-countdown {
             font-size: 0.8rem;
@@ -471,7 +488,7 @@
         }
 
         .btn-assign-guide {
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            background: linear-gradient(135deg, #0284c7, #0369a1);
             color: white;
             border: none;
             border-radius: 0.5rem;
@@ -484,7 +501,9 @@
             display: inline-block;
         }
 
-        .btn-assign-guide:hover { opacity: 0.85; }
+        .btn-assign-guide:hover {
+            opacity: 0.85;
+        }
 
         .empty-alerts {
             text-align: center;
@@ -514,20 +533,7 @@
 
 <body>
     <div class="admin-layout">
-        <aside class="sidebar">
-            <a href="./dashboard.html" class="logo"> TourBooking</a>
-            <nav>
-                <a href="./dashboard.html" class="nav-item active"> Dashboard</a>
-                <a href="./manageTours.html" class="nav-item"> Tours</a>
-                <a href="./manageCategories.html" class="nav-item"> Categories</a>
-                <a href="./manageBookings.html" class="nav-item"> Bookings</a>
-                <a href="./manageUsers.html" class="nav-item"> Users</a>
-                <a href="./manageReview.html" class="nav-item"> Reviews</a>
-                <a href="./manageNewsletter.html" class="nav-item"> Newsletters</a>
-                <a href="./financialReport.html" class="nav-item"> Financial Report</a>
-                <a href="./manageDiscounts.html" class="nav-item"> Manage Discount</a>
-            </nav>
-        </aside>
+        <aside class="sidebar"></aside>
 
         <main class="main-content">
             <header>
@@ -535,12 +541,23 @@
                     <h1>Dashboard Overview</h1>
                     <div class="last-updated" id="lastUpdated">Đang tải dữ liệu...</div>
                 </div>
-                <div style="display:flex; align-items:center; gap:1rem;">
+                <div class="header-actions">
                     <button class="btn-refresh" id="refreshBtn" onclick="refreshStats()">
-                        <span class="icon">🔄</span> Làm mới
+                        <span class="icon">&#x1F504;</span> Lam moi
                     </button>
-                    <span id="userInfo" style="font-weight:600; font-size:0.9rem;"></span>
-                    <button id="logoutBtn" class="btn btn-secondary">Đăng xuất</button>
+                    <div style="width:1px; height:24px; background:var(--border);"></div>
+                    <div style="position:relative; cursor:pointer; padding:0.5rem 0.6rem; border-radius:0.5rem; border:1px solid var(--border);">
+                        <span style="font-size:1.1rem;">&#x1F514;</span>
+                        <span style="position:absolute; top:2px; right:2px; background:#f59e0b; width:8px; height:8px; border-radius:50%; border:2px solid var(--bg-main);"></span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.75rem; padding:0.25rem 0.75rem; border-radius:0.75rem; border:1px solid var(--border); cursor:pointer;">
+                        <div style="width:32px; height:32px; border-radius:50%; background:#e0f2fe; color:#0369a1; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem;" id="userAvatar">A</div>
+                        <div style="display:flex; flex-direction:column; line-height:1.2;">
+                            <span id="userInfo" style="font-weight:700; font-size:0.85rem;">Admin</span>
+                            <span style="font-size:0.7rem; color:var(--text-muted);">Administrator</span>
+                        </div>
+                    </div>
+                    <button id="logoutBtn" class="btn btn-secondary" style="font-size:0.8rem; padding:0.4rem 0.85rem;">Dang xuat</button>
                 </div>
             </header>
 
@@ -564,7 +581,7 @@
 
                 <!-- Online Users -->
                 <div class="stat-card green" id="card-online-users">
-                    <div class="stat-icon green"></div>
+                    <div class="stat-icon green">&#x1F7E2;</div>
                     <div class="stat-body">
                         <div class="stat-label">Đang trực tuyến</div>
                         <div class="stat-value" id="onlineUsers">
@@ -578,7 +595,7 @@
 
                 <!-- Monthly Revenue -->
                 <div class="stat-card purple" id="card-revenue">
-                    <div class="stat-icon purple"></div>
+                    <div class="stat-icon purple">&#x1F4B0;</div>
                     <div class="stat-body">
                         <div class="stat-label">Doanh thu tháng này</div>
                         <div class="stat-value" id="totalRevenue">
@@ -592,7 +609,7 @@
 
                 <!-- Active Bookings -->
                 <div class="stat-card orange" id="card-bookings">
-                    <div class="stat-icon orange"></div>
+                    <div class="stat-icon orange">&#x1F4C5;</div>
                     <div class="stat-body">
                         <div class="stat-label">Booking đang hoạt động</div>
                         <div class="stat-value" id="activeBookings">
@@ -663,16 +680,19 @@
                 <!-- Metrics Row -->
                 <div class="ops-metrics-grid" id="opsMetricsGrid">
                     <div class="ops-metric-card amber">
-                        <div class="ops-metric-val" id="opsOpenNoGuide"><span class="skeleton skeleton-val"></span></div>
-                        <div class="ops-metric-label">⚠️ Schedules No Guide</div>
+                        <div class="ops-metric-val" id="opsOpenNoGuide"><span class="skeleton skeleton-val"></span>
+                        </div>
+                        <div class="ops-metric-label">⚠️ Bookings Chưa Có Guide</div>
                     </div>
                     <div class="ops-metric-card red">
-                        <div class="ops-metric-val" id="opsPendingGuide"><span class="skeleton skeleton-val"></span></div>
-                        <div class="ops-metric-label">🔴 PENDING_GUIDE</div>
+                        <div class="ops-metric-val" id="opsPendingGuide"><span class="skeleton skeleton-val"></span>
+                        </div>
+                        <div class="ops-metric-label">🔴 Bookings Đang Chờ Guide</div>
                     </div>
                     <div class="ops-metric-card purple">
-                        <div class="ops-metric-val" id="opsCancelledOp"><span class="skeleton skeleton-val"></span></div>
-                        <div class="ops-metric-label">🚫 Cancelled by Operator</div>
+                        <div class="ops-metric-val" id="opsCancelledOp"><span class="skeleton skeleton-val"></span>
+                        </div>
+                        <div class="ops-metric-label">🚫 Bookings Bị Hủy Bởi Vận Hành</div>
                     </div>
                     <div class="ops-metric-card blue">
                         <div class="ops-metric-val" id="opsAffected"><span class="skeleton skeleton-val"></span></div>
@@ -911,12 +931,12 @@
                 // Metrics
                 if (metricsRes.status === 'fulfilled' && metricsRes.value) {
                     const m = metricsRes.value.data || metricsRes.value;
-                    document.getElementById('opsOpenNoGuide').textContent = m.openSchedulesWithNoGuide ?? '—';
-                    document.getElementById('opsPendingGuide').textContent = m.pendingGuideSchedules ?? '—';
-                    document.getElementById('opsCancelledOp').textContent = m.cancelledByOperatorSchedules ?? '—';
+                    document.getElementById('opsOpenNoGuide').textContent = m.bookingsMissingGuide ?? '—';
+                    document.getElementById('opsPendingGuide').textContent = m.bookingsPendingGuide ?? '—';
+                    document.getElementById('opsCancelledOp').textContent = m.bookingsRefundedByOperator ?? '—';
                     document.getElementById('opsAffected').textContent = m.affectedCustomers ?? '—';
                 } else {
-                    ['opsOpenNoGuide','opsPendingGuide','opsCancelledOp','opsAffected']
+                    ['opsOpenNoGuide', 'opsPendingGuide', 'opsCancelledOp', 'opsAffected']
                         .forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; });
                 }
 
@@ -968,15 +988,13 @@
                     </div>` : '';
 
                 const scheduleId = alert.scheduleId;
-                const assignLink = `./manageTours.html?highlight=${scheduleId}`;
-
                 let actionArea = `
                     <div style="margin-top:10px;">
-                        <a href="${assignLink}" class="btn-assign-guide">
+                        <button onclick="openAssignModal(${scheduleId})" class="btn-assign-guide" style="padding:6px 12px; margin:0;">
                             👤 Assign Guide
-                        </a>
+                        </button>
                     </div>`;
-                    
+
                 if (isUrgent) {
                     actionArea = `
                     <div style="margin-top:12px; background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
@@ -1012,7 +1030,7 @@
                     ${actionArea}
                 </div>`;
             }).join('');
-            
+
             // Populate guide dropdowns
             populateGuideDropdowns();
         }
@@ -1039,9 +1057,9 @@
             }
         }
 
-        window.quickAssign = async function(scheduleId) {
+        window.quickAssign = async function (scheduleId) {
             const el = document.getElementById('quick-assign-' + scheduleId);
-            if(!el || !el.value) { alert('Vui lòng nhập Guide ID hợp lệ.'); return; }
+            if (!el || !el.value) { alert('Vui lòng nhập Guide ID hợp lệ.'); return; }
             try {
                 const res = await TB.apiFetch('/api/v1/staff/schedules/' + scheduleId + '/assign-guide?guideId=' + el.value, { method: 'PATCH' });
                 if (res.status === 'rejected') throw new Error(res.reason?.message || 'Lỗi phân công');
@@ -1059,6 +1077,76 @@
         setInterval(loadOperationalData, 60_000);
     </script>
 
+    <!-- Assign Guide Modal -->
+    <div class="modal" id="assignModal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
+        <div class="modal-content"
+            style="background: white; padding: 2rem; border-radius: 16px; width: 400px; max-width: 95%;">
+            <h2 style="margin-top: 0; margin-bottom: 1rem;">Assign Tour Guide</h2>
+            <p id="targetScheduleId" style="margin-bottom: 1rem; font-weight: 600;"></p>
+            <select id="guideSelect"
+                style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 1rem;"></select>
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button class="action-btn"
+                    style="background:#64748b; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;"
+                    onclick="closeAssignModal()">Close</button>
+                <button class="action-btn"
+                    style="background:#0f766e; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;"
+                    onclick="submitAssignment()">Assign</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAssignScheduleId = null;
+        window.openAssignModal = async function (scheduleId) {
+            currentAssignScheduleId = scheduleId;
+            document.getElementById('targetScheduleId').innerText = 'Schedule ID: ' + scheduleId;
+            const select = document.getElementById('guideSelect');
+            select.innerHTML = '<option value="">-- Select an Available Guide --</option>';
+            document.getElementById('assignModal').style.display = 'flex';
+
+            try {
+                const res = await TB.apiFetch('/api/v1/admin/users?size=1000');
+                if (res && res.data && res.data.content) {
+                    res.data.content.forEach(u => {
+                        if (u.role === 'GUIDE' && u.isActive) {
+                            const opt = document.createElement('option');
+                            opt.value = u.id;
+                            opt.textContent = `${u.fullName} (${u.phoneNumber || u.email})`;
+                            select.appendChild(opt);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Lỗi lấy danh sách HDV:", e);
+            }
+        };
+
+        window.closeAssignModal = function () {
+            document.getElementById('assignModal').style.display = 'none';
+        };
+
+        window.submitAssignment = async function () {
+            if (!currentAssignScheduleId) return;
+            const guideId = document.getElementById('guideSelect').value;
+            if (!guideId) {
+                alert('Vui lòng chọn Hướng dẫn viên!');
+                return;
+            }
+            try {
+                const res = await TB.apiFetch('/api/v1/staff/schedules/' + currentAssignScheduleId + '/assign-guide?guideId=' + guideId, { method: 'PATCH' });
+                if (typeof showToast === 'function') showToast('Gán hướng dẫn viên thành công!', 'success');
+                else alert('Gán hướng dẫn viên thành công!');
+                closeAssignModal();
+                loadOperationalData();
+            } catch (e) {
+                if (typeof showToast === 'function') showToast('Lỗi: ' + e.message, 'error');
+                else alert('Lỗi: ' + e.message);
+            }
+        };
+    </script>
+<script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>

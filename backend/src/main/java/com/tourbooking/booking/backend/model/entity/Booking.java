@@ -44,9 +44,22 @@ public class Booking extends Base {
     @Column(name = "DiscountCode", length = 50)
     private String discountCode;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "DiscountID")
+    private Discount discount;
+
+    @Column(name = "LoyaltyPointsUsed")
+    private Integer loyaltyPointsUsed = 0;
+
+    @Column(name = "LoyaltyDiscountAmount", precision = 10, scale = 2)
+    private BigDecimal loyaltyDiscountAmount = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "Status", length = 50)
     private BookingStatus status = BookingStatus.PENDING;
+
+    @Column(name = "CancellationReason", length = 500)
+    private String cancellationReason;
 
     @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Payment payment;

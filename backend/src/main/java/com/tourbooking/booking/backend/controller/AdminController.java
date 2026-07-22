@@ -30,13 +30,15 @@ public class AdminController {
     private final UserService userService;
     private final BookingService bookingService;
     private final FileService fileService;
+    private final com.tourbooking.booking.backend.service.TourScheduleService tourScheduleService;
 
     @Autowired
-    public AdminController(TourService tourService, UserService userService, BookingService bookingService, FileService fileService) {
+    public AdminController(TourService tourService, UserService userService, BookingService bookingService, FileService fileService, com.tourbooking.booking.backend.service.TourScheduleService tourScheduleService) {
         this.tourService = tourService;
         this.userService = userService;
         this.bookingService = bookingService;
         this.fileService = fileService;
+        this.tourScheduleService = tourScheduleService;
     }
 
     @GetMapping("/ping")
@@ -62,6 +64,35 @@ public class AdminController {
                 .code(HttpStatus.CREATED.value())
                 .message("Tour created successfully")
                 .data(tourService.createTour(request))
+                .build();
+    }
+
+    @PostMapping("/tours/schedules/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<String> bulkCreateSchedules(@RequestBody com.tourbooking.booking.backend.model.dto.request.TourScheduleBulkRequest request) {
+        java.util.List<com.tourbooking.booking.backend.model.entity.TourSchedule> created = tourScheduleService.bulkCreateSchedules(request);
+        return ApiResponse.<String>builder()
+                .code(HttpStatus.CREATED.value())
+                .message("Schedules created successfully")
+                .data("Created " + created.size() + " schedules")
+                .build();
+    }
+
+    @PutMapping("/tour-schedules/{scheduleId}/cancel")
+    public ApiResponse<Void> cancelTourSchedule(@PathVariable Long scheduleId) {
+        tourScheduleService.cancelTourSchedule(scheduleId);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Schedule cancelled and customers refunded successfully")
+                .build();
+    }
+
+    @PatchMapping("/tour-schedules/{scheduleId}/release-guide")
+    public ApiResponse<Void> releaseGuideFromSchedule(@PathVariable Long scheduleId) {
+        tourScheduleService.releaseGuideIfNoActiveBookings(scheduleId);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Guide released from schedule if no active bookings remain")
                 .build();
     }
 
@@ -205,6 +236,17 @@ public class AdminController {
                 .code(HttpStatus.OK.value())
                 .message("Test data generated successfully")
                 .data("5 sample successful bookings created.")
+                .build();
+    }
+
+    @PutMapping("/bookings/{id}/cancel")
+    public ApiResponse<com.tourbooking.booking.backend.model.dto.response.BookingResponse> cancelBooking(
+            @PathVariable Long id,
+            @RequestBody(required = false) com.tourbooking.booking.backend.model.dto.request.CancelBookingRequest request) {
+        return ApiResponse.<com.tourbooking.booking.backend.model.dto.response.BookingResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Booking cancelled successfully")
+                .data(bookingService.cancelBooking(id, request))
                 .build();
     }
 }

@@ -105,8 +105,9 @@ public class TourScheduleScheduler {
             // ── GUIDE REQUIREMENT GUARD ───────────────────────────────────────
             // A schedule CANNOT go IN_PROGRESS without an assigned guide.
             // The OperationalScheduler will transition it to PENDING_GUIDE / CANCELLED_BY_OPERATOR.
+            // Log at DEBUG to avoid spam — OperationalScheduler already fires the WARN+alert.
             if (schedule.getGuide() == null) {
-                log.warn("[SCHEDULER] Schedule #{} reached departure but has NO guide — skipping IN_PROGRESS transition.",
+                log.debug("[SCHEDULER] Schedule #{} reached departure but has NO guide — skipping IN_PROGRESS transition.",
                         schedule.getId());
                 continue;
             }

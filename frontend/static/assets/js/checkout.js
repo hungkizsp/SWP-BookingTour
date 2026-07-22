@@ -19,7 +19,7 @@
     return;
   }
 
-  const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+  const userStr = sessionStorage.getItem('user');
   let user = userStr ? JSON.parse(userStr) : null;
   if (!user) {
     TB.goToLogin('Vui lòng đăng nhập để tiếp tục đặt tour.');
@@ -59,6 +59,9 @@
   let scheduleData = null;
   let appliedDiscount = 0;
   let appliedVoucherCode = '';
+  let loyaltyPointsAvailable = 0;
+  let loyaltyPointsToRedeem = 0;
+  let loyaltyDiscountAmount = 0;
   let childRate = 0.75;
   let infantRate = 0.10;
 
@@ -114,15 +117,24 @@
 
   // ─── Fetch tour & schedule ────────────────────────────────────────────────────
   try {
-    const [tourRes, scheduleRes, discountRes] = await Promise.all([
+    const [tourRes, scheduleRes, discountRes, loyaltyRes] = await Promise.all([
       TB.apiFetch(`/api/v1/tours/${tourId}`),
       TB.apiFetch(`/api/v1/tours/schedules/${scheduleId}`),
-      TB.apiFetch(`/api/v1/discount-policies`).catch(e => ({ data: [] }))
+      TB.apiFetch(`/api/v1/discount-policies`).catch(e => ({ data: [] })),
+      TB.apiFetch(`/api/v1/loyalty/my-points`).catch(e => ({ data: null }))
     ]);
 
     const tourData = tourRes.data;
     scheduleData = scheduleRes.data;
     const policies = discountRes.data || discountRes || [];
+    const loyaltyData = loyaltyRes.data;
+    
+    if (loyaltyData && loyaltyData.totalPoints > 0) {
+      loyaltyPointsAvailable = loyaltyData.totalPoints;
+      document.getElementById('loyaltySection').style.display = 'block';
+      document.getElementById('loyaltyTotalPoints').textContent = loyaltyPointsAvailable.toLocaleString('vi-VN');
+      document.getElementById('loyaltyTotalValue').textContent = loyaltyData.pointsValue.toLocaleString('vi-VN');
+    }
     currentPrice = tourData.price;
     tourStartDate = parseTourStartDate(scheduleData.startDate);
 
@@ -130,7 +142,7 @@
     // This mirrors the backend's authoritative checks to provide instant UX feedback.
     // The server will ALWAYS re-validate; this is purely a convenience guard.
     const schedStatus = String(scheduleData.status || '').toUpperCase();
-    const NON_BOOKABLE = ['CANCELLED', 'COMPLETED', 'IN_PROGRESS', 'BOOKING_CLOSED'];
+    const NON_BOOKABLE = ['CANCELLED', 'COMPLETED', 'IN_PROGRESS', 'BOOKING_CLOSED', 'EXPIRED_NO_BOOKING'];
 
     let blockReason = null;
     if (NON_BOOKABLE.includes(schedStatus)) {
@@ -139,6 +151,7 @@
         COMPLETED:      'Tour này đã hoàn thành.',
         IN_PROGRESS:    'Tour đang diễn ra, không thể đặt thêm chỗ.',
         BOOKING_CLOSED: 'Hạn đặt tour cho lịch trình này đã kết thúc.',
+        EXPIRED_NO_BOOKING: 'Đã hết hạn - Không có khách đặt.',
       };
       blockReason = labels[schedStatus] || 'Lịch trình này hiện không thể đặt.';
     } else if (schedStatus === 'SOLD_OUT' || (scheduleData.availableSlots != null && scheduleData.availableSlots <= 0)) {
@@ -249,7 +262,15 @@
       document.getElementById('discountItem').style.display = 'none';
     }
 
-    const finalTotal = Math.max(0, baseTotal - appliedDiscount);
+    if (loyaltyDiscountAmount > 0) {
+      document.getElementById('loyaltyDiscountItem').style.display = 'flex';
+      document.getElementById('summaryLoyaltyDiscountAmount').textContent = '-' + loyaltyDiscountAmount.toLocaleString('vi-VN') + ' đ';
+      document.getElementById('summaryLoyaltyPoints').textContent = loyaltyPointsToRedeem.toLocaleString('vi-VN');
+    } else {
+      document.getElementById('loyaltyDiscountItem').style.display = 'none';
+    }
+
+    const finalTotal = Math.max(0, baseTotal - appliedDiscount - loyaltyDiscountAmount);
     summaryTotalPrice.textContent = finalTotal.toLocaleString('vi-VN');
   }
 
@@ -259,6 +280,9 @@
     appliedDiscount = 0;
     appliedVoucherCode = '';
     resetVoucherUI();
+    loyaltyDiscountAmount = 0;
+    loyaltyPointsToRedeem = 0;
+    resetLoyaltyUI();
   }
 
   // ─── Counters ─────────────────────────────────────────────────────────────────
@@ -482,7 +506,7 @@
 
       const res = await TB.apiFetch('/api/v1/bookings/apply-voucher', {
         method: 'POST',
-        body: JSON.stringify({ voucherCode: code, currentTotal: baseTotal })
+        body: JSON.stringify({ voucherCode: code, currentTotal: baseTotal, tourId: parseInt(tourId) })
       });
 
       if (res.data.isValid) {
@@ -504,6 +528,67 @@
     } finally {
       applyVoucherBtn.disabled = false;
       applyVoucherBtn.textContent = 'Áp dụng';
+    }
+  };
+
+  function resetLoyaltyUI() {
+    document.getElementById('loyaltyMsg').textContent = '';
+    document.getElementById('loyaltyPointsInput').value = '';
+  }
+
+  // ─── Loyalty Points ──────────────────────────────────────────────────────────
+  const applyLoyaltyBtn = document.getElementById('applyLoyaltyBtn');
+  const loyaltyInput = document.getElementById('loyaltyPointsInput');
+  const loyaltyMsg = document.getElementById('loyaltyMsg');
+
+  applyLoyaltyBtn.onclick = async () => {
+    const points = parseInt(loyaltyInput.value);
+    if (isNaN(points) || points <= 0) return;
+    
+    if (points > loyaltyPointsAvailable) {
+      loyaltyMsg.style.color = '#f44336';
+      loyaltyMsg.textContent = 'Số điểm muốn dùng vượt quá số điểm hiện có.';
+      return;
+    }
+
+    applyLoyaltyBtn.disabled = true;
+    applyLoyaltyBtn.textContent = '...';
+
+    try {
+      const adults = getAdultCount();
+      const children = getChildCount();
+      const infants = getInfantCount();
+      const baseTotal = adults * currentPrice
+        + children * currentPrice * childRate
+        + infants * currentPrice * infantRate;
+        
+      // If there is already a voucher discount, we pass the total AFTER voucher
+      const totalAfterVoucher = Math.max(0, baseTotal - appliedDiscount);
+
+      const res = await TB.apiFetch('/api/v1/loyalty/validate-redeem', {
+        method: 'POST',
+        body: JSON.stringify({ pointsToRedeem: points, bookingTotal: totalAfterVoucher })
+      });
+
+      if (res.data.valid) {
+        loyaltyDiscountAmount = res.data.discountAmount;
+        loyaltyPointsToRedeem = points;
+        loyaltyMsg.style.color = '#4caf50';
+        loyaltyMsg.textContent = res.data.message || `Đã đổi thành công ${points.toLocaleString('vi-VN')} điểm.`;
+      } else {
+        loyaltyDiscountAmount = 0;
+        loyaltyPointsToRedeem = 0;
+        loyaltyMsg.style.color = '#f44336';
+        loyaltyMsg.textContent = res.data.message || 'Không thể đổi điểm.';
+      }
+      updateTotals();
+    } catch (err) {
+      console.error(err);
+      loyaltyMsg.style.color = '#f44336';
+      loyaltyMsg.textContent = 'Lỗi hệ thống khi đổi điểm.';
+    } finally {
+      applyLoyaltyBtn.disabled = false;
+      applyLoyaltyBtn.textContent = 'Đổi điểm';
     }
   };
 
@@ -683,6 +768,7 @@
         childCount: getChildCount(),
         infantCount: getInfantCount(),
         discountCode: appliedVoucherCode || null,
+        pointsToRedeem: loyaltyPointsToRedeem || 0,
         passengers: passengers.map(p => ({
           fullName: p.fullName,
           dateOfBirth: p.dateOfBirth,
@@ -697,6 +783,30 @@
       });
 
       const bookingId = bookingRes.data.id;
+
+      // Bước 1: Gọi API redeem điểm trước khi thanh toán nếu có dùng điểm
+      if (loyaltyPointsToRedeem > 0) {
+        try {
+          const rawTotal = (getAdultCount() * currentPrice) +
+                           (getChildCount() * currentPrice * childRate) +
+                           (getInfantCount() * currentPrice * infantRate);
+                           
+          await TB.apiFetch('/api/v1/loyalty/redeem', {
+            method: 'POST',
+            body: JSON.stringify({
+              bookingId: bookingId,
+              pointsToRedeem: loyaltyPointsToRedeem,
+              bookingTotal: rawTotal
+            })
+          });
+        } catch (e) {
+          console.error("Lỗi khi áp dụng điểm thưởng:", e);
+          alert('Có lỗi xảy ra khi áp dụng điểm thưởng, vui lòng thử lại!');
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'XÁC NHẬN ĐẶT TOUR';
+          return;
+        }
+      }
 
       if (selectedMethod === 'PAYOS') {
         const paymentRes = await TB.apiFetch('/api/v1/payments/payos/create', {

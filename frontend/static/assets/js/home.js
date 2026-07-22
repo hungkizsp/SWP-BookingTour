@@ -75,7 +75,7 @@
   let userWishlist = new Set();
   
   async function initWishlist() {
-    const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+    const userStr = sessionStorage.getItem('user');
     if (!userStr) return;
     const user = JSON.parse(userStr);
     try {
@@ -90,7 +90,7 @@
   window.toggleWishlist = async function(tourId, btn) {
     event.stopPropagation();
     event.preventDefault();
-    const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+    const userStr = sessionStorage.getItem('user');
     if (!userStr) {
       alert("Vui lòng đăng nhập để lưu tour yêu thích!");
       return;

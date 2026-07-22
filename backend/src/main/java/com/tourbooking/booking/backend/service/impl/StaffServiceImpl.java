@@ -30,6 +30,7 @@ import com.tourbooking.booking.backend.model.dto.response.UserResponse;
 import com.tourbooking.booking.backend.model.dto.response.ProgressLogResponse;
 import com.tourbooking.booking.backend.repository.TourProgressLogRepository;
 import com.tourbooking.booking.backend.service.ProgressLogService;
+import com.tourbooking.booking.backend.util.ActiveBookingStatuses;
 
 @Service
 @RequiredArgsConstructor
@@ -95,6 +96,9 @@ public class StaffServiceImpl implements StaffService {
                     existing.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.COMPLETED) {
                     continue;
                 }
+                if (bookingRepository.countByScheduleIdAndStatusIn(existing.getId(), ActiveBookingStatuses.STATUSES) == 0) {
+                    continue;
+                }
                 
                 LocalDateTime existingDeparture = existing.getDepartureDateTime();
                 LocalDateTime existingReturn = existing.getReturnDateTime();
@@ -106,6 +110,11 @@ public class StaffServiceImpl implements StaffService {
                     }
                 }
             }
+        }
+
+        if (schedule.getGuide() != null && schedule.getGuide().getId().equals(guideId)) {
+            log.info("Guide {} is already assigned to schedule {}, skipping assignment.", guideId, scheduleId);
+            return;
         }
 
         schedule.setGuide(guide);
@@ -270,7 +279,7 @@ public class StaffServiceImpl implements StaffService {
         if (status != null && !status.isEmpty()) {
             bookings = bookingRepository.findByStatus(BookingStatus.valueOf(status.toUpperCase()));
         } else {
-            bookings = bookingRepository.findAll();
+            bookings = bookingRepository.findAllWithDetails();
         }
 
         return bookings.stream()
@@ -284,6 +293,11 @@ public class StaffServiceImpl implements StaffService {
                     res.setTourName(b.getSchedule() != null && b.getSchedule().getTour() != null
                             ? b.getSchedule().getTour().getTourName()
                             : "N/A");
+                    boolean bookingCancelled = b.getStatus() == BookingStatus.CANCELLED
+                            || b.getStatus() == BookingStatus.COMPANY_CANCELED;
+                    if (!bookingCancelled && b.getSchedule() != null && b.getSchedule().getGuide() != null) {
+                        res.setGuideFullName(b.getSchedule().getGuide().getFullName());
+                    }
                     res.setBookingDate(b.getBookingDate());
                     res.setNumberOfPeople(b.getNumberOfPeople());
                     res.setTotalPrice(b.getTotalPrice());
@@ -317,6 +331,11 @@ public class StaffServiceImpl implements StaffService {
             res.setTourName(b.getSchedule() != null && b.getSchedule().getTour() != null
                     ? b.getSchedule().getTour().getTourName()
                     : "N/A");
+            boolean bookingCancelled = b.getStatus() == BookingStatus.CANCELLED
+                    || b.getStatus() == BookingStatus.COMPANY_CANCELED;
+            if (!bookingCancelled && b.getSchedule() != null && b.getSchedule().getGuide() != null) {
+                res.setGuideFullName(b.getSchedule().getGuide().getFullName());
+            }
             res.setBookingDate(b.getBookingDate());
             res.setNumberOfPeople(b.getNumberOfPeople());
             res.setTotalPrice(b.getTotalPrice());
@@ -337,7 +356,7 @@ public class StaffServiceImpl implements StaffService {
     @Override
     @Transactional(readOnly = true)
     public List<TourScheduleResponse> listSchedules() {
-        return tourScheduleRepository.findAll().stream()
+        return tourScheduleRepository.findAllWithDetails().stream()
                 .map(s -> mapToResponse(s, false))
                 .collect(Collectors.toList());
     }

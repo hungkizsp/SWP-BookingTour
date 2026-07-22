@@ -20,14 +20,15 @@
   // ── Status helpers ─────────────────────────────────────────────────────────
 
   const STATUS_META = {
-    OPEN:                 { label: 'Đang nhận đặt',        color: '#059669', bg: '#d1fae5', icon: '🟢' },
-    BOOKING_CLOSED:       { label: 'Đã đóng đặt chỗ',      color: '#d97706', bg: '#fef3c7', icon: '🔒' },
-    SOLD_OUT:             { label: 'Hết chỗ',               color: '#dc2626', bg: '#fee2e2', icon: '🔴' },
-    PENDING_GUIDE:        { label: 'Tạm thời không khả dụng', color: '#b45309', bg: '#fef9c3', icon: '⚠️' },
-    IN_PROGRESS:          { label: 'Đang diễn ra',           color: '#2563eb', bg: '#dbeafe', icon: '🚀' },
-    COMPLETED:            { label: 'Đã hoàn thành',          color: '#64748b', bg: '#f1f5f9', icon: '✅' },
-    CANCELLED:            { label: 'Đã hủy',                 color: '#9ca3af', bg: '#f3f4f6', icon: '❌' },
-    CANCELLED_BY_OPERATOR:{ label: 'Đã hủy bởi nhà điều hành', color: '#7c3aed', bg: '#ede9fe', icon: '🚫' },
+    OPEN: { label: 'Đang nhận đặt', color: '#059669', bg: '#d1fae5', icon: '🟢' },
+    BOOKING_CLOSED: { label: 'Đã đóng đặt chỗ', color: '#d97706', bg: '#fef3c7', icon: '🔒' },
+    SOLD_OUT: { label: 'Hết chỗ', color: '#dc2626', bg: '#fee2e2', icon: '🔴' },
+    PENDING_GUIDE: { label: 'Tạm thời không khả dụng', color: '#b45309', bg: '#fef9c3', icon: '⚠️' },
+    IN_PROGRESS: { label: 'Đang diễn ra', color: '#2563eb', bg: '#dbeafe', icon: '🚀' },
+    COMPLETED: { label: 'Đã hoàn thành', color: '#64748b', bg: '#f1f5f9', icon: '✅' },
+    CANCELLED: { label: 'Đã hủy', color: '#9ca3af', bg: '#f3f4f6', icon: '❌' },
+    CANCELLED_BY_OPERATOR: { label: 'Đã hủy bởi nhà điều hành', color: '#7c3aed', bg: '#ede9fe', icon: '🚫' },
+    EXPIRED_NO_BOOKING: { label: 'Đã hết hạn - 0 booking', color: '#6b7280', bg: '#e5e7eb', icon: '👻' },
   };
 
   function getStatusMeta(status) {
@@ -44,11 +45,13 @@
     const now = new Date();
 
     if (status === 'CANCELLED') return { canBook: false, reason: 'Lịch trình đã bị hủy.', isPendingGuide: false };
+    if (s.isExpired) return { canBook: false, reason: 'Lịch trình này đã khởi hành (Giờ khởi hành đã qua so với giờ hiện tại).', isPendingGuide: false };
     if (status === 'CANCELLED_BY_OPERATOR') return { canBook: false, reason: 'Lịch trình đã bị hủy bởi nhà điều hành.', isPendingGuide: false };
     if (status === 'COMPLETED') return { canBook: false, reason: 'Tour đã hoàn thành.', isPendingGuide: false };
     if (status === 'IN_PROGRESS') return { canBook: false, reason: 'Tour đang diễn ra, không thể đặt thêm.', isPendingGuide: false };
     if (status === 'BOOKING_CLOSED') return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.', isPendingGuide: false };
     if (status === 'SOLD_OUT') return { canBook: false, reason: 'Tour đã hết chỗ.', isPendingGuide: false };
+    if (status === 'EXPIRED_NO_BOOKING') return { canBook: false, reason: 'Lịch trình đã hết hạn và không có lịch khởi hành do không đủ khách.', isPendingGuide: false };
     // PENDING_GUIDE: departure is < 1h away and no guide assigned — booking is blocked
     if (status === 'PENDING_GUIDE') return {
       canBook: false,
@@ -85,9 +88,9 @@
 
   const formatTime = (t) => {
     if (!t) return '';
-    if (Array.isArray(t)) return `${String(t[0]).padStart(2,'0')}:${String(t[1]).padStart(2,'0')}`;
+    if (Array.isArray(t)) return `${String(t[0]).padStart(2, '0')}:${String(t[1]).padStart(2, '0')}`;
     const d = new Date(t);
-    if (!isNaN(d)) return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    if (!isNaN(d)) return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     // Already a string like "07:00"
     return String(t).substring(0, 5);
   };
@@ -96,7 +99,7 @@
     if (!dt) return '—';
     const d = toDateObj(dt);
     if (!d || isNaN(d)) return String(dt);
-    return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    return d.toLocaleDateString('vi-VN') + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
   };
 
   // ── Gallery ──────────────────────────────────────────────────────────────
@@ -118,35 +121,36 @@
 
   // ── Itinerary ─────────────────────────────────────────────────────────────
 
-  function renderItinerary(itineraryJson) {
+  async function renderItinerary(tourId) {
     const root = el('itinerary');
-    if (!itineraryJson) {
-      root.innerHTML = '<p style="padding: 20px; color: var(--text-faint);">Vui lòng liên hệ để nhận lịch trình chi tiết từ nhân viên tư vấn.</p>';
-      return;
-    }
-
     try {
-      const items = typeof itineraryJson === 'string' && itineraryJson.trim().startsWith('[')
-        ? JSON.parse(itineraryJson)
-        : itineraryJson;
-
-      if (Array.isArray(items)) {
-        root.innerHTML = items.map((item, idx) => `
-          <div class="itinerary-item ${idx === 0 ? 'active' : ''}">
-            <div class="itinerary-header" onclick="this.parentElement.classList.toggle('active')">
-              <strong>${escapeHtml(item.title || item.day || `Ngày ${idx + 1}`)}</strong>
-              <span style="font-size: 0.8rem; opacity: 0.5;">▼</span>
-            </div>
-            <div class="itinerary-content" style="padding: 20px; line-height: 1.8;">
-              ${item.content || item.description || 'Nội dung đang được cập nhật...'}
-            </div>
-          </div>
-        `).join('');
-      } else {
-        root.innerHTML = `<div class="itinerary-content" style="display:block; border:1px solid var(--border); border-radius:12px; background:white; padding:30px; line-height:2;">${itineraryJson}</div>`;
+      const res = await TB.apiFetch(`/api/v1/tours/${tourId}/itinerary`);
+      const items = res.data;
+      if (!items || items.length === 0) {
+        root.innerHTML = '<p style="padding: 20px; color: var(--text-faint);">Chưa có thông tin lịch trình chi tiết.</p>';
+        return;
       }
+      root.innerHTML = items.map((item, idx) => `
+        <div class="itinerary-item ${idx === 0 ? 'active' : ''}">
+          <div class="itinerary-header" onclick="this.parentElement.classList.toggle('active')">
+            <strong>Ngày ${item.dayNumber}: ${escapeHtml(item.title)}</strong>
+            <span style="font-size: 0.8rem; opacity: 0.5;">▼</span>
+          </div>
+          <div class="itinerary-content" style="padding: 25px; line-height: 1.8;">
+            ${item.imageUrl ? `<img src="${TB.normalizeImageUrl(item.imageUrl)}" style="width:100%; max-height:300px; object-fit:cover; border-radius:8px; margin-bottom:15px;" alt="${escapeHtml(item.title)}">` : ''}
+            <div style="margin-bottom: 15px;">
+              ${item.transportation ? `<span style="margin-right: 15px;">🚌 <strong>Di chuyển:</strong> ${escapeHtml(item.transportation)}</span>` : ''}
+              ${item.meals ? `<span style="margin-right: 15px;">🍽️ <strong>Bữa ăn:</strong> ${escapeHtml(item.meals)}</span>` : ''}
+              ${item.accommodation ? `<span style="margin-right: 15px;">🏨 <strong>Lưu trú:</strong> ${escapeHtml(item.accommodation)}</span>` : ''}
+            </div>
+            ${item.highlights ? `<div style="margin-bottom: 15px;">📍 <strong>Điểm tham quan:</strong> ${escapeHtml(item.highlights)}</div>` : ''}
+            <div style="white-space: pre-line;">${escapeHtml(item.description || 'Đang cập nhật...')}</div>
+          </div>
+        </div>
+      `).join('');
     } catch (e) {
-      root.innerHTML = `<div class="itinerary-content" style="display:block; border:1px solid var(--border); border-radius:12px; background:white; padding:30px; line-height:2;">${itineraryJson}</div>`;
+      console.error('Error fetching itinerary:', e);
+      root.innerHTML = '<p style="padding: 20px; color: var(--text-faint);">Vui lòng liên hệ để nhận lịch trình chi tiết.</p>';
     }
   }
 
@@ -164,6 +168,12 @@
       return;
     }
 
+    if (list.length === 0) {
+      root.innerHTML = '<option value="">Hiện chưa có lịch khởi hành phù hợp</option>';
+      if (btn) { btn.disabled = true; }
+      return;
+    }
+
     root.innerHTML = '<option value="">-- Chọn lịch khởi hành --</option>' + list.map(s => {
       const status = String(s.status || '').toUpperCase();
       const { canBook } = getBookabilityState(s);
@@ -172,8 +182,9 @@
       const timeStr = formatTime(s.departureTime) || formatTime(s.startDate);
       const slotText = (s.availableSlots ?? 0) > 0 ? `Còn ${s.availableSlots} chỗ` : 'Hết chỗ';
 
-      return `<option value="${s.scheduleId}" ${!canBook ? 'disabled' : ''} data-status="${escapeHtml(status)}">
-        ${meta.icon} ${dateStr}${timeStr ? ' lúc ' + timeStr : ''} · ${slotText} · ${meta.label}
+      const expiredText = s.isExpired ? ' (Đã khởi hành)' : '';
+      return `<option value="${s.scheduleId}" ${(!canBook && !s.isExpired) ? 'disabled' : ''} data-status="${escapeHtml(status)}">
+        ${meta.icon} ${dateStr}${timeStr ? ' lúc ' + timeStr : ''} · ${slotText} · ${meta.label}${expiredText}
       </option>`;
     }).join('');
 
@@ -188,12 +199,14 @@
     const btn = el('bookNowBtn');
     const statusBadgeWrap = el('scheduleStatusBadge');
     const deadlineInfo = el('scheduleDeadlineInfo');
+    const departureInfo = el('scheduleDepartureInfo');
     const selectedId = root ? parseInt(root.value) : null;
 
     if (!selectedId || !list) {
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; }
       if (statusBadgeWrap) statusBadgeWrap.innerHTML = '';
       if (deadlineInfo) deadlineInfo.innerHTML = '';
+      if (departureInfo) departureInfo.innerHTML = '';
       return;
     }
 
@@ -230,6 +243,55 @@
       } else {
         deadlineInfo.innerHTML = '';
       }
+    }
+
+    // Departure Info
+    if (departureInfo) {
+      if (schedule.departureTime) {
+        const timeStr = formatTime(schedule.departureTime);
+        departureInfo.innerHTML = `
+          <div style="font-size: 0.82rem; color: #059669; margin-top: 4px; font-weight: 700;">
+            ⏰ Giờ khởi hành: <strong>${timeStr}</strong>
+          </div>`;
+      } else {
+        departureInfo.innerHTML = '';
+      }
+    }
+
+    // ── Expired Schedule special alert banner ────────────────────────────────
+    let expiredAlert = document.getElementById('expiredScheduleAlert');
+    if (schedule.isExpired) {
+      if (!expiredAlert) {
+        expiredAlert = document.createElement('div');
+        expiredAlert.id = 'expiredScheduleAlert';
+        expiredAlert.style.cssText = [
+          'background: linear-gradient(135deg, #fee2e2, #fecaca)',
+          'border: 2px solid #ef4444',
+          'border-radius: 12px',
+          'padding: 16px 20px',
+          'margin-top: 12px',
+          'display: flex',
+          'align-items: flex-start',
+          'gap: 12px',
+          'box-shadow: 0 2px 8px rgba(239,68,68,0.15)'
+        ].join(';');
+        expiredAlert.innerHTML = `
+          <span style="font-size:1.6rem;flex-shrink:0;">⏳</span>
+          <div>
+            <div style="font-weight:800;color:#991b1b;font-size:0.95rem;margin-bottom:4px;">Đã quá giờ đăng ký</div>
+            <div style="color:#7f1d1d;font-size:0.875rem;line-height:1.5;">
+              Lịch trình này đã khởi hành (Giờ khởi hành đã qua so với giờ hiện tại). Vui lòng chọn ngày khác.
+            </div>
+          </div>
+        `;
+        const anchor = departureInfo || deadlineInfo || statusBadgeWrap;
+        if (anchor && anchor.parentNode) {
+          anchor.parentNode.insertBefore(expiredAlert, anchor.nextSibling);
+        }
+      }
+      expiredAlert.style.display = 'flex';
+    } else {
+      if (expiredAlert) expiredAlert.style.display = 'none';
     }
 
     // ── PENDING_GUIDE special alert banner ────────────────────────────────
@@ -287,7 +349,7 @@
         } else {
           btn.style.display = '';
           btn.style.opacity = '0.5';
-          btn.textContent = reason || 'Không thể đặt';
+          btn.textContent = schedule.isExpired ? 'Đã quá giờ đăng ký' : (reason || 'Không thể đặt');
         }
       }
     }
@@ -328,8 +390,13 @@
     if (el('whyChooseUs')) el('whyChooseUs').textContent = t.whyChooseUs || '';
 
     renderGallery(t.imageUrls);
-    renderItinerary(t.itinerary);
-    renderSchedules(t.schedules);
+    renderItinerary(t.id);
+    const visibleSchedules = (t.schedules || []).filter(s => {
+      const status = String(s.status || '').toUpperCase();
+      return status === 'OPEN' || status === 'IN_PROGRESS';
+    });
+
+    renderSchedules(visibleSchedules);
   }
 
   // ── Reviews ───────────────────────────────────────────────────────────────

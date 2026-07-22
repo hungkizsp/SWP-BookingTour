@@ -148,6 +148,7 @@
               <div class="kpi">
                 <div style="color:var(--text-faint); font-size:0.85rem;">Điểm tích lũy</div>
                 <div class="v" id="points">0</div>
+                <div style="color:var(--primary); font-size:0.85rem; font-weight:700;" id="pointsValue">~0 đ</div>
               </div>
               <div class="kpi">
                 <div style="color:var(--text-faint); font-size:0.85rem;">Tổng lượt đặt tour</div>
@@ -156,6 +157,24 @@
               <div class="kpi">
                 <div style="color:var(--text-faint); font-size:0.85rem;">Lượt đặt tour thành công</div>
                 <div class="v" id="doneBookings">0</div>
+              </div>
+            </div>
+
+            <div style="margin-top: 25px;">
+              <h3 style="font-size: 1.1rem; color: var(--primary); margin-bottom: 15px; font-weight: 800;">Lịch sử điểm</h3>
+              <div style="background: white; border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                  <thead style="background: #f8fafc; border-bottom: 1px solid var(--border);">
+                    <tr>
+                      <th style="padding: 12px 16px; font-weight: 700;">Ngày</th>
+                      <th style="padding: 12px 16px; font-weight: 700;">Mô tả</th>
+                      <th style="padding: 12px 16px; font-weight: 700; text-align: right;">Điểm</th>
+                    </tr>
+                  </thead>
+                  <tbody id="loyaltyHistoryTable">
+                    <tr><td colspan="3" style="padding: 20px; text-align: center; color: var(--text-soft);">Đang tải lịch sử...</td></tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
@@ -181,14 +200,14 @@
         return;
       }
 
-      const [uRes, pRes, bRes] = await Promise.all([
+      const [uRes, loyaltyRes, bRes] = await Promise.all([
         TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}`, { method: 'GET' }),
-        TB.apiFetch(`/api/v1/users/${encodeURIComponent(user.id)}/loyalty-points`, { method: 'GET' }),
+        TB.apiFetch(`/api/v1/loyalty/my-points`, { method: 'GET' }).catch(() => ({ data: { totalPoints: 0, pointsValue: 0, transactions: [] }})),
         TB.apiFetch(`/api/v1/bookings/user/${encodeURIComponent(user.id)}`, { method: 'GET' })
       ]);
 
       const u = uRes?.data || {};
-      const points = Number(pRes?.data || 0);
+      const loyaltyData = loyaltyRes?.data || { totalPoints: 0, pointsValue: 0, transactions: [] };
       const bookings = Array.isArray(bRes?.data) ? bRes.data : [];
       const done = bookings.filter(b => {
         const s = String(b?.status || '').toUpperCase();
@@ -200,9 +219,30 @@
       $('email').textContent = u.email || '-';
       $('phone').textContent = u.phoneNumber || '-';
       $('address').textContent = u.address || '-';
-      $('points').textContent = points.toLocaleString('vi-VN');
+      $('points').textContent = loyaltyData.totalPoints.toLocaleString('vi-VN');
+      $('pointsValue').textContent = `~${loyaltyData.pointsValue.toLocaleString('vi-VN')} đ`;
       $('totalBookings').textContent = String(bookings.length);
       $('doneBookings').textContent = String(done);
+
+      // Render transactions
+      const tbody = $('loyaltyHistoryTable');
+      if (!loyaltyData.transactions || loyaltyData.transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="padding: 20px; text-align: center; color: var(--text-soft);">Chưa có lịch sử điểm.</td></tr>';
+      } else {
+        tbody.innerHTML = loyaltyData.transactions.map(t => {
+          const isEarn = t.transactionType === 'EARN';
+          const pts = isEarn ? `+${t.points}` : `-${t.points}`;
+          const color = isEarn ? '#10b981' : '#ef4444';
+          const dateStr = t.createdAt ? new Date(t.createdAt).toLocaleString('vi-VN') : '-';
+          return `
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 12px 16px; color: var(--text-soft);">${dateStr}</td>
+              <td style="padding: 12px 16px; color: var(--text-base);">${t.description || '-'}</td>
+              <td style="padding: 12px 16px; font-weight: 700; text-align: right; color: ${color};">${pts}</td>
+            </tr>
+          `;
+        }).join('');
+      }
     }
 
     loadPersonalInfo().catch(err => {

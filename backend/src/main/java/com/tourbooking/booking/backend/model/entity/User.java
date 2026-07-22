@@ -39,6 +39,9 @@ public class User extends Base {
     @Column(name = "IsActive")
     private Boolean isActive = true;
 
+    @Column(name = "EmailVerified")
+    private Boolean emailVerified = false;
+
     @Column(name = "CurrentSessionID", length = 64)
     private String currentSessionId;
 
@@ -54,7 +57,7 @@ public class User extends Base {
     @Column(name = "Gender", length = 20)
     private String gender;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<Booking> bookings;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)

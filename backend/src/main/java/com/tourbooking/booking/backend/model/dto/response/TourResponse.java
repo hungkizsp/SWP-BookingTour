@@ -18,4 +18,6 @@ public class TourResponse {
     private List<String> imageUrls;
     private String imageUrl;
     private String externalId;
+    private Long categoryId;
+    private String categoryName;
 }

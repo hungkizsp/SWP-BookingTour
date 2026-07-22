@@ -17,7 +17,7 @@
     maxPrice: '',
     categoryId: params.get('cat') || '',
     sortBy: 'price',
-    selected: new Set(JSON.parse(localStorage.getItem('compareIds') || '[]'))
+    selected: new Set(JSON.parse(sessionStorage.getItem('compareIds') || '[]'))
   };
   let wishlistIds = new Set();
 
@@ -44,7 +44,7 @@
   function updateCompareBadge() {
     compareCountEl.textContent = state.selected.size;
     compareBar.style.display = state.selected.size > 0 ? 'flex' : 'none';
-    localStorage.setItem('compareIds', JSON.stringify([...state.selected]));
+    sessionStorage.setItem('compareIds', JSON.stringify([...state.selected]));
   }
 
   async function fetchTours() {
@@ -147,7 +147,7 @@
       btn.onclick = async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+        const userStr = sessionStorage.getItem('user');
         if (!userStr) {
           alert('Vui lòng đăng nhập để lưu tour yêu thích!');
           return;
@@ -246,7 +246,7 @@
   }
 
   async function initWishlist() {
-    const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+    const userStr = sessionStorage.getItem('user');
     if (!userStr) return;
     const user = JSON.parse(userStr);
     try {

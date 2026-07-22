@@ -15,6 +15,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByUserId(Long userId);
     long countByUserId(Long userId);
     List<Booking> findByScheduleId(Long scheduleId);
+    List<Booking> findByScheduleIdAndStatusIn(Long scheduleId, List<BookingStatus> statuses);
+    long countByScheduleIdAndStatusIn(Long scheduleId, List<BookingStatus> statuses);
     List<Booking> findByUser_IdAndStatusIn(Long userId, List<BookingStatus> statuses);
     List<Booking> findByStatus(BookingStatus status);
     org.springframework.data.domain.Page<Booking> findByStatus(BookingStatus status, org.springframework.data.domain.Pageable pageable);
@@ -116,8 +118,30 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "AND b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED")
     List<Booking> findConfirmedByScheduleId(@Param("scheduleId") Long scheduleId);
 
-    /** Count bookings with REFUNDED status (caused by CANCELLED_BY_OPERATOR). */
+    /** Count ALL bookings for a schedule (any status) — used by the purge job to ensure 0 bookings before deletion. */
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.schedule.id = :scheduleId")
+    long countByScheduleId(@Param("scheduleId") Long scheduleId);
+
+    /** Count valid bookings (CONFIRMED/PAID) for a specific schedule. */
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.schedule.id = :scheduleId " +
+           "AND b.status IN (com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED, com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PAID)")
+    long countValidBookingsByScheduleId(@Param("scheduleId") Long scheduleId);
+
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status IN (com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED, com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PAID) " +
+           "AND b.schedule.guide IS NULL " +
+           "AND b.schedule.status IN (com.tourbooking.booking.backend.model.entity.enums.TourStatus.OPEN, com.tourbooking.booking.backend.model.entity.enums.TourStatus.BOOKING_CLOSED, com.tourbooking.booking.backend.model.entity.enums.TourStatus.SOLD_OUT, com.tourbooking.booking.backend.model.entity.enums.TourStatus.PENDING_GUIDE)")
+    long countValidBookingsMissingGuide();
+
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status IN (com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED, com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PAID) " +
+           "AND b.schedule.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.PENDING_GUIDE")
+    long countValidBookingsPendingGuide();
+
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.REFUNDED " +
+           "AND b.schedule.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR")
+    long countBookingsRefundedByOperator();
+
+    /** Count affected distinct customers (users) caused by CANCELLED_BY_OPERATOR. */
+    @Query("SELECT COUNT(DISTINCT b.user.id) FROM Booking b WHERE b.status = com.tourbooking.booking.backend.model.entity.enums.BookingStatus.REFUNDED " +
            "AND EXISTS (SELECT 1 FROM TourSchedule s WHERE s.id = b.schedule.id " +
            "AND s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR)")
     long countOperatorCancelledRefundedBookings();
@@ -127,5 +151,13 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "AND EXISTS (SELECT 1 FROM TourSchedule s WHERE s.id = b.schedule.id " +
            "AND s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.CANCELLED_BY_OPERATOR)")
     java.math.BigDecimal sumOperatorCancelledRefundAmounts();
+
+    /** Override findAll for admin/staff dashboard to prevent N+1 by using JOIN FETCH */
+    @Query("SELECT DISTINCT b FROM Booking b " +
+           "LEFT JOIN FETCH b.user " +
+           "LEFT JOIN FETCH b.schedule s " +
+           "LEFT JOIN FETCH s.tour " +
+           "LEFT JOIN FETCH s.guide")
+    List<Booking> findAllWithDetails();
 }
 

@@ -41,18 +41,18 @@ function renderUploadedGallery(urls) {
     if (!cont) return;
     
     if (urls.length === 0) {
-        cont.innerHTML = '<div style="width:100%; font-size:0.85rem; color:#94a3b8; padding:10px; border:1px dashed #e2e8f0; border-radius:8px; text-align:center;">No photos uploaded yet.</div>';
+        cont.innerHTML = '<div style="width:100%; font-size:0.85rem; color:var(--text-muted); padding:10px; border:1px dashed var(--border); border-radius:8px; text-align:center;">Chưa có ảnh nào.</div>';
         return;
     }
 
-    cont.innerHTML = '<div style="width:100%; font-size:0.8rem; font-weight:700; color:#64748b; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Activity Photos</div>';
+    cont.innerHTML = '<div style="width:100%; font-size:0.8rem; font-weight:700; color:var(--text-muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Ảnh hoạt động</div>';
     
     urls.forEach(url => {
         const fullUrl = TB.normalizeImageUrl(url);
         const img = document.createElement('img');
         img.src = fullUrl;
         img.className = 'preview-img';
-        img.style.cssText = 'width:80px; height:80px; object-fit:cover; border-radius:10px; cursor:pointer; border:1px solid #f1f5f9; transition:transform 0.2s;';
+        img.style.cssText = 'width:80px; height:80px; object-fit:cover; border-radius:10px; cursor:pointer; border:1px solid var(--border); transition:transform 0.2s;';
         img.onmouseover = () => img.style.transform = 'scale(1.05)';
         img.onmouseout = () => img.style.transform = 'scale(1)';
         img.onclick = () => window.open(url, '_blank');
@@ -69,13 +69,13 @@ function renderProgressHistory(logs) {
         return;
     }
 
-    cont.innerHTML = '<h4 style="margin-bottom:10px; font-size: 0.9rem; color: #64748b;">HISTORY</h4>';
+    cont.innerHTML = '<h4 style="margin-bottom:10px; font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase;">Lịch sử</h4>';
     logs.forEach(log => {
         const timeStr = new Date(log.createdAt).toLocaleString();
         cont.innerHTML += `
-            <div style="margin-bottom: 10px; border-left: 2px solid #0f766e; padding-left: 10px; background: #f8fafc; padding: 8px; border-radius: 4px;">
-                <div style="font-size: 0.7rem; color: #64748b;">${timeStr}</div>
-                <div style="font-size: 0.85rem;">${log.content}</div>
+            <div style="margin-bottom: 10px; border-left: 2px solid var(--primary); padding-left: 10px; background: var(--bg-main); padding: 8px; border-radius: 4px;">
+                <div style="font-size: 0.7rem; color: var(--text-muted);">${timeStr}</div>
+                <div style="font-size: 0.85rem; color: var(--text-main); margin-top: 4px;">${log.content}</div>
             </div>
         `;
     });

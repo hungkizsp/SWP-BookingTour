@@ -10,9 +10,19 @@ import com.tourbooking.booking.backend.model.entity.TourSchedule;
 import com.tourbooking.booking.backend.model.entity.enums.TourStatus;
 import com.tourbooking.booking.backend.repository.TourScheduleRepository;
 import com.tourbooking.booking.backend.service.TourScheduleService;
+import com.tourbooking.booking.backend.service.TourChatGroupService;
+import com.tourbooking.booking.backend.util.ActiveBookingStatuses;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import com.tourbooking.booking.backend.repository.BookingRepository;
+import com.tourbooking.booking.backend.repository.RefundRequestRepository;
+import com.tourbooking.booking.backend.service.MailService;
+import java.util.List;
+import com.tourbooking.booking.backend.model.entity.enums.BookingStatus;
+import com.tourbooking.booking.backend.model.entity.enums.RefundStatus;
+import com.tourbooking.booking.backend.model.entity.RefundRequest;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +30,97 @@ import lombok.extern.slf4j.Slf4j;
 public class TourScheduleServiceImpl implements TourScheduleService {
 
     private final TourScheduleRepository tourScheduleRepository;
+    private final com.tourbooking.booking.backend.repository.TourRepository tourRepository;
+    private final BookingRepository bookingRepository;
+    private final RefundRequestRepository refundRequestRepository;
+    private final MailService mailService;
+    private final TourChatGroupService tourChatGroupService;
+
+    @Override
+    @Transactional
+    public void cancelTourSchedule(Long scheduleId) {
+        // Step 1: Update Schedule Status
+        TourSchedule schedule = tourScheduleRepository.findById(scheduleId)
+            .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+        
+        if (schedule.getStatus() == TourStatus.CANCELLED || schedule.getStatus() == TourStatus.CANCELLED_BY_OPERATOR) {
+            throw new IllegalStateException("Lịch trình này đã bị hủy trước đó.");
+        }
+        schedule.setStatus(TourStatus.CANCELLED);
+        tourScheduleRepository.save(schedule);
+
+        try {
+            tourChatGroupService.closeGroup(scheduleId);
+        } catch (Exception e) {
+            log.error("Failed to close chat group for schedule {}", scheduleId, e);
+        }
+
+        // Step 2: Fetch all active bookings linked to this schedule
+        List<com.tourbooking.booking.backend.model.entity.Booking> activeBookings = bookingRepository.findByScheduleIdAndStatusIn(
+            scheduleId, List.of(BookingStatus.CONFIRMED, BookingStatus.PAID, BookingStatus.PENDING, BookingStatus.PENDING_CASH)
+        );
+
+        // Step 3: Loop through bookings for automated 100% refund & cancellation
+        for (com.tourbooking.booking.backend.model.entity.Booking booking : activeBookings) {
+            BookingStatus originalStatus = booking.getStatus();
+            // Update booking status
+            booking.setStatus(BookingStatus.COMPANY_CANCELED); 
+            
+            // Only refund if they actually paid (CONFIRMED or PAID)
+            if (originalStatus == BookingStatus.CONFIRMED || originalStatus == BookingStatus.PAID) {
+                // Trigger 100% Refund Logic
+                RefundRequest refund = new RefundRequest();
+                refund.setBooking(booking);
+                refund.setAmount(booking.getTotalPrice());
+                refund.setReason("Công ty hủy lịch trình");
+                refund.setStatus(RefundStatus.APPROVED);
+                refund.setOriginalBookingStatus(originalStatus);
+                refund.setProcessedAt(java.time.LocalDateTime.now());
+                refund.setStaffNote("Hoàn tiền 100% do hủy lịch trình");
+                refundRequestRepository.save(refund);
+            }
+            
+            // Queue/Send Notification to Customer
+            try {
+                if (booking.getUser() != null && booking.getUser().getEmail() != null) {
+                    mailService.sendOperatorCancellationRefundEmail(
+                        booking.getUser().getEmail(), 
+                        booking.getUser().getFullName(),
+                        booking.getId(),
+                        booking.getTotalPrice()
+                    );
+                }
+            } catch (Exception e) {
+                log.error("Failed to send cancellation email to user {}", booking.getUser().getEmail(), e);
+            }
+        }
+        bookingRepository.saveAll(activeBookings);
+
+        if (schedule.getGuide() != null) {
+            schedule.setGuide(null);
+            tourScheduleRepository.save(schedule);
+            log.info("[CANCEL-SCHEDULE] Released guide from schedule #{} after full cancellation.", scheduleId);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void releaseGuideIfNoActiveBookings(Long scheduleId) {
+        TourSchedule schedule = tourScheduleRepository.findById(scheduleId).orElse(null);
+        if (schedule == null || schedule.getGuide() == null) {
+            return;
+        }
+
+        long activeCount = bookingRepository.countByScheduleIdAndStatusIn(scheduleId, ActiveBookingStatuses.STATUSES);
+        if (activeCount == 0) {
+            Long guideId = schedule.getGuide().getId();
+            schedule.setGuide(null);
+            tourScheduleRepository.save(schedule);
+            log.info("[RELEASE-GUIDE] Released guide #{} from schedule #{} (0 active bookings).",
+                    guideId, scheduleId);
+        }
+    }
+
 
     /**
      * Deduct slots atomically using a Pessimistic Write Lock.
@@ -83,5 +184,56 @@ public class TourScheduleServiceImpl implements TourScheduleService {
 
             tourScheduleRepository.save(schedule);
         });
+    }
+
+    @Override
+    @Transactional
+    public java.util.List<TourSchedule> bulkCreateSchedules(
+            com.tourbooking.booking.backend.model.dto.request.TourScheduleBulkRequest request) {
+        if (request.getRangeStartDate() == null || request.getRangeEndDate() == null) {
+            throw new BadRequestException("Range start and end dates are required");
+        }
+        if (request.getRangeStartDate().isAfter(request.getRangeEndDate())) {
+            throw new BadRequestException("Start date cannot be after end date");
+        }
+
+        long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(request.getRangeStartDate(),
+                request.getRangeEndDate());
+        if (daysBetween > 365) {
+            throw new BadRequestException("Khoảng thời gian lặp lại không được vượt quá 1 năm");
+        }
+
+        com.tourbooking.booking.backend.model.entity.Tour tour = tourRepository.findById(request.getTourId())
+                .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
+
+        java.util.List<TourSchedule> schedulesToSave = new java.util.ArrayList<>();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.LocalDate current = request.getRangeStartDate();
+
+        int durationDays = tour.getDuration() != null && tour.getDuration() > 0 ? tour.getDuration() - 1 : 0;
+
+        while (!current.isAfter(request.getRangeEndDate())) {
+            if (request.getDaysOfWeek() == null || request.getDaysOfWeek().isEmpty()
+                    || request.getDaysOfWeek().contains(current.getDayOfWeek())) {
+                    
+                if (current.equals(today) && request.getDepartureTime() != null && request.getDepartureTime().isBefore(java.time.LocalTime.now())) {
+                    throw new IllegalArgumentException("Không thể lặp lịch vào giờ đã qua của ngày hôm nay!");
+                }
+
+                TourSchedule schedule = new TourSchedule();
+                schedule.setTour(tour);
+                schedule.setStartDate(current);
+                schedule.setEndDate(current.plusDays(durationDays));
+                schedule.setDepartureTime(request.getDepartureTime());
+                schedule.setMaxSlots(request.getMaxSlots());
+                schedule.setAvailableSlots(request.getMaxSlots());
+                schedule.setStatus(TourStatus.OPEN);
+
+                schedulesToSave.add(schedule);
+            }
+            current = current.plusDays(1);
+        }
+
+        return tourScheduleRepository.saveAll(schedulesToSave);
     }
 }

@@ -1,5 +1,6 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,37 +11,62 @@
     <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/toast.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .panel { background: var(--bg-white); border-radius: 1.25rem; padding: 1.5rem; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
-        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
-        .panel-title { font-size: 1rem; font-weight: 700; color: var(--text-main); }
-        .btn-refresh { background: #3b82f6; color: white; padding: 6px 12px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-        .btn-refresh:hover { background: #2563eb; }
-        header h1 { font-size: 1.6rem; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .panel {
+            background: var(--bg-white);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .btn-refresh {
+            background: #3b82f6;
+            color: white;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-refresh:hover {
+            background: #2563eb;
+        }
+
+        header h1 {
+            font-size: 1.6rem;
+        }
     </style>
 </head>
+
 <body>
     <div class="admin-layout">
-        <aside class="sidebar">
-            <a href="./dashboard.html" class="logo"> TourBooking</a>
-            <nav>
-                <a href="./dashboard.html" class="nav-item"> Dashboard</a>
-                <a href="./manageTours.html" class="nav-item"> Tours</a>
-                <a href="./manageCategories.html" class="nav-item"> Categories</a>
-                <a href="./manageBookings.html" class="nav-item"> Bookings</a>
-                <a href="./manageUsers.html" class="nav-item"> Users</a>
-                <a href="./manageReview.html" class="nav-item"> Reviews</a>
-                <a href="./manageNewsletter.html" class="nav-item"> Newsletters</a>
-                <a href="./financialReport.html" class="nav-item"> Financial Report</a>
-                <a href="./manageDiscounts.html" class="nav-item active"> Manage Discount</a>
-            </nav>
-        </aside>
+        <aside class="sidebar"></aside>
 
         <main class="main-content">
             <header>
                 <div>
                     <h1>Manage Discounts</h1>
-                    <div style="color:var(--text-muted); font-size:0.85rem; margin-top:0.5rem;">Cấu hình tỉ lệ giảm giá cho các đối tượng hành khách.</div>
+                    <div style="color:var(--text-muted); font-size:0.85rem; margin-top:0.5rem;">Cấu hình giảm giá cho
+                        các đối tượng hành khách</div>
                 </div>
                 <div style="display:flex; align-items:center; gap:1rem;">
                     <span id="userInfo" style="font-weight:600; font-size:0.9rem;"></span>
@@ -50,7 +76,7 @@
 
             <div class="panel" style="max-width: 800px; margin-top: 2rem;">
                 <div class="panel-header">
-                    <span class="panel-title">👶 Age Bracket Discount Configurations</span>
+                    <span class="panel-title">Age Bracket Discount Configurations</span>
                 </div>
                 <div id="discount-settings-container" style="font-size: 0.95rem;">
                     <p style="color:var(--text-muted)">Đang tải cấu hình...</p>
@@ -101,7 +127,7 @@
                 html += '</div>';
                 document.getElementById('discount-settings-container').innerHTML = html;
             } catch (e) {
-                document.getElementById('discount-settings-container').innerHTML = '<p style="color:red">Lỗi tải cấu hình: ' + e.message + '</p>';
+                document.getElementById('discount-settings-container').innerHTML = '<p style="color:red">L�i tải cấu hình: ' + e.message + '</p>';
             }
         }
 
@@ -113,15 +139,17 @@
                     method: 'PUT',
                     body: JSON.stringify({ rate, isActive })
                 });
-                if(typeof showToast === 'function') showToast(`Đã cập nhật cấu hình cho ${type}`, 'success');
+                if (typeof showToast === 'function') showToast(`Đã cập nhật cấu hình cho ${type}`, 'success');
                 else alert(`Đã cập nhật cấu hình cho ${type}`);
             } catch (e) {
-                if(typeof showToast === 'function') showToast(`Lỗi cập nhật: ${e.message}`, 'error');
-                else alert(`Lỗi cập nhật: ${e.message}`);
+                if (typeof showToast === 'function') showToast(`L�i cập nhật: ${e.message}`, 'error');
+                else alert(`L�i cập nhật: ${e.message}`);
             }
         }
 
         document.addEventListener('DOMContentLoaded', loadDiscountConfigs);
     </script>
+<script src="../../assets/js/admin/sidebar.js"></script>
 </body>
+
 </html>

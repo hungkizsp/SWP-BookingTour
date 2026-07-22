@@ -1,4 +1,4 @@
-(()=>{
+document.addEventListener('DOMContentLoaded', () => {
   const user = sessionStorage.getItem('user') ? JSON.parse(sessionStorage.getItem('user')) : null;
   if (!user) {
     TB.goToLogin('Vui lòng đăng nhập để có thể sử dụng tính năng Chat.');
@@ -17,10 +17,10 @@
   const isGuest = !user;
   let guestId = null;
   if (isGuest) {
-    guestId = localStorage.getItem('guestId');
+    guestId = sessionStorage.getItem('guestId');
     if (!guestId) {
       guestId = 'guest_' + Math.random().toString(36).substring(2, 11);
-      localStorage.setItem('guestId', guestId);
+      sessionStorage.setItem('guestId', guestId);
     }
   }
 
@@ -455,4 +455,4 @@
 
   setInterval(load, 10000);
   setInterval(loadSessionStatus, 15000);
-})();
+});
