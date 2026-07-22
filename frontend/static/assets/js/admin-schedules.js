@@ -92,9 +92,9 @@ function renderPagination(totalPages) {
         container.innerHTML = '';
         return;
     }
-    let html = `<button class="action-btn" style="background:#cbd5e1; color:#1e293b;" ${currentPage === 0 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">Prev</button>`;
-    html += `<span style="display:flex; align-items:center; font-weight:bold; margin: 0 10px;">Page ${currentPage + 1} of ${totalPages}</span>`;
-    html += `<button class="action-btn" style="background:#cbd5e1; color:#1e293b;" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Next</button>`;
+    let html = `<button class="btn btn-secondary btn-sm" ${currentPage === 0 ? 'disabled' : ''} onclick="goToPage(${currentPage - 1})">← Trước</button>`;
+    html += `<span style="display:flex; align-items:center; font-size:0.875rem; font-weight:600; color:var(--text-muted); margin: 0 8px;">Trang ${currentPage + 1} / ${totalPages}</span>`;
+    html += `<button class="btn btn-secondary btn-sm" ${currentPage >= totalPages - 1 ? 'disabled' : ''} onclick="goToPage(${currentPage + 1})">Tiếp →</button>`;
     container.innerHTML = html;
 }
 
