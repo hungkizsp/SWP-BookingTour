@@ -105,6 +105,23 @@ public class FixDatabaseComponent implements CommandLineRunner {
             } catch (Exception e) {
                 log.warn("Failed to check/add OriginalBookingStatus to RefundRequests: {}", e.getMessage());
             }
+
+            // 3. Check and add EmailVerified to Users
+            try {
+                jdbcTemplate.execute(
+                        "IF COL_LENGTH('dbo.Users', 'EmailVerified') IS NULL " +
+                                "BEGIN " +
+                                "    ALTER TABLE dbo.Users ADD EmailVerified BIT NOT NULL CONSTRAINT DF_Users_EmailVerified DEFAULT 0; " +
+                                "END");
+                jdbcTemplate.execute(
+                        "IF COL_LENGTH('dbo.Users', 'EmailVerified') IS NOT NULL " +
+                                "BEGIN " +
+                                "    UPDATE dbo.Users SET EmailVerified = 1; " +
+                                "END");
+                log.info("Schema migration: EmailVerified column checked/added to Users.");
+            } catch (Exception e) {
+                log.warn("Failed to check/add EmailVerified to Users: {}", e.getMessage());
+            }
         } catch (Exception e) {
             log.error("Schema migration error: {}", e.getMessage());
         }

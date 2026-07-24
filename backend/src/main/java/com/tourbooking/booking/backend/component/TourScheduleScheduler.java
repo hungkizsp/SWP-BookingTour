@@ -54,6 +54,11 @@ public class TourScheduleScheduler {
 
         int updated = 0;
         for (TourSchedule schedule : schedules) {
+            schedule = tourScheduleRepository.findByIdWithLock(schedule.getId()).orElse(null);
+            if (schedule == null) {
+                continue;
+            }
+
             // Double-check the effective deadline at entity level to handle null departureTime
             LocalDateTime effectiveDeadline = schedule.getEffectiveBookingDeadline();
             if (effectiveDeadline == null || now.isBefore(effectiveDeadline)) {
@@ -97,6 +102,11 @@ public class TourScheduleScheduler {
 
         int updated = 0;
         for (TourSchedule schedule : candidates) {
+            schedule = tourScheduleRepository.findByIdWithLock(schedule.getId()).orElse(null);
+            if (schedule == null) {
+                continue;
+            }
+
             LocalDateTime departureDateTime = schedule.getDepartureDateTime();
             if (departureDateTime == null || now.isBefore(departureDateTime)) {
                 continue; // departureTime pushes it later in the day
@@ -144,6 +154,11 @@ public class TourScheduleScheduler {
 
         int updated = 0;
         for (TourSchedule schedule : candidates) {
+            schedule = tourScheduleRepository.findByIdWithLock(schedule.getId()).orElse(null);
+            if (schedule == null) {
+                continue;
+            }
+
             LocalDateTime returnDateTime = schedule.getReturnDateTime();
             if (returnDateTime == null || now.isBefore(returnDateTime)) {
                 continue; // returnTime pushes it later in the day
