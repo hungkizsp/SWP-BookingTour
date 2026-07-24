@@ -142,7 +142,7 @@ public class AiChatServiceImpl implements AiChatService {
                 if (tours.isEmpty()) {
                     String[] words = keyword.split("\\s+");
                     for (String word : words) {
-                        if (word.length() > 2) {
+                        if (word.length() > 2 && !isStopWord(word)) {
                             List<Tour> wordMatch = tourRepo.searchToursWithFilters(word, null, null, null, null);
                             if (!wordMatch.isEmpty()) {
                                 tours = wordMatch;
@@ -185,9 +185,18 @@ public class AiChatServiceImpl implements AiChatService {
         }
     }
 
+    private boolean isStopWord(String word) {
+        if (word == null) return true;
+        String w = word.toLowerCase().trim();
+        return w.equals("tour") || w.equals("cho") || w.equals("tôi") || w.equals("nào") 
+            || w.equals("gì") || w.equals("bạn") || w.equals("của") || w.equals("tìm") 
+            || w.equals("đây") || w.equals("có") || w.equals("lịch") || w.equals("trình")
+            || w.equals("ngày") || w.equals("đêm") || w.equals("du") || w.equals("lịch");
+    }
+
     private String extractKeyword(String message) {
         if (message == null) return "";
-        return message.toLowerCase().replace("tôi muốn đi", "").replace("tìm tour", "").replace("giới thiệu", "").replace("có những sản phẩm nào", "").replace("sản phẩm", "").replace("tour du lịch", "").replace("tư vấn", "").replace("đến", "").replace("tại", "").replace("đi", "").trim();
+        return message.toLowerCase().replace("tôi muốn đi", "").replace("tìm tour", "").replace("giới thiệu", "").replace("có những sản phẩm nào", "").replace("sản phẩm", "").replace("tour du lịch", "").replace("tư vấn", "").replace("đến", "").replace("tại", "").replace("đi", "").replace("tour", "").trim();
     }
 
     private String fallbackResponse(String userMessage) {
