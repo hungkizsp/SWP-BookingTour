@@ -87,6 +87,11 @@ public class OperationalScheduler {
 
         int alertsSent = 0;
         for (TourSchedule schedule : candidates) {
+            schedule = tourScheduleRepository.findByIdWithLock(schedule.getId()).orElse(null);
+            if (schedule == null) {
+                continue;
+            }
+
             LocalDateTime departure = schedule.getDepartureDateTime();
             if (departure == null) continue;
 
@@ -208,6 +213,11 @@ public class OperationalScheduler {
 
         int transitioned = 0;
         for (TourSchedule schedule : candidates) {
+            schedule = tourScheduleRepository.findByIdWithLock(schedule.getId()).orElse(null);
+            if (schedule == null) {
+                continue;
+            }
+
             LocalDateTime departure = schedule.getDepartureDateTime();
             if (departure == null) continue;
 
@@ -350,6 +360,11 @@ public class OperationalScheduler {
                 .findEligibleNoGuideSchedulesOnOrBeforeDate(today);
 
         for (TourSchedule schedule : candidatesForProgress) {
+            schedule = tourScheduleRepository.findByIdWithLock(schedule.getId()).orElse(null);
+            if (schedule == null) {
+                continue;
+            }
+
             LocalDateTime departure = schedule.getDepartureDateTime();
             if (departure == null || now.isBefore(departure)) {
                 continue; // not yet at departure
@@ -403,6 +418,11 @@ public class OperationalScheduler {
 
         int purged = 0;
         for (TourSchedule schedule : candidates) {
+            schedule = tourScheduleRepository.findByIdWithLock(schedule.getId()).orElse(null);
+            if (schedule == null) {
+                continue;
+            }
+
             LocalDateTime departure = schedule.getDepartureDateTime();
 
             // Only process schedules whose departure has actually passed

@@ -245,7 +245,7 @@
           grid.innerHTML = tours.map((t, idx) => `
             <div class="tour-card reveal" style="animation-delay: ${idx * 0.1}s">
               <div class="tour-card-img-wrapper">
-                <img src="${t.imageUrl || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg'}" class="tour-card-img" alt="${t.tourName}">
+                <img src="${TB.normalizeImageUrl(t.imageUrl || (t.imageUrls && t.imageUrls[0]) || 'https://danangbest.com/vnt_upload/tour/04_2023/banahill_4.jpg')}" class="tour-card-img" alt="${t.tourName}">
                 <div class="tour-card-badge">✨ NỔI BẬT</div>
               </div>
               <div class="tour-card-body">

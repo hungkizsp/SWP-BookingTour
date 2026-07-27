@@ -124,6 +124,12 @@
         </div>`;
       });
 
+      bodyHtml += renderRow('✨ Lý do chọn tour', t => `
+        <div style="font-size: 0.85rem; line-height: 1.6; text-align: justify; color: #475569; font-weight: 500; min-width: 250px; white-space: normal;">
+          ${escapeHtml(t.whyChooseUs || 'Chưa cập nhật lý do chọn tour')}
+        </div>
+      `);
+
       bodyHtml += renderRow('🚌 Phương tiện', t => `
         <div>${escapeHtml(t.transportType || 'Đang cập nhật')}</div>
       `);
