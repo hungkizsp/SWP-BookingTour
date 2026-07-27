@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -95,7 +95,7 @@
                 $('gExp').value = u.experienceYears || '';
                 $('gBio').value = u.bio || '';
             } catch (e) {
-                alert("Cannot load profile");
+                alert("Không thể tải thông tin hồ sơ");
             }
         }
 
@@ -120,7 +120,7 @@
                 user.fullName = payload.fullName;
                 sessionStorage.setItem('user', JSON.stringify(user));
 
-                alert('Profile updated successfully!');
+                alert('Cập nhật hồ sơ thành công!');
             } catch (e) {
                 alert('Update failed: ' + e.message);
             }

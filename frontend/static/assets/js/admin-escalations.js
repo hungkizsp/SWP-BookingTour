@@ -12,7 +12,7 @@
     } catch (err) {
       if (infoEl) {
         infoEl.hidden = false;
-        infoEl.textContent = 'Unable to load sessions: ' + (err.message || 'Unknown error');
+        infoEl.textContent = 'Không thể tải danh sách phiên: ' + (err.message || 'Unknown error');
       }
     }
   }
@@ -28,7 +28,7 @@
     });
 
     if (!items.length) {
-      listEl.innerHTML = '<p class="muted">No sessions waiting for staff.</p>';
+      listEl.innerHTML = '<p class="muted">Không có phiên nào đang chờ nhân viên.</p>';
       return;
     }
 
@@ -56,7 +56,7 @@
     // 2. Update Meta
     const meta = card.querySelector('.escalation-meta');
     if (session.lastMessageAt) {
-        meta.innerHTML = `<div><strong>Last activity:</strong> ${new Date(session.lastMessageAt).toLocaleString()}</div>`;
+        meta.innerHTML = `<div><strong>Hoạt động gần nhất:</strong> ${new Date(session.lastMessageAt).toLocaleString()}</div>`;
     }
 
     // 3. Update Conversation (Only if last activity changed or count changed?)
@@ -139,7 +139,7 @@
         textarea.value = '';
         refresh();
       } catch (err) {
-        alert('Failed to send reply: ' + (err.message || 'Unknown error'));
+        alert('Gửi phản hồi thất bại: ' + (err.message || 'Unknown error'));
       }
     });
 
@@ -148,17 +148,17 @@
         await TB.apiFetch(`/api/v1/admin/chat/escalations/${session.id}/assign`, { method: 'POST' });
         refresh();
       } catch (err) {
-        alert('Failed to accept session.');
+        alert('Tiếp nhận phiên thất bại.');
       }
     });
 
     closeBtn.addEventListener('click', async () => {
-      if (!window.confirm('Mark this session as resolved?')) return;
+      if (!window.confirm('Đánh dấu phiên này là đã giải quyết?')) return;
       try {
         await TB.apiFetch(`/api/v1/admin/chat/escalations/${session.id}/resolve`, { method: 'POST' });
         refresh();
       } catch (err) {
-        alert('Failed to resolve session.');
+        alert('Giải quyết phiên thất bại.');
       }
     });
 
@@ -172,7 +172,7 @@
   }
 
   async function loadConversation(session, container, showSpinner = true) {
-    if (showSpinner) container.innerHTML = '<p class="muted">Loading conversation...</p>';
+    if (showSpinner) container.innerHTML = '<p class="muted">Đang tải cuộc hội thoại...</p>';
     const query = session.userId ? `?userId=${encodeURIComponent(session.userId)}` : `?guestId=${encodeURIComponent(session.guestId || '')}`;
     try {
       const res = await TB.apiFetch(`/api/v1/chat/messages${query}`);
@@ -183,7 +183,7 @@
 
       container.innerHTML = '';
       if (!messages.length) {
-        container.innerHTML = '<p class="muted">No messages yet.</p>';
+        container.innerHTML = '<p class="muted">Chưa có tin nhắn.</p>';
       } else {
         messages.forEach(m => container.append(renderMessage(m)));
       }
@@ -191,7 +191,7 @@
       // Auto scroll to bottom
       container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     } catch (err) {
-      if (showSpinner) container.innerHTML = `<p class="muted">Unable to load messages.</p>`;
+      if (showSpinner) container.innerHTML = `<p class="muted">Không thể tải tin nhắn.</p>`;
     }
   }
 

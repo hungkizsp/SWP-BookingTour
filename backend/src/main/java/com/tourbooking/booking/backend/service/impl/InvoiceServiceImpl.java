@@ -21,7 +21,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     @Override
     public Invoice getInvoice(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy booking."));
                 
         org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails) {
@@ -30,7 +30,7 @@ public class InvoiceServiceImpl implements InvoiceService {
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
             if (!isStaffOrAdmin) {
                 if (!booking.getUser().getEmail().equals(email)) {
-                    throw new RuntimeException("Access denied");
+                    throw new RuntimeException("Truy cập bị từ chối.");
                 }
             }
         }

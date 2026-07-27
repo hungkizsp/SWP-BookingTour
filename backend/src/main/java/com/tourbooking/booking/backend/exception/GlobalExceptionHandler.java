@@ -124,7 +124,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
         log.warn("Validation failed: {}", e.getMessage(), e);
-        String message = "Validation error";
+        String message = "Dữ liệu nhập vào không hợp lệ.";
         var fieldError = e.getBindingResult().getFieldError();
         if (fieldError != null) {
             message = fieldError.getDefaultMessage();
@@ -141,7 +141,7 @@ public class GlobalExceptionHandler {
         log.warn("Bad credentials attempt: {}", e.getMessage());
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .code(HttpStatus.UNAUTHORIZED.value())
-                .message("Invalid email or password")
+                .message("Email hoặc mật khẩu không chính xác.")
                 .build();
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }

@@ -5,32 +5,32 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             title: "TỔNG QUAN",
             items: [
-                { href: './dashboard.html', text: 'Dashboard', icon: '📊', activeMatch: ['dashboard.html'] }
+                { href: './dashboard.html', text: 'Tổng quan', icon: '📊', activeMatch: ['dashboard.html'] }
             ]
         },
         {
             title: "ĐIỀU HÀNH & TOUR",
             items: [
                 { href: './manageTours.html', text: 'Tours', icon: '🗺️', activeMatch: ['manageTours.html', 'editTour.html', 'createrTour.html'] },
-                { href: './manageCategories.html', text: 'Categories', icon: '🏷️', activeMatch: ['manageCategories.html', 'manageCatelories.html'] }
+                { href: './manageCategories.html', text: 'Danh mục', icon: '🏷️', activeMatch: ['manageCategories.html', 'manageCatelories.html'] }
             ]
         },
         {
             title: "KHÁCH HÀNG & GIAO DỊCH",
             items: [
                 { href: './manageBookings.html', text: 'Bookings', icon: '📅', activeMatch: ['manageBookings.html'] },
-                { href: './manageUsers.html', text: 'Users', icon: '👥', activeMatch: ['manageUsers.html'] },
-                { href: './manageReview.html', text: 'Reviews', icon: '⭐', activeMatch: ['manageReview.html'] },
-                { href: './chat-escalations.html', text: 'Support Chat', icon: '💬', activeMatch: ['chat-escalations.html'] }
+                { href: './manageUsers.html', text: 'Người dùng', icon: '👥', activeMatch: ['manageUsers.html'] },
+                { href: './manageReview.html', text: 'Đánh giá', icon: '⭐', activeMatch: ['manageReview.html'] },
+                { href: './chat-escalations.html', text: 'Chat Hỗ trợ', icon: '💬', activeMatch: ['chat-escalations.html'] }
             ]
         },
         {
             title: "MARKETING & TÀI CHÍNH",
             items: [
-                { href: './manageDiscounts.html', text: 'Discounts', icon: '🔥', activeMatch: ['manageDiscounts.html'] },
+                { href: './manageDiscounts.html', text: 'Giảm giá', icon: '🔥', activeMatch: ['manageDiscounts.html'] },
                 { href: './manageVouchers.html', text: 'Vouchers', icon: '🎟️', activeMatch: ['manageVouchers.html'] },
-                { href: './manageNewsletter.html', text: 'Newsletters', icon: '📧', activeMatch: ['manageNewsletter.html'] },
-                { href: './financialReport.html', text: 'Financial Report', icon: '💰', activeMatch: ['financialReport.html'] }
+                { href: './manageNewsletter.html', text: 'Bản tin', icon: '📧', activeMatch: ['manageNewsletter.html'] },
+                { href: './financialReport.html', text: 'Báo cáo tài chính', icon: '💰', activeMatch: ['financialReport.html'] }
             ]
         }
     ];

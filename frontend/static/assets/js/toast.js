@@ -34,6 +34,6 @@ function showToast(message, type = 'success') {
 
 // Override global alert for existing code
 window.alert = function(msg) {
-    const isError = msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('error') || msg.toLowerCase().includes('lỗi');
+    const isError = msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('error') || msg.toLowerCase().includes('lỗi') || msg.toLowerCase().includes('thất bại') || msg.toLowerCase().includes('không thể') || msg.toLowerCase().includes('không tìm thấy');
     showToast(msg, isError ? 'error' : 'info');
 };

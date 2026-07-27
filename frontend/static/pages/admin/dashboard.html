@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -538,12 +538,12 @@
         <main class="main-content">
             <header>
                 <div>
-                    <h1>Dashboard Overview</h1>
+                    <h1>Tổng quan hệ thống</h1>
                     <div class="last-updated" id="lastUpdated">Đang tải dữ liệu...</div>
                 </div>
                 <div class="header-actions">
                     <button class="btn-refresh" id="refreshBtn" onclick="refreshStats()">
-                        <span class="icon">&#x1F504;</span> Lam moi
+                        <span class="icon">&#x1F504;</span> Làm mới
                     </button>
                     <div style="width:1px; height:24px; background:var(--border);"></div>
                     <div style="position:relative; cursor:pointer; padding:0.5rem 0.6rem; border-radius:0.5rem; border:1px solid var(--border);">
@@ -557,7 +557,7 @@
                             <span style="font-size:0.7rem; color:var(--text-muted);">Administrator</span>
                         </div>
                     </div>
-                    <button id="logoutBtn" class="btn btn-secondary" style="font-size:0.8rem; padding:0.4rem 0.85rem;">Dang xuat</button>
+                    <button id="logoutBtn" class="btn btn-secondary" style="font-size:0.8rem; padding:0.4rem 0.85rem;">Đăng xuất</button>
                 </div>
             </header>
 
@@ -627,7 +627,7 @@
                 <!-- Revenue snapshot -->
                 <div class="panel">
                     <div class="panel-header">
-                        <span class="panel-title"> Snapshot Doanh thu</span>
+                        <span class="panel-title"> Tổng quan doanh thu</span>
                         <span class="month-chip" id="currentMonthLabel">--</span>
                     </div>
                     <div class="revenue-bar-container" id="revenueSnapshot">
@@ -670,7 +670,7 @@
             <div style="margin-bottom:1rem;">
                 <div class="ops-section-header">
                     <span class="panel-title" style="font-size:1rem;">
-                        <span class="live-dot"></span>🚨 Operational Readiness Center
+                        <span class="live-dot"></span>🚨 Trung tâm cảnh báo vận hành
                     </span>
                     <button class="btn-refresh" id="opsRefreshBtn" onclick="loadOperationalData()">
                         <span class="icon">🔄</span> Làm mới
@@ -696,14 +696,14 @@
                     </div>
                     <div class="ops-metric-card blue">
                         <div class="ops-metric-val" id="opsAffected"><span class="skeleton skeleton-val"></span></div>
-                        <div class="ops-metric-label">👥 Affected Customers</div>
+                        <div class="ops-metric-label">👥 Khách hàng bị ảnh hưởng</div>
                     </div>
                 </div>
 
                 <!-- Alert Cards -->
                 <div class="panel">
                     <div class="panel-header">
-                        <span class="panel-title">🔔 Live Alert Queue</span>
+                        <span class="panel-title">🔔 Danh sách cảnh báo</span>
                         <span class="panel-badge" id="opsAlertCount">—</span>
                     </div>
                     <div id="opsAlertList">

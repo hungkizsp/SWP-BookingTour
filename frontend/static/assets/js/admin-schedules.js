@@ -32,7 +32,7 @@ async function loadSchedules() {
         allSchedules = data;
         renderSchedulesPage();
     } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="6" style="color:red">Error: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="color:red">Lỗi: ${e.message}</td></tr>`;
     }
 }
 
@@ -48,7 +48,7 @@ function renderSchedulesPage() {
     
     tbody.innerHTML = '';
     if (pageItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6">No schedules found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6">Không tìm thấy lịch trình.</td></tr>';
         if(container) container.innerHTML = '';
         return;
     }
@@ -106,15 +106,15 @@ window.goToPage = function(page) {
 };
 
 window.openDetailsModal = async function(scheduleId) {
-    document.getElementById('detailsTitle').innerText = `Details for SD-${scheduleId}`;
+    document.getElementById('detailsTitle').innerText = `Chi tiết lịch trình SD-${scheduleId}`;
     
     const progressCont = document.getElementById('detailsProgress');
     const photoCont = document.getElementById('detailsPhotos');
     const reportCont = document.getElementById('detailsReport');
 
-    progressCont.innerHTML = '<p style="color: #64748b; font-size: 0.8rem;">Loading history...</p>';
+    progressCont.innerHTML = '<p style="color: #64748b; font-size: 0.8rem;">Đang tải lịch sử...</p>';
     photoCont.innerHTML = '';
-    reportCont.innerText = 'Loading report...';
+    reportCont.innerText = 'Đang tải báo cáo...';
 
     document.getElementById('detailsModal').classList.add('active');
 
@@ -139,10 +139,10 @@ window.openDetailsModal = async function(scheduleId) {
                 `;
             });
         } else {
-            progressCont.innerHTML = '<p style="color: #94a3b8; font-size: 0.8rem;">No progress logs yet.</p>';
+            progressCont.innerHTML = '<p style="color: #94a3b8; font-size: 0.8rem;">Chưa có nhật ký tiến độ.</p>';
         }
 
-        reportCont.innerText = s.reportContent || 'Report not yet submitted.';
+        reportCont.innerText = s.reportContent || 'Báo cáo chưa được nộp.';
         
         photoCont.innerHTML = '';
         if (s.imageUrls && s.imageUrls.length) {
@@ -161,12 +161,12 @@ window.openDetailsModal = async function(scheduleId) {
                 photoCont.appendChild(img);
             });
         } else {
-            photoCont.innerHTML = '<p style="color: #94a3b8; font-size: 0.8rem;">No photos available.</p>';
+            photoCont.innerHTML = '<p style="color: #94a3b8; font-size: 0.8rem;">Chưa có ảnh.</p>';
         }
     } catch (e) {
         console.error('Fetch error details:', e);
-        progressCont.innerHTML = `<p style="color: red; font-size: 0.8rem;">Error: ${e.message}</p>`;
-        reportCont.innerText = 'Error loading report.';
+        progressCont.innerHTML = `<p style="color: red; font-size: 0.8rem;">Lỗi: ${e.message}</p>`;
+        reportCont.innerText = 'Lỗi khi tải báo cáo.';
     }
 };
 
@@ -176,11 +176,11 @@ window.closeDetailsModal = function() {
 
 window.openAssignModal = async function(scheduleId) {
     currentScheduleId = scheduleId;
-    document.getElementById('targetScheduleId').innerText = 'Selected Schedule: SD-' + scheduleId;
+    document.getElementById('targetScheduleId').innerText = 'Lịch trình được chọn: SD-' + scheduleId;
     document.getElementById('assignModal').classList.add('active');
     
     const select = document.getElementById('guideSelect');
-    select.innerHTML = '<option>Loading guides...</option>';
+    select.innerHTML = '<option>Đang tải danh sách hướng dẫn viên...</option>';
     try {
         const res = await TB.apiFetch('/api/v1/staff/guides');
         select.innerHTML = '';
@@ -189,10 +189,10 @@ window.openAssignModal = async function(scheduleId) {
                 select.innerHTML += `<option value="${g.id}">${g.fullName} (${g.email})</option>`;
             });
         } else {
-            select.innerHTML = '<option>No guides found</option>';
+            select.innerHTML = '<option>Không tìm thấy hướng dẫn viên</option>';
         }
     } catch (e) {
-         select.innerHTML = '<option style="color:red">Error loading guides</option>';
+         select.innerHTML = '<option style="color:red">Lỗi khi tải hướng dẫn viên</option>';
     }
 };
 
@@ -205,7 +205,7 @@ window.submitAssignment = async function() {
     const btn = document.querySelector('#assignModal .btn:not(.btn-secondary)');
     if (btn) {
         btn.disabled = true;
-        btn.innerText = 'Assigning...';
+        btn.innerText = 'Đang phân công...';
     }
     try {
         await TB.apiFetch(`/api/v1/staff/schedules/${currentScheduleId}/assign-guide?guideId=${guideId}`, { method: 'PATCH' });
@@ -218,7 +218,7 @@ window.submitAssignment = async function() {
     } finally {
         if (btn) {
             btn.disabled = false;
-            btn.innerText = 'Assign';
+            btn.innerText = 'Phân công';
         }
     }
 };

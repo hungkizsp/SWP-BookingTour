@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Users - TourBooking Admin</title>
+    <title>Quản lý Người dùng - Admin</title>
     <link rel="stylesheet" href="../../assets/css/admin-common.css">
     <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/toast.js"></script>
@@ -19,20 +19,20 @@
                 <h1>Users</h1>
                 <div class="user-actions">
                     <span id="userInfo">Loading...</span>
-                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                    <button id="logoutBtn" class="btn btn-secondary">Đăng xuất</button>
                 </div>
             </header>
 
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h2>User List</h2>
-                    <button onclick="showCreateModal()" class="btn btn-primary">Create New User</button>
+                    <h2>Danh sách Người dùng</h2>
+                    <button onclick="showCreateModal()" class="btn btn-primary">Tạo Người dùng mới</button>
                 </div>
 
                 <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
                     <div class="badge badge-info">Total: <span id="totalUsers">0</span></div>
-                    <div class="badge badge-success">Active: <span id="activeUsers">0</span></div>
-                    <div class="badge badge-danger">Blocked: <span id="blockedUsers">0</span></div>
+                    <div class="badge badge-success">Đang hoạt động: <span id="activeUsers">0</span></div>
+                    <div class="badge badge-danger">Đã chặn: <span id="blockedUsers">0</span></div>
                 </div>
 
                 <div class="table-container">
@@ -41,15 +41,15 @@
                             <tr>
                                 <th>ID</th>
                                 <th>Email</th>
-                                <th>Full Name</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th>Họ và Tên</th>
+                                <th>Vai trò</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="userTable">
                             <tr>
-                                <td colspan="6" style="text-align: center; padding: 2rem;">Loading users...</td>
+                                <td colspan="6" style="text-align: center; padding: 2rem;">Đang tải người dùng...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -65,7 +65,7 @@
     <!-- Modal for Create/Edit User -->
     <div id="userModal" class="modal">
         <div class="modal-content">
-            <h3 id="modalTitle">Create New User</h3>
+            <h3 id="modalTitle">Tạo Người dùng mới</h3>
             <input type="hidden" id="userId">
 
             <div class="form-group">
@@ -76,35 +76,35 @@
             <div class="form-group" id="passwordGroup">
                 <label>Password *</label>
                 <input type="password" id="password" class="form-control" placeholder="Enter password">
-                <small>Leave blank to keep current password when editing</small>
+                <small>Để trống để giữ mật khẩu hiện tại when editing</small>
             </div>
 
             <div class="form-group">
-                <label>Full Name *</label>
+                <label>Họ và tên *</label>
                 <input type="text" id="fullName" class="form-control" placeholder="Enter full name">
             </div>
 
             <div class="form-group">
-                <label>Role</label>
+                <label>Vai trò</label>
                 <select id="role" class="form-control">
                     <option value="CUSTOMER">Customer</option>
                     <option value="ADMIN">Admin</option>
-                    <option value="GUIDE">Guide</option>
+                    <option value="GUIDE">Hướng dẫn viên</option>
                     <option value="STAFF">Staff</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label>Status</label>
+                <label>Trạng thái</label>
                 <select id="isActive" class="form-control">
-                    <option value="true">Active</option>
-                    <option value="false">Blocked</option>
+                    <option value="true">Trạng thái hoạt động</option>
+                    <option value="false">Đã chặn</option>
                 </select>
             </div>
 
             <div class="modal-buttons">
-                <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
-                <button onclick="saveUser()" class="btn btn-primary">Save User</button>
+                <button onclick="closeModal()" class="btn btn-secondary">Hủy</button>
+                <button onclick="saveUser()" class="btn btn-primary">Lưu Người dùng</button>
             </div>
         </div>
     </div>
@@ -156,7 +156,7 @@
         async function loadUsers(page = 0) {
             currentPage = page;
             const userTable = document.getElementById("userTable");
-            
+
             try {
                 const response = await TB.apiFetch(`${API}?page=${page}&size=${pageSize}`);
                 const data = response.data;
@@ -165,7 +165,7 @@
                 if (!users || users.length === 0) {
                     userTable.innerHTML = `
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 2rem;">No users found.</td>
+                            <td colspan="6" style="text-align: center; padding: 2rem;">Không tìm thấy người dùng nào.</td>
                         </tr>
                     `;
                     updateStats([]);
@@ -190,18 +190,18 @@
                             </td>
                             <td>
                                 <span class="badge ${u.isActive ? 'badge-success' : 'badge-danger'}">
-                                    ${u.isActive ? 'Active' : 'Blocked'}
+                                    ${u.isActive ? 'Đang hoạt động' : 'Đã chặn'}
                                 </span>
                             </td>
                             <td class="action-buttons">
-                                <button onclick="editUser(${u.id})" class="btn btn-warning" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;" ${isSelf ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="Cannot edit yourself"' : ''}>
-                                    Edit
+                                <button onclick="editUser(${u.id})" class="btn btn-warning" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;" ${isSelf ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="Không thể chỉnh sửa chính bạn"' : ''}>
+                                    Sửa
                                 </button>
                                 <button onclick="toggleUserStatus(${u.id}, ${u.isActive})" 
                                     class="btn ${u.isActive ? 'btn-danger' : 'btn-success'}"
                                     style="padding: 0.25rem 0.75rem; font-size: 0.75rem;"
                                     ${isSelf ? 'disabled style="opacity:0.5;cursor:not-allowed;" title="Cannot block yourself"' : ''}>
-                                    ${u.isActive ? 'Block' : 'Unblock'}
+                                    ${u.isActive ? 'Đã chặn' : 'Đang hoạt động'}
                                 </button>
                             </td>
                         </tr>
@@ -316,7 +316,7 @@
                 document.getElementById('userModal').style.display = 'flex';
             } catch (error) {
                 console.error('Error loading user for edit:', error);
-                showToast('Failed to load user details', 'error');
+                showToast('Không thể tải thông tin người dùng', 'error');
             }
         }
 
@@ -329,17 +329,17 @@
             const isActive = document.getElementById('isActive').value === 'true';
 
             if (!email) {
-                showToast('Please enter email!', 'error');
+                showToast('Vui lòng nhập email!', 'error');
                 return;
             }
             if (!fullName) {
-                showToast('Please enter full name!', 'error');
+                showToast('Vui lòng nhập họ tên!', 'error');
                 return;
             }
 
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
-                showToast('Please enter a valid email address!', 'error');
+                showToast('Vui lòng nhập địa chỉ email hợp lệ!', 'error');
                 return;
             }
 
@@ -368,7 +368,7 @@
                     body: JSON.stringify(userData)
                 });
 
-                showToast(currentEditId ? 'User updated successfully' : 'User created successfully', 'success');
+                showToast(currentEditId ? 'Cập nhật người dùng thành công' : 'Tạo người dùng thành công', 'success');
                 closeModal();
                 loadUsers(currentPage);
             } catch (error) {
@@ -421,9 +421,7 @@
             loadUsers();
         }
     </script>
-<script src="../../assets/js/admin/sidebar.js"></script>
+    <script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>
-
-

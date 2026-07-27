@@ -50,7 +50,7 @@ public class StaffServiceImpl implements StaffService {
     @Transactional
     public void confirmBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy booking."));
         booking.setStatus(BookingStatus.CONFIRMED);
         bookingRepository.save(booking);
 

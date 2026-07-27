@@ -50,6 +50,7 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
             "(:startDate IS NULL OR ts.startDate >= :startDate) AND " +
             "(:categoryId IS NULL OR t.category.id = :categoryId) AND " +
             "(:transportType IS NULL OR LOWER(t.transportType) = LOWER(:transportType))")
+
     Page<Tour> browseTours(@Param("keyword") String keyword,
             @Param("keywordPattern") String keywordPattern,
             @Param("minPrice") BigDecimal minPrice,

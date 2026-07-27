@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Reviews - TourBooking Admin</title>
+    <title>Quản lý Đánh giá - Admin</title>
     <link rel="stylesheet" href="../../assets/css/admin-common.css">
     <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/toast.js"></script>
@@ -16,36 +16,44 @@
 
         <main class="main-content">
             <header>
-                <h1>Reviews</h1>
+                <h1>Quản lý đánh giá</h1>
                 <div class="user-actions">
                     <span id="userInfo" style="font-weight: 600;"></span>
-                    <button id="logoutBtn" class="btn btn-secondary" style="margin-left: 1rem;">Logout</button>
+                    <button id="logoutBtn" class="btn btn-secondary" style="margin-left: 1rem;">Đăng xuất</button>
                 </div>
             </header>
 
             <!-- Stats -->
             <div class="card" style="margin-bottom: 2rem;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h2>Review Statistics</h2>
+                    <h2>Thống kê đánh giá</h2>
                 </div>
-                <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
-                    <div class="stat-card" style="background: var(--bg-light); padding: 1rem; border-radius: 0.5rem; text-align: center;">
-                        <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Total Reviews</small>
+                <div class="stats-grid"
+                    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 1rem;">
+                    <div class="stat-card"
+                        style="background: var(--bg-light); padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                        <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Total
+                            Reviews</small>
                         <strong id="totalReviews" style="font-size: 1.5rem; color: var(--primary);">0</strong>
                     </div>
-                    <div class="stat-card" style="background: var(--bg-light); padding: 1rem; border-radius: 0.5rem; text-align: center;">
-                        <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Avg Rating</small>
+                    <div class="stat-card"
+                        style="background: var(--bg-light); padding: 1rem; border-radius: 0.5rem; text-align: center;">
+                        <small style="color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Avg
+                            Rating</small>
                         <strong id="avgRating" style="font-size: 1.5rem; color: var(--warning);">-</strong>
                     </div>
-                    <div class="stat-card" style="background: var(--bg-light); padding: 0.5rem; border-radius: 0.5rem; text-align: center;">
+                    <div class="stat-card"
+                        style="background: var(--bg-light); padding: 0.5rem; border-radius: 0.5rem; text-align: center;">
                         <small style="color: var(--text-muted);">5 Stars</small>
                         <strong id="rating5" style="display: block; color: var(--success);">-</strong>
                     </div>
-                    <div class="stat-card" style="background: var(--bg-light); padding: 0.5rem; border-radius: 0.5rem; text-align: center;">
+                    <div class="stat-card"
+                        style="background: var(--bg-light); padding: 0.5rem; border-radius: 0.5rem; text-align: center;">
                         <small style="color: var(--text-muted);">4 Stars</small>
                         <strong id="rating4" style="display: block; color: var(--primary);">-</strong>
                     </div>
-                    <div class="stat-card" style="background: var(--bg-light); padding: 0.5rem; border-radius: 0.5rem; text-align: center;">
+                    <div class="stat-card"
+                        style="background: var(--bg-light); padding: 0.5rem; border-radius: 0.5rem; text-align: center;">
                         <small style="color: var(--text-muted);">3 Stars</small>
                         <strong id="rating3" style="display: block; color: var(--warning);">-</strong>
                     </div>
@@ -54,7 +62,8 @@
 
             <!-- Table -->
             <div class="card">
-                <div class="filter-bar" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
+                <div class="filter-bar"
+                    style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap;">
                     <div class="form-group" style="margin-bottom: 0; min-width: 150px;">
                         <select id="ratingFilter" class="form-control" onchange="loadReviews(0)">
                             <option value="all">All Ratings</option>
@@ -66,7 +75,8 @@
                         </select>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <input type="text" id="tourFilter" class="form-control" placeholder="Search by Tour ID..." onkeyup="loadReviews(0)">
+                        <input type="text" id="tourFilter" class="form-control" placeholder="Search by Tour ID..."
+                            onkeyup="loadReviews(0)">
                     </div>
                     <button onclick="loadReviews()" class="btn btn-secondary">Refresh</button>
                 </div>
@@ -78,7 +88,7 @@
                                 <th>ID</th>
                                 <th>Kh&aacute;ch h&agrave;ng</th>
                                 <th>Tour</th>
-                                <th>Rating</th>
+                                <th>Đánh giá</th>
                                 <th>N&#7897;i dung</th>
                                 <th>Ng&agrave;y t&#7841;o</th>
                                 <th>H&agrave;nh &#273;&#7897;ng</th>
@@ -201,12 +211,12 @@
                 // Fetch max 10000 reviews to calculate stats accurately across pages
                 let url = `${API}?page=0&size=10000`;
                 if (tourId) url += `&tourId=${tourId}`;
-                
+
                 const response = await TB.apiFetch(url);
                 const reviews = response.data?.content || [];
-                
+
                 document.getElementById('totalReviews').innerText = response.data?.totalElements ?? 0;
-                
+
                 if (reviews.length === 0) {
                     document.getElementById('avgRating').innerText = '&mdash;';
                     document.getElementById('rating5').innerText = '0';
@@ -217,7 +227,7 @@
 
                 let sum = 0;
                 let count5 = 0, count4 = 0, count3 = 0;
-                
+
                 reviews.forEach(r => {
                     const rating = r.rating || 0;
                     sum += rating;
@@ -284,8 +294,7 @@
 
         loadReviews();
     </script>
-<script src="../../assets/js/admin/sidebar.js"></script>
+    <script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>
-

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -19,7 +19,7 @@
                 <h1>Newsletter Subscriptions</h1>
                 <div class="user-actions">
                     <span id="userInfo">Loading...</span>
-                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                    <button id="logoutBtn" class="btn btn-secondary">Đăng xuất</button>
                 </div>
             </header>
 
@@ -36,8 +36,8 @@
                                 <th>ID</th>
                                 <th>Email</th>
                                 <th>Subscribed At</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="newsletterTable">
@@ -70,7 +70,7 @@
                         <td>${new Date(item.subscribedAt).toLocaleString()}</td>
                         <td><span class="badge ${item.subscribed ? 'badge-success' : 'badge-danger'}">${item.subscribed ? 'ACTIVE' : 'UNSUBSCRIBED'}</span></td>
                         <td>
-                            <button onclick="deleteSub(${item.id})" class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 0.75rem;">Delete</button>
+                            <button onclick="deleteSub(${item.id})" class="btn btn-danger btn-sm" style="padding: 5px 10px; font-size: 0.75rem;">Xóa</button>
                         </td>
                     </tr>
                 `).join('');
@@ -81,13 +81,13 @@
         }
 
         async function deleteSub(id) {
-            if (!confirm('Are you sure you want to remove this subscriber?')) return;
+            if (!confirm('Bạn có chắc muốn xóa người đăng ký này không?')) return;
             try {
                 await TB.apiFetch(`/api/v1/newsletters/${id}`, { method: 'DELETE' });
-                showToast('Subscriber removed successfully');
+                showToast('Đã xóa người đăng ký thành công');
                 loadSubscribers();
             } catch (err) {
-                showToast('Failed to remove subscriber', 'error');
+                showToast('Xóa người đăng ký thất bại', 'error');
             }
         }
 

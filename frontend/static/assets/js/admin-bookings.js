@@ -50,7 +50,7 @@ async function loadBookings() {
         }
         renderBookingsPage();
     } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="6" style="color:red">Error: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="color:red">Lỗi: ${error.message}</td></tr>`;
     }
 }
 
@@ -60,7 +60,7 @@ function renderBookingsPage() {
 
     tbody.innerHTML = '';
     if (allBookings.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8">No bookings found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8">Không tìm thấy booking.</td></tr>';
         if (container) container.innerHTML = '';
         return;
     }
@@ -137,7 +137,7 @@ window.goToPage = function (page) {
 };
 
 window.confirmBooking = async function (id) {
-    if (!confirm('Confirm mapping payment and activating this booking?')) return;
+    if (!confirm('Xác nhận ghép thanh toán và kích hoạt booking này?')) return;
     try {
         await TB.apiFetch(`/api/v1/staff/bookings/${id}/confirm`, { method: 'PATCH' });
         alert('Booking confirmed!');
@@ -154,7 +154,7 @@ window.confirmBooking = async function (id) {
 // ASSIGN GUIDE LOGIC
 // ==========================================
 window.openAssignModal = async function(scheduleId) {
-    document.getElementById('targetScheduleId').innerText = `Schedule ID: SD-${scheduleId}`;
+    document.getElementById('targetScheduleId').innerText = `Mã lịch trình: SD-${scheduleId}`;
     document.getElementById('targetScheduleId').dataset.sid = scheduleId;
     document.getElementById('assignModal').style.display = 'flex';
     

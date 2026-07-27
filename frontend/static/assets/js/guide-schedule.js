@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const scheduleId = urlParams.get('id');
     if (!scheduleId) {
-        alert("Invalid Schedule ID");
+        alert("Mã lịch trình không hợp lệ");
         window.location.href = '/pages/guide/dashboard.html';
         return;
     }
@@ -93,7 +93,7 @@ window.updateProgress = async function() {
     const sid = getScheduleId();
     try {
         await TB.apiFetch(`/api/v1/guides/tours/${sid}/progress?progress=${encodeURIComponent(progress)}`, { method: 'PATCH' });
-        alert('Progress updated successfully!');
+        alert('Cập nhật tiến độ thành công!');
         document.getElementById('progressInput').value = '';
         loadScheduleDetails(sid); // Refresh history
     } catch (err) {
@@ -118,7 +118,7 @@ photosInput.addEventListener('change', () => {
 // UC29 (Multipart Form)
 window.uploadPhotos = async function() {
     const files = photosInput.files;
-    if (files.length === 0) return alert('Select photos first.');
+    if (files.length === 0) return alert('Vui lòng chọn ảnh trước.');
     const sid = getScheduleId();
     
     const formData = new FormData();
@@ -134,7 +134,7 @@ window.uploadPhotos = async function() {
             body: formData
         });
         if (!res.ok) throw new Error('Upload failed');
-        alert('Upload success!');
+        alert('Tải ảnh lên thành công!');
         photosInput.value = '';
         previewCont.innerHTML = '';
         loadScheduleDetails(sid); // Refresh gallery
@@ -148,14 +148,14 @@ window.uploadPhotos = async function() {
 // UC30
 window.submitReport = async function() {
     const content = document.getElementById('reportInput').value.trim();
-    if (!content) return alert('Report content required.');
+    if (!content) return alert('Vui lòng nhập nội dung báo cáo.');
     
-    if (!confirm('Are you sure you want to finalize this tour and save report?')) return;
+    if (!confirm('Bạn có chắc muốn hoàn thành tour và lưu báo cáo không?')) return;
     
     const sid = getScheduleId();
     try {
         await TB.apiFetch(`/api/v1/guides/tours/${sid}/report?content=${encodeURIComponent(content)}`, { method: 'POST' });
-        alert('Report submitted! Tour marked as completed.');
+        alert('Đã nộp báo cáo! Tour đã được đánh dấu hoàn thành.');
         window.location.href = '/pages/guide/dashboard.html';
     } catch (err) {
         alert('Mocked: Report saved. ' + err.message);

@@ -4,18 +4,18 @@ import lombok.Getter;
 
 @Getter
 public enum ErrorCode {
-    UNCATEGORIZED_EXCEPTION(9999, "Uncategorized error"),
-    USER_NOT_FOUND(1001, "User not found"),
-    TOUR_NOT_FOUND(1002, "Tour not found"),
-    CATEGORY_NOT_FOUND(1003, "Category not found"),
-    REVIEW_NOT_FOUND(1004, "Review not found"),
-    BOOKING_NOT_FOUND(1005, "Booking not found"),
-    NEWSLETTER_NOT_FOUND(1006, "Newsletter subscription not found"),
-    EMAIL_EXISTED(1007, "Email already exists"),
-    INVALID_RATING(1008, "Rating must be between 1 and 5"),
-    UNAUTHORIZED(1009, "Unauthorized access"),
-    FORBIDDEN(1010, "Access denied"),
-    INVALID_REQUEST(1011, "Invalid request"),
+    UNCATEGORIZED_EXCEPTION(9999, "Lỗi hệ thống không xác định."),
+    USER_NOT_FOUND(1001, "Không tìm thấy người dùng."),
+    TOUR_NOT_FOUND(1002, "Không tìm thấy tour."),
+    CATEGORY_NOT_FOUND(1003, "Không tìm thấy danh mục."),
+    REVIEW_NOT_FOUND(1004, "Không tìm thấy đánh giá."),
+    BOOKING_NOT_FOUND(1005, "Không tìm thấy booking."),
+    NEWSLETTER_NOT_FOUND(1006, "Không tìm thấy đăng ký nhận bản tin."),
+    EMAIL_EXISTED(1007, "Email đã được đăng ký."),
+    INVALID_RATING(1008, "Điểm đánh giá phải từ 1 đến 5."),
+    UNAUTHORIZED(1009, "Bạn không có quyền truy cập."),
+    FORBIDDEN(1010, "Truy cập bị từ chối."),
+    INVALID_REQUEST(1011, "Yêu cầu không hợp lệ."),
     PAYOS_PAYMENT_PENDING(1013, "PayOS chưa ghi nhận thanh toán (PENDING/PROCESSING). Vui lòng thử lại sau vài giây."),
     PAYOS_NOT_CONFIGURED(1014,
             "Chưa cấu hình PayOS: đặt PAYOS_CLIENT_ID và PAYOS_API_KEY trong .env rồi khởi động lại backend."),
@@ -33,7 +33,7 @@ public enum ErrorCode {
     BOOKING_DEADLINE_PASSED(1024, "Đã quá hạn đặt tour. Vui lòng chọn lịch khác."),
     SCHEDULE_SOLD_OUT(1025, "Tour đã hết chỗ."),
     INSUFFICIENT_SLOTS(1026, "Số chỗ trống không đủ cho số lượng hành khách yêu cầu."),
-    SCHEDULE_PENDING_GUIDE(1027, "This schedule is temporarily unavailable because operational requirements are not completed.");
+    SCHEDULE_PENDING_GUIDE(1027, "Lịch trình này tạm thời không thể đặt vì chưa được phân công hướng dẫn viên.");
 
     private final int code;
     private final String message;

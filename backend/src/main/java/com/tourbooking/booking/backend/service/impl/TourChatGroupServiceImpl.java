@@ -41,7 +41,7 @@ public class TourChatGroupServiceImpl implements TourChatGroupService {
     public TourChatGroup getOrCreateGroup(Long scheduleId) {
         return groupRepository.findBySchedule_Id(scheduleId).orElseGet(() -> {
             TourSchedule schedule = scheduleRepository.findById(scheduleId)
-                    .orElseThrow(() -> new RuntimeException("Schedule not found"));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy lịch trình."));
             TourChatGroup group = TourChatGroup.builder()
                     .schedule(schedule)
                     .isActive(true)
@@ -55,9 +55,9 @@ public class TourChatGroupServiceImpl implements TourChatGroupService {
     public void addMember(Long groupId, Long userId) {
         if (!memberRepository.existsByGroupIdAndUserId(groupId, userId)) {
             TourChatGroup group = groupRepository.findById(groupId)
-                    .orElseThrow(() -> new RuntimeException("Group not found"));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy nhóm chat."));
             User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng."));
             
             TourChatGroupMember member = TourChatGroupMember.builder()
                     .group(group)
@@ -71,15 +71,15 @@ public class TourChatGroupServiceImpl implements TourChatGroupService {
     @Transactional
     public TourChatGroupMessageResponse sendMessage(Long groupId, Long userId, String content) {
         if (!memberRepository.existsByGroupIdAndUserId(groupId, userId)) {
-            throw new RuntimeException("User is not a member of this group");
+            throw new RuntimeException("Người dùng không phải thành viên của nhóm này.");
         }
         TourChatGroup group = groupRepository.findById(groupId)
-                .orElseThrow(() -> new RuntimeException("Group not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy nhóm chat."));
         if (!group.getIsActive()) {
-            throw new RuntimeException("This group is closed");
+            throw new RuntimeException("Nhóm chat này đã đóng.");
         }
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng."));
 
         TourChatGroupMessage msg = TourChatGroupMessage.builder()
                 .group(group)
@@ -101,7 +101,7 @@ public class TourChatGroupServiceImpl implements TourChatGroupService {
     @Override
     public Page<TourChatGroupMessageResponse> getMessages(Long groupId, Long userId, int page, int size) {
         if (!memberRepository.existsByGroupIdAndUserId(groupId, userId)) {
-            throw new RuntimeException("Access denied");
+            throw new RuntimeException("Truy cập bị từ chối.");
         }
         return messageRepository.findByGroupId(groupId, PageRequest.of(page, size, Sort.by("sentAt").descending()))
                 .map(msg -> TourChatGroupMessageResponse.builder()
@@ -135,7 +135,7 @@ public class TourChatGroupServiceImpl implements TourChatGroupService {
     @Override
     public List<TourChatGroupMemberResponse> getMembers(Long groupId, Long userId) {
         if (!memberRepository.existsByGroupIdAndUserId(groupId, userId)) {
-            throw new RuntimeException("Access denied");
+            throw new RuntimeException("Truy cập bị từ chối.");
         }
         return memberRepository.findByGroupId(groupId).stream()
                 .map(m -> TourChatGroupMemberResponse.builder()

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Report - TourBooking Admin</title>
+    <title>Báo cáo tài chính - Admin</title>
     <link rel="stylesheet" href="../../assets/css/admin-common.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -21,25 +21,25 @@
 
         <main class="main-content">
             <header>
-                <h1>Financial Report</h1>
+                <h1>Báo cáo tài chính</h1>
                 <div class="user-actions">
                     <span id="userInfo" style="font-weight: 600;"></span>
-                    <button id="logoutBtn" class="btn btn-secondary" style="margin-left: 1rem;">Logout</button>
+                    <button id="logoutBtn" class="btn btn-secondary" style="margin-left: 1rem;">Đăng xuất</button>
                 </div>
             </header>
 
             <div class="card" style="margin-bottom: 2rem;">
                 <div class="filter-row" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label>From Date</label>
+                        <label>Từ ngày:</label>
                         <input type="date" id="startDate" class="form-control">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label>To Date</label>
+                        <label>Đến ngày:</label>
                         <input type="date" id="endDate" class="form-control">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label>Type</label>
+                        <label>Loại báo cáo</label>
                         <select id="reportType" class="form-control">
                             <option value="daily">Daily</option>
                             <option value="weekly">Weekly</option>
@@ -48,18 +48,15 @@
                         </select>
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
-                        <label>Payment Status</label>
+                        <label>Trạng thái thanh toán:</label>
                         <select id="bookingStatus" class="form-control">
-                            <option value="INCLUDE_TEST" selected>Success Payment</option>
-                            <option value="CANCELLED">Cancellations Only</option>
+                            <option value="INCLUDE_TEST" selected>Thành công</option>
+                            <option value="CANCELLED">Hủy</option>
                         </select>
                     </div>
                     <button onclick="loadReport()" class="btn btn-primary"
-                        style="padding: 0 25px; min-height: 48px;">Generate</button>
-                    <button onclick="seedTestData()" class="btn btn-secondary"
-                        style="margin-left: 0.5rem; opacity: 0.7;"
-                        title="Ch�0 dùng �Ồ demo/kiỒm thử � không ảnh hư�xng khi vừa m�x trang">Seed Test
-                        Data</button>
+                        style="padding: 0 25px; min-height: 48px;">Tạo báo cáo</button>
+
                     <div style="flex: 1;"></div>
                     <button onclick="exportToExcel()" class="btn btn-success"
                         style="padding: 0 20px; min-height: 40px;">Excel</button>
@@ -114,11 +111,11 @@
                     <table id="reportTable">
                         <thead>
                             <tr>
-                                <th>Date/Period</th>
-                                <th>Bookings</th>
-                                <th>Revenue</th>
-                                <th>Avg. Value</th>
-                                <th>Cancellations</th>
+                                <th>Thời gian</th>
+                                <th>Đặt tour</th>
+                                <th>Doanh thu</th>
+                                <th>Giá trị trung bình</th>
+                                <th>Hủy tour</th>
                             </tr>
                         </thead>
                         <tbody id="reportBody">
@@ -133,7 +130,7 @@
         </main>
     </div>
 
-<script src="../../assets/js/admin/sidebar.js"></script>
+    <script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>

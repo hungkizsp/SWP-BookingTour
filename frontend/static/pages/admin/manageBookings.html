@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Bookings - TourBooking Admin</title>
+    <title>Quản lý Bookings - Admin</title>
     <link rel="stylesheet" href="../../assets/css/admin-common.css">
     <script src="../../assets/js/api.js"></script>
     <script src="../../assets/js/toast.js"></script>
@@ -19,7 +19,7 @@
                 <h1>Booking Management</h1>
                 <div class="user-actions">
                     <span id="userInfo">Loading...</span>
-                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                    <button id="logoutBtn" class="btn btn-secondary">Đăng xuất</button>
                 </div>
             </header>
 
@@ -48,15 +48,15 @@
                                 <th>Tour</th>
                                 <th>Booking Date</th>
                                 <th>Total</th>
-                                <th>Status</th>
-                                <th>Guide</th>
-                                <th>Refund Info</th>
-                                <th>Actions</th>
+                                <th>Trạng thái</th>
+                                <th>Hướng dẫn viên</th>
+                                <th>Thông tin hoàn tiền</th>
+                                <th>Thao tác</th>
                             </tr>
                         </thead>
                         <tbody id="bookingTable">
                             <tr>
-                                <td colspan="9" style="text-align: center; padding: 2rem;">Loading bookings...</td>
+                                <td colspan="9" style="text-align: center; padding: 2rem;">Đang tải bookings...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -72,7 +72,7 @@
         style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000;">
         <div class="modal-content"
             style="background: white; padding: 2rem; border-radius: 12px; width: 450px; max-width: 95%;">
-            <h2 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">Assign Tour Guide</h2>
+            <h2 style="margin-top: 0; margin-bottom: 1rem; color: #1e293b;">Phân công Hướng dẫn viên</h2>
             <p id="targetScheduleId" style="margin-bottom:10px; color:#475569;"></p>
             <p style="margin-bottom:15px; font-size:0.9em; color:#dc2626; font-weight:bold;">
                 Lưu ý: Guide này sẽ áp dụng cho toàn bộ Schedule này, bao gồm tất cả các booking (khách hàng) trong
@@ -83,7 +83,8 @@
             <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
                 <button class="btn btn-secondary" onclick="closeAssignModal()" style="padding: 8px 16px;">Đóng</button>
                 <button class="btn btn-primary" onclick="submitAssignment()"
-                    style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">Assign</button>
+                    style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">Phân
+                    công</button>
             </div>
         </div>
     </div>
@@ -113,12 +114,16 @@
             style="background: white; padding: 2rem; border-radius: 12px; width: 500px; max-width: 95%;">
             <h2 style="margin-top: 0; margin-bottom: 1rem; color: #991b1b;">Hủy Toàn Bộ Chuyến Đi</h2>
             <p id="cancelScheduleTarget" style="margin-bottom: 0.75rem; color: #475569; font-weight: 600;"></p>
-            <p id="cancelScheduleWarning" style="margin-bottom: 1rem; color: #991b1b; font-size: 0.9rem; line-height: 1.5; background: #fef2f2; padding: 12px; border-radius: 8px; border: 1px solid #fecaca;"></p>
+            <p id="cancelScheduleWarning"
+                style="margin-bottom: 1rem; color: #991b1b; font-size: 0.9rem; line-height: 1.5; background: #fef2f2; padding: 12px; border-radius: 8px; border: 1px solid #fecaca;">
+            </p>
             <p style="margin-bottom: 0.5rem; color: #64748b; font-size: 0.85rem;">
-                Dùng khi tour bị hủy do vận hành/thời tiết (ảnh hưởng toàn bộ đoàn). Khác với "Hủy Đặt Tour" — chỉ hủy 1 khách.
+                Dùng khi tour bị hủy do vận hành/thời tiết (ảnh hưởng toàn bộ đoàn). Khác với "Hủy Đặt Tour" — chỉ hủy 1
+                khách.
             </p>
             <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1rem;">
-                <button class="btn btn-secondary" onclick="closeCancelScheduleModal()" style="padding: 8px 16px;">Đóng</button>
+                <button class="btn btn-secondary" onclick="closeCancelScheduleModal()"
+                    style="padding: 8px 16px;">Đóng</button>
                 <button id="confirmCancelScheduleBtn" class="btn btn-danger" onclick="submitCancelSchedule()"
                     style="padding: 8px 16px;">Xác nhận hủy toàn bộ chuyến</button>
             </div>
@@ -253,18 +258,18 @@
                         <td><span class="badge ${getStatusClass(item.status)}">${item.status}</span></td>
                         ${(() => {
                     if (item.guideFullName) return `<td>${escapeHtml(item.guideFullName)}</td>`;
-                    if (item.status === 'CONFIRMED' || item.status === 'PAID') return `<td><button class="btn btn-sm" style="background: #3b82f6; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;" onclick="openAssignModal(${item.scheduleId})">👤 Assign</button></td>`;
+                    if (item.status === 'CONFIRMED' || item.status === 'PAID') return `<td><button class="btn btn-sm" style="background: #3b82f6; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;" onclick="openAssignModal(${item.scheduleId})">👤 Phân công</button></td>`;
                     return '<td>-</td>';
                 })()}
                         <td style="font-size:0.8rem; max-width:220px; line-height:1.4;">${formatRefundInfo(item)}</td>
                         <td>
                             <div style="display:flex; gap:5px; flex-wrap:wrap;">
                                 ${item.status === 'REFUND_REQUESTED' ? `
-                                    <button onclick="updateStatus(${item.id}, 'CANCELLED')" class="btn btn-danger btn-sm">Approve Cancel</button>
-                                    <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-secondary btn-sm">Reject</button>
+                                    <button onclick="updateStatus(${item.id}, 'CANCELLED')" class="btn btn-danger btn-sm">Chấp nhận yêu cầu</button>
+                                    <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-secondary btn-sm">Từ chối yêu cầu</button>
                                 ` : ''}
                                 ${item.status === 'PENDING_CASH' ? `
-                                    <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-success btn-sm">Confirm</button>
+                                    <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-success btn-sm">Xác nhận</button>
                                 ` : ''}
                                 ${(item.status === 'CONFIRMED' || item.status === 'PAID') ? `
                                     <button onclick="openCancelModal(${item.id})" class="btn btn-danger btn-sm">Hủy Đặt Tour</button>
@@ -315,7 +320,7 @@
             if (!confirm(`Update booking #${id} to ${newStatus}?`)) return;
             try {
                 await TB.apiFetch(`/api/v1/bookings/${id}/status?status=${newStatus}`, { method: 'PUT' });
-                showToast('Status updated successfully');
+                showToast('Cập nhật trạng thái thành công');
                 loadBookings(currentPage);
             } catch (err) {
                 showToast('Update failed: ' + err.message, 'error');
@@ -470,13 +475,13 @@
         }
 
         async function deleteBooking(id) {
-            if (!confirm('Permanent delete this booking?')) return;
+            if (!confirm('Bạn có chắc muốn xóa vĩnh viễn booking này không?')) return;
             try {
                 await TB.apiFetch(`/api/v1/bookings/${id}`, { method: 'DELETE' });
-                showToast('Booking deleted');
+                showToast('Đã xóa booking');
                 loadBookings(currentPage);
             } catch (err) {
-                showToast('Delete failed', 'error');
+                showToast('Xóa thất bại', 'error');
             }
         }
 
