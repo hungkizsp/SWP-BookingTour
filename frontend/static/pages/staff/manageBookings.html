@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -9,7 +9,76 @@
         href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="../../assets/css/admin-common.css">
+    <style>
+        /* Scoped styling for action buttons to match standard .btn in admin-common.css */
+        /* Applied !important to override any JS inline styles without changing shared JS */
+        .action-btn {
+            padding: 0.5rem 1rem !important;
+            border-radius: 0.5rem !important;
+            cursor: pointer !important;
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
+            transition: all 0.2s ease !important;
+            border: none !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.4rem !important;
+            color: white !important;
+            letter-spacing: 0.01em !important;
+            margin: 0.1rem;
+        }
 
+        .action-btn:hover {
+            transform: translateY(-1px) !important;
+        }
+
+        /* Chat button -> Blue (Primary) */
+        #bookingsTable .action-btn[onclick^="window.open"] {
+            background: var(--primary) !important;
+        }
+        #bookingsTable .action-btn[onclick^="window.open"]:hover {
+            background: var(--primary-dark) !important;
+            box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
+        }
+
+        /* Hủy đặt tour (Cancel) -> Red (Danger) */
+        #bookingsTable .action-btn[onclick^="openCancelModal"] {
+            background: var(--danger) !important; /* red */
+        }
+        #bookingsTable .action-btn[onclick^="openCancelModal"]:hover {
+            background: #b91c1c !important; /* darker red */
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3) !important;
+        }
+
+        /* Xác nhận (Confirm) -> Green (Success) */
+        #bookingsTable .action-btn[onclick^="confirmBooking"] {
+            background: var(--success) !important; /* green */
+        }
+        #bookingsTable .action-btn[onclick^="confirmBooking"]:hover {
+            background: #059669 !important; /* darker green */
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3) !important;
+        }
+
+        /* Phân công (Assign) -> Teal (Secondary) */
+        #bookingsTable .action-btn[onclick^="openAssignModal"],
+        .modal .action-btn[onclick^="submitAssignment"] {
+            background: var(--secondary) !important; /* teal */
+        }
+        #bookingsTable .action-btn[onclick^="openAssignModal"]:hover,
+        .modal .action-btn[onclick^="submitAssignment"]:hover {
+            background: var(--secondary-dark) !important;
+            box-shadow: 0 4px 10px rgba(13, 148, 136, 0.3) !important;
+        }
+
+        /* Close/Cancel Modal button -> Gray */
+        .modal .action-btn[onclick^="closeAssignModal"] {
+            background: #94a3b8 !important;
+        }
+        .modal .action-btn[onclick^="closeAssignModal"]:hover {
+            background: #64748b !important;
+        }
+    </style>
 </head>
 
 <body>
