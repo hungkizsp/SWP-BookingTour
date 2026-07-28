@@ -206,15 +206,15 @@
 
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-label">Pending Bookings</div>
+                    <div class="stat-label">Đặt tour chờ xử lý</div>
                     <div class="stat-value" id="stat-pending-bookings">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Unassigned Schedules</div>
+                    <div class="stat-label">Lịch chưa phân công</div>
                     <div class="stat-value" id="stat-unassigned-schedules">0</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Open Refunds</div>
+                    <div class="stat-label">Yêu cầu hoàn tiền</div>
                     <div class="stat-value" id="stat-open-refunds">0</div>
                 </div>
             </div>
@@ -223,7 +223,7 @@
             <div style="margin-bottom:1rem;">
                 <div class="ops-section-header">
                     <span class="panel-title" style="font-size:1rem;">
-                        <span class="live-dot"></span>🚨 Operational Readiness Center
+                        <span class="live-dot"></span>🚨 Trung tâm sẵn sàng hoạt động
                     </span>
                     <button class="btn-refresh" id="opsRefreshBtn" onclick="loadOperationalData()">
                         <span class="icon">🔄</span> Làm mới
@@ -234,26 +234,26 @@
                 <div class="ops-metrics-grid" id="opsMetricsGrid">
                     <div class="ops-metric-card amber">
                         <div class="ops-metric-val" id="opsOpenNoGuide">0</div>
-                        <div class="ops-metric-label">⚠️ Bookings Chưa Có Guide</div>
+                        <div class="ops-metric-label">⚠️ Đặt tour chưa có HDV</div>
                     </div>
                     <div class="ops-metric-card red">
                         <div class="ops-metric-val" id="opsPendingGuide">0</div>
-                        <div class="ops-metric-label">🔴 Bookings Đang Chờ Guide</div>
+                        <div class="ops-metric-label">🔴 Đặt tour đang chờ HDV</div>
                     </div>
                     <div class="ops-metric-card purple">
                         <div class="ops-metric-val" id="opsCancelledOp">0</div>
-                        <div class="ops-metric-label">🚫 Bookings Bị Hủy Bởi Vận Hành</div>
+                        <div class="ops-metric-label">🚫 Đặt tour bị hủy bởi Vận Hành</div>
                     </div>
                     <div class="ops-metric-card blue">
                         <div class="ops-metric-val" id="opsAffected">0</div>
-                        <div class="ops-metric-label">👥 Khách Hàng Bị Ảnh Hưởng</div>
+                        <div class="ops-metric-label">👥 Khách bị ảnh hưởng</div>
                     </div>
                 </div>
 
                 <!-- Alert Cards -->
                 <div class="panel">
                     <div class="panel-header">
-                        <span class="panel-title">🔔 Live Alert Queue</span>
+                        <span class="panel-title">🔔 Hàng đợi cảnh báo trực tiếp</span>
                         <span class="panel-badge" id="opsAlertCount"
                             style="background:#f1f5f9; padding:4px 10px; border-radius:20px; font-weight:bold; font-size:0.85rem;">—</span>
                     </div>

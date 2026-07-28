@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -41,13 +41,13 @@
                 <thead>
                     <tr>
                         <th>Booking ID</th>
-                        <th>User</th>
-                        <th>Tour Schedule</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Guide</th>
-                        <th>Chat</th>
-                        <th>Actions</th>
+                        <th>Người dùng</th>
+                        <th>Lịch trình tour</th>
+                        <th>Số tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Hướng dẫn</th>
+                        <th>Trò chuyện</th>
+                        <th>Hành động</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -67,9 +67,11 @@
             <h2>Assign Tour Guide</h2>
             <p id="targetScheduleId" style="margin-bottom:10px; color:#475569;"></p>
             <p style="margin-bottom:15px; font-size:0.9em; color:#dc2626; font-weight:bold;">
-                Lưu ý: Guide này sẽ áp dụng cho toàn bộ Schedule này, bao gồm tất cả các booking (khách hàng) trong schedule đó.
+                Lưu ý: Guide này sẽ áp dụng cho toàn bộ Schedule này, bao gồm tất cả các booking (khách hàng) trong
+                schedule đó.
             </p>
-            <select id="guideSelect" style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc;"></select>
+            <select id="guideSelect"
+                style="width:100%; padding:10px; margin-bottom:15px; border-radius:8px; border:1px solid #ccc;"></select>
             <div class="modal-actions" style="display:flex; justify-content:flex-end; gap:10px;">
                 <button class="action-btn" style="background:#64748b;" onclick="closeAssignModal()">Close</button>
                 <button class="action-btn" onclick="submitAssignment()">Assign</button>
