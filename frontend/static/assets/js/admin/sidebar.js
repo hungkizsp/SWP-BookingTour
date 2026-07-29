@@ -32,6 +32,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 { href: './manageNewsletter.html', text: 'Bản tin', icon: '📧', activeMatch: ['manageNewsletter.html'] },
                 { href: './financialReport.html', text: 'Báo cáo tài chính', icon: '💰', activeMatch: ['financialReport.html'] }
             ]
+        },
+        {
+            title: "BẢO MẬT & PHÂN TÍCH",
+            items: [
+                { href: './securityDashboard.html', text: 'Bảo mật & Spam', icon: '🛡️', activeMatch: ['securityDashboard.html'] }
+            ]
         }
     ];
 

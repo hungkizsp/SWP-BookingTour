@@ -28,14 +28,14 @@ document.addEventListener('DOMContentLoaded', () => {
     who.textContent = user ? (user.fullName || user.email) : 'Guest';
     const container = who.parentElement;
     container.querySelectorAll('.btn-secondary-context').forEach(b => b.remove());
-    
+
     if (user) {
       const logoutBtn = document.createElement('button');
       logoutBtn.className = 'btn btn-secondary btn-secondary-context';
       logoutBtn.style.marginLeft = '10px';
       logoutBtn.textContent = 'Logout';
       logoutBtn.onclick = () => TB.logout();
-      
+
       const isAdmin = String(user.role || '').toUpperCase() === 'ADMIN';
       if (isAdmin) {
         const adminBtn = document.createElement('button');
@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const q = isGuest ? `?guestId=${encodeURIComponent(guestId)}` : `?userId=${encodeURIComponent(userId)}`;
       const res = await TB.apiFetch(`/api/v1/chat/messages${q}`);
       const msgs = res.data || [];
-      
+
       console.log("[Chat] Current messages count:", msgs.length);
 
       if (msgs.length !== lastMessageCount) {
@@ -97,8 +97,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const unique = [];
       msgs.forEach(m => {
         if (m.id && seen.has(m.id)) {
-           console.warn("[Chat] Duplicate ID detected from server:", m.id);
-           return;
+          console.warn("[Chat] Duplicate ID detected from server:", m.id);
+          return;
         }
         if (m.id) seen.add(m.id);
         unique.push(m);
@@ -121,14 +121,14 @@ document.addEventListener('DOMContentLoaded', () => {
           )) || (isAdminSender && user && user.role === 'ADMIN');
 
           const div = document.createElement('div');
-          
+
           let cssClass = 'user';
           if (isAiSender) cssClass = 'ai';
           else if (isAdminSender) cssClass = 'staff';
-          
+
           div.className = `msg ${cssClass}`;
           if (fromMe) div.classList.add('me');
-          
+
           const label = isAiSender ? '🤖 Trợ lý AI' : (isAdminSender ? 'Nhân viên' : 'Bạn');
           const content = senderType === 'AI' ? formatAiText(m.message) : escapeHtml(m.message);
           div.innerHTML = `
@@ -163,11 +163,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('text');
     const content = input.value.trim();
     if (!content) return;
-    
+
     isSending = true;
     const now = new Date().getTime();
     console.log(`[Chat] Submitting message at ${now}: "${content}"`);
-    
+
     input.value = '';
     const btn = chatForm.querySelector('button[type="submit"]');
     if (btn) btn.disabled = true;
@@ -179,13 +179,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       console.log(`[Chat] Post success for message at ${now}`);
       await load();
-      
+
       const sessionStatus = currentSession?.status || 'AI';
       const isHandledByStaff = sessionStatus === 'STAFF_CHATTING' || sessionStatus === 'WAITING_STAFF';
       if (!isHandledByStaff) {
-          setTimeout(() => getAiResponse(content), 600);
+        setTimeout(() => getAiResponse(content), 600);
       } else {
-          console.log("[Chat] AI silent because staff is handling or requested.");
+        console.log("[Chat] AI silent because staff is handling or requested.");
       }
     } catch (err) {
       console.error("[Chat] Post failed", err);
@@ -295,13 +295,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sseSource) {
       sseSource.close();
     }
-    
+
     // Khi chạy ở dev server (port 3000/5500), phải trỏ thẳng về Backend host
     // (giống cách apiFetch trong api.js xử lý)
     const BACKEND_URL = 'http://localhost:8080';
     const isDev = window.location.port === '3000' || window.location.port === '5500';
     const sseUrl = isDev ? `${BACKEND_URL}/api/v1/chat/messages/stream` : '/api/v1/chat/messages/stream';
-    
+
     console.log("[SSE] Connecting to:", sseUrl);
     sseSource = new EventSource(sseUrl);
 
@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
           assignedStaffName: data.staffName || 'Nhân viên hỗ trợ'
         });
         load();
-      } catch (err) {}
+      } catch (err) { }
     });
 
     sseSource.addEventListener('session-closed', (e) => {
@@ -355,7 +355,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderSessionStatus({ status: 'CLOSED' });
         appendSystemMessage(data.message || 'Cuộc hỗ trợ đã kết thúc bởi nhân viên. Cảm ơn bạn!');
         load();
-      } catch (err) {}
+      } catch (err) { }
     });
 
     sseSource.onopen = () => {
@@ -382,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
     infoDiv.style.borderRadius = '8px';
     infoDiv.style.margin = '10px 0';
     infoDiv.innerHTML = `<div style="font-size:0.9rem; font-weight:700; text-align:center;">⚠️ ${text}</div>`;
-    
+
     box.appendChild(infoDiv);
     box.scrollTo({ top: box.scrollHeight, behavior: 'smooth' });
   }
@@ -401,9 +401,9 @@ document.addEventListener('DOMContentLoaded', () => {
     escalateBtn.onclick = async () => {
       const note = chatInput ? chatInput.value.trim() : 'Cần hỗ trợ từ nhân viên';
       try {
-        await TB.apiFetch('/api/v1/chat/escalations', { 
-          method: 'POST', 
-          body: JSON.stringify({ userId, guestId: isGuest ? guestId : null, requestNote: note }) 
+        await TB.apiFetch('/api/v1/chat/escalations', {
+          method: 'POST',
+          body: JSON.stringify({ userId, guestId: isGuest ? guestId : null, requestNote: note })
         });
         if (chatInput) chatInput.value = '';
         await loadSessionStatus();
@@ -434,11 +434,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (submitBtn) {
         submitBtn.disabled = false;
       }
-      
+
       resetToAiBtn.style.display = 'none';
       if (escalateBtn) escalateBtn.style.display = 'inline-block';
       if (statusBar) statusBar.style.display = 'none';
-      
+
       currentSession = { status: 'AI' };
       lastMessageCount = -1;
 

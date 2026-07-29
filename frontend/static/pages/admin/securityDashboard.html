@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảo mật & Phân tích - Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/admin-common.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../../assets/js/api.js"></script>
+    <script src="../../assets/js/toast.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+
+        /* ── Stat Cards ── */
+        .sec-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        .sec-stat-card {
+            background: var(--bg-white);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .sec-stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.10); }
+        .sec-stat-icon {
+            width: 52px; height: 52px;
+            border-radius: 0.875rem;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; flex-shrink: 0;
+        }
+        .sec-stat-icon.blue   { background: #e0f2fe; }
+        .sec-stat-icon.red    { background: #fee2e2; }
+        .sec-stat-icon.amber  { background: #fef3c7; }
+        .sec-stat-icon.purple { background: #f5f3ff; }
+        .sec-stat-icon.green  { background: #ecfdf5; }
+        .sec-stat-body { flex: 1; }
+        .sec-stat-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem; }
+        .sec-stat-value { font-size: 1.85rem; font-weight: 800; color: var(--text-main); line-height: 1; }
+        .sec-stat-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; }
+
+        /* ── Panels ── */
+        .panel {
+            background: var(--bg-white);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 1.5rem;
+        }
+        .panel-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.25rem;
+        }
+        .panel-title { font-size: 1rem; font-weight: 700; color: var(--text-main); }
+
+        /* ── Charts row ── */
+        .charts-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 1024px) { .charts-row { grid-template-columns: 1fr; } }
+        .chart-container { position: relative; height: 280px; }
+
+        /* ── Blocked IP Table ── */
+        .blocked-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .blocked-table th {
+            background: #f8fafc; color: var(--text-muted); font-size: 0.75rem;
+            font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+            padding: 0.75rem 1rem; text-align: left; border-bottom: 2px solid var(--border);
+        }
+        .blocked-table td { padding: 0.875rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .blocked-table tr:hover td { background: #f8fafc; }
+        .blocked-table tr:last-child td { border-bottom: none; }
+        .badge-blocked { background: #fee2e2; color: #991b1b; padding: 3px 10px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; }
+        .badge-normal  { background: #ecfdf5; color: #065f46; padding: 3px 10px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; }
+        .btn-unblock {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white; border: none; border-radius: 0.5rem;
+            padding: 0.35rem 0.85rem; font-size: 0.78rem; font-weight: 700;
+            cursor: pointer; transition: opacity 0.2s;
+        }
+        .btn-unblock:hover { opacity: 0.85; }
+
+        /* ── Refresh btn ── */
+        .btn-refresh {
+            background: none; border: 1px solid var(--border); border-radius: 0.5rem;
+            padding: 0.4rem 0.75rem; font-size: 0.8rem; font-weight: 600;
+            cursor: pointer; color: var(--text-muted); display: flex;
+            align-items: center; gap: 0.3rem; transition: all 0.2s;
+        }
+        .btn-refresh:hover { background: #f1f5f9; color: var(--text-main); }
+        .btn-refresh.spinning .ri { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Threat level badge ── */
+        .threat-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 12px; border-radius: 9999px; font-size: 0.75rem; font-weight: 700;
+        }
+        .threat-low     { background: #ecfdf5; color: #065f46; }
+        .threat-medium  { background: #fef3c7; color: #92400e; }
+        .threat-high    { background: #fee2e2; color: #991b1b; }
+
+        /* ── Skeleton ── */
+        .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px; display: inline-block; }
+        .sk-val { width: 60px; height: 28px; }
+        .sk-sub { width: 90px; height: 12px; margin-top: 4px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        .live-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; margin-right: 6px; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        .empty-state { text-align: center; padding: 2.5rem; color: var(--text-muted); font-size: 0.875rem; }
+
+        header h1 { font-size: 1.6rem; }
+
+        /* ── Log Filter Tabs ── */
+        .log-filter-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .log-tab {
+            padding: 0.3rem 0.85rem; border-radius: 9999px; font-size: 0.75rem;
+            font-weight: 700; cursor: pointer; border: 1px solid var(--border);
+            background: none; color: var(--text-muted); transition: all 0.18s;
+        }
+        .log-tab.active, .log-tab:hover { background: #1e40af; color: #fff; border-color: #1e40af; }
+        .log-tab.active-blocked { background: #dc2626; color: #fff; border-color: #dc2626; }
+        .log-tab.active-suspicious { background: #d97706; color: #fff; border-color: #d97706; }
+        .log-tab.active-normal { background: #059669; color: #fff; border-color: #059669; }
+
+        /* ── Badge status ── */
+        .badge-suspicious { background: #fef3c7; color: #92400e; padding: 3px 10px; border-radius: 9999px; font-size: 0.7rem; font-weight: 700; }
+        .badge-method { background: #e0f2fe; color: #0369a1; padding: 2px 7px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; }
+        .badge-method-post { background: #fce7f3; color: #9d174d; }
+        .badge-method-delete { background: #fee2e2; color: #991b1b; }
+        .badge-method-put { background: #fef3c7; color: #92400e; }
+    </style>
+</head>
+
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar"></aside>
+
+        <main class="main-content">
+            <header>
+                <div>
+                    <h1>🛡️ Bảo mật & Phân tích</h1>
+                    <div style="font-size:0.78rem; color:var(--text-muted); margin-top:2px;" id="lastUpdated">Đang tải...</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-refresh" id="refreshBtn" onclick="loadAll()">
+                        <span class="ri" id="refreshIcon">🔄</span> Làm mới
+                    </button>
+                    <div style="width:1px; height:24px; background:var(--border);"></div>
+                    <span id="userInfo" style="font-weight:700; font-size:0.85rem;">Admin</span>
+                    <button id="logoutBtn" class="btn btn-secondary" style="font-size:0.8rem; padding:0.4rem 0.85rem;">Đăng xuất</button>
+                </div>
+            </header>
+
+            <!-- Metric Cards -->
+            <div class="sec-stats-grid">
+                <div class="sec-stat-card">
+                    <div class="sec-stat-icon blue">🌐</div>
+                    <div class="sec-stat-body">
+                        <div class="sec-stat-label">Tổng request (24h)</div>
+                        <div class="sec-stat-value" id="statTotal"><span class="skeleton sk-val"></span></div>
+                        <div class="sec-stat-sub" id="statTotalSub"><span class="skeleton sk-sub"></span></div>
+                    </div>
+                </div>
+                <div class="sec-stat-card">
+                    <div class="sec-stat-icon amber">⚠️</div>
+                    <div class="sec-stat-body">
+                        <div class="sec-stat-label">Nghi ngờ (24h)</div>
+                        <div class="sec-stat-value" id="statSuspicious"><span class="skeleton sk-val"></span></div>
+                        <div class="sec-stat-sub">Yêu cầu bất thường</div>
+                    </div>
+                </div>
+                <div class="sec-stat-card">
+                    <div class="sec-stat-icon red">🚫</div>
+                    <div class="sec-stat-body">
+                        <div class="sec-stat-label">Bị chặn (24h)</div>
+                        <div class="sec-stat-value" id="statBlocked"><span class="skeleton sk-val"></span></div>
+                        <div class="sec-stat-sub">Request bị block</div>
+                    </div>
+                </div>
+                <div class="sec-stat-card">
+                    <div class="sec-stat-icon red">🔒</div>
+                    <div class="sec-stat-body">
+                        <div class="sec-stat-label">IP Đang bị chặn</div>
+                        <div class="sec-stat-value" id="statActiveBlocked"><span class="skeleton sk-val"></span></div>
+                        <div class="sec-stat-sub">Đang active</div>
+                    </div>
+                </div>
+                <div class="sec-stat-card">
+                    <div class="sec-stat-icon green">⚡</div>
+                    <div class="sec-stat-body">
+                        <div class="sec-stat-label">Avg Response (1h)</div>
+                        <div class="sec-stat-value" id="statAvgResponse"><span class="skeleton sk-val"></span></div>
+                        <div class="sec-stat-sub">Milliseconds</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="charts-row">
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">📈 Requests theo ngày (7 ngày qua)</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">
+                        <span class="panel-title">🎯 Top IP nghi ngờ (24h)</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="topIpChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blocked IPs Table -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">
+                        <span class="live-dot"></span>🔒 Danh sách tài khoản / IP đang bị chặn
+                    </span>
+                    <div style="display:flex; gap:0.5rem;">
+                        <button class="btn-refresh" onclick="cleanupExpired()">🗑️ Dọn hết hạn</button>
+                        <button class="btn-refresh" onclick="loadBlockedIps()">🔄 Làm mới</button>
+                    </div>
+                </div>
+                <div id="blockedIpsContainer">
+                    <div class="empty-state">Đang tải...</div>
+                </div>
+            </div>
+
+            <!-- Audit Log Table -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span class="panel-title">📋 Nhật ký truy cập gần đây</span>
+                    <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                        <div class="log-filter-tabs">
+                            <button class="log-tab active" id="tab-ALL"    onclick="setLogFilter('ALL')">Tất cả</button>
+                            <button class="log-tab" id="tab-BLOCKED"       onclick="setLogFilter('BLOCKED')">🚫 Blocked</button>
+                            <button class="log-tab" id="tab-SUSPICIOUS"    onclick="setLogFilter('SUSPICIOUS')">⚠️ Suspicious</button>
+                            <button class="log-tab" id="tab-NORMAL"        onclick="setLogFilter('NORMAL')">✅ Normal</button>
+                        </div>
+                        <button class="btn-refresh" onclick="loadLogs()">🔄</button>
+                    </div>
+                </div>
+                <div id="logsContainer">
+                    <div class="empty-state">Đang tải...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="../../assets/js/admin/sidebar.js"></script>
+    <script>
+        // Auth guard
+        try {
+            const userStr = sessionStorage.getItem('user');
+            if (!userStr) { window.location.href = '/pages/auth/login.html'; throw new Error(); }
+            const user = JSON.parse(userStr);
+            if (!user || user.role !== 'ADMIN') { window.location.href = '/pages/auth/login.html'; throw new Error(); }
+            document.getElementById('userInfo').innerText = user.fullName || user.email || 'Admin';
+        } catch(e) { setTimeout(() => window.location.href = '/pages/auth/login.html', 1500); }
+
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            sessionStorage.clear();
+            window.location.href = '/pages/auth/login.html';
+        });
+
+        let dailyChart = null;
+        let topIpChart = null;
+
+        function formatNum(n) { return Number(n || 0).toLocaleString('vi-VN'); }
+        function getNow() { return new Date().toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+        function formatDt(s) {
+            if (!s) return '-';
+            const d = new Date(s);
+            return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'});
+        }
+
+        async function loadStats() {
+            try {
+                const res = await TB.apiFetch('/api/v1/admin/security/stats');
+                if (!res || res.code) return;
+                document.getElementById('statTotal').textContent         = formatNum(res.totalRequestsToday);
+                document.getElementById('statTotalSub').textContent      = 'Tổng trong 24h qua';
+                document.getElementById('statSuspicious').textContent    = formatNum(res.suspiciousRequestsToday);
+                document.getElementById('statBlocked').textContent       = formatNum(res.blockedRequestsToday);
+                document.getElementById('statActiveBlocked').textContent = formatNum(res.activeBlockedIps);
+                document.getElementById('statAvgResponse').textContent   = formatNum(res.avgResponseTimeMs) + ' ms';
+            } catch(e) { console.warn('Stats error:', e); }
+        }
+
+        async function loadCharts() {
+            try {
+                const res = await TB.apiFetch('/api/v1/admin/security/charts');
+                if (!res) return;
+
+                // Daily chart
+                const labels   = (res.dailyStats || []).map(d => d.date);
+                const totals   = (res.dailyStats || []).map(d => d.total);
+                const blockeds = (res.dailyStats || []).map(d => d.blocked);
+
+                if (dailyChart) dailyChart.destroy();
+                dailyChart = new Chart(document.getElementById('dailyChart'), {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            { label: 'Tổng request', data: totals, backgroundColor: 'rgba(59,130,246,0.7)', borderRadius: 6 },
+                            { label: 'Bị chặn',      data: blockeds, backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 6 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
+                });
+
+                // Top IP chart
+                const topIps   = (res.topAbusiveIps || []).slice(0, 8);
+                const ipLabels = topIps.map(i => i.ip);
+                const ipCounts = topIps.map(i => i.count);
+
+                if (topIpChart) topIpChart.destroy();
+                topIpChart = new Chart(document.getElementById('topIpChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ipLabels,
+                        datasets: [{
+                            data: ipCounts,
+                            backgroundColor: ['#ef4444','#f59e0b','#8b5cf6','#06b6d4','#10b981','#3b82f6','#ec4899','#f97316'],
+                            borderWidth: 2, borderColor: '#fff'
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 } } } } }
+                });
+            } catch(e) { console.warn('Charts error:', e); }
+        }
+
+        async function loadBlockedIps() {
+            const container = document.getElementById('blockedIpsContainer');
+            try {
+                const list = await TB.apiFetch('/api/v1/admin/security/blocked-ips');
+                if (!list || !Array.isArray(list) || list.length === 0) {
+                    container.innerHTML = '<div class="empty-state">✅ Không có tài khoản hay IP nào đang bị chặn</div>';
+                    return;
+                }
+                let html = `<table class="blocked-table">
+                    <thead><tr>
+                        <th>#</th><th>Đối tượng (Tài khoản / IP)</th><th>Lý do</th>
+                        <th>Bị chặn lúc</th><th>Hết hạn lúc</th><th>Hành động</th>
+                    </tr></thead><tbody>`;
+                list.forEach((item, idx) => {
+                    const now = new Date();
+                    const until = new Date(item.blockedUntil);
+                    const isActive = until > now;
+                    const remaining = isActive ? Math.ceil((until - now) / 60000) + ' phút nữa' : 'Hết hạn';
+                    
+                    let displayVal = item.ipAddress;
+                    let badgeHtml = '';
+                    if (displayVal.startsWith('USER:')) {
+                        displayVal = displayVal.substring(5);
+                        badgeHtml = `<span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;margin-right:6px;display:inline-flex;align-items:center;">👤 User</span>`;
+                    } else {
+                        badgeHtml = `<span style="background:#f1f5f9;color:#475569;padding:2px 6px;border-radius:4px;font-size:0.75rem;font-weight:600;margin-right:6px;display:inline-flex;align-items:center;">🌐 IP</span>`;
+                    }
+
+                    html += `<tr>
+                        <td style="color:var(--text-muted)">${idx+1}</td>
+                        <td>${badgeHtml}<code style="background:#f8fafc;padding:2px 8px;border-radius:4px;font-size:0.85rem;font-weight:500;">${displayVal}</code></td>
+                        <td style="color:var(--text-muted);font-size:0.82rem;">${item.reason || '-'}</td>
+                        <td style="font-size:0.82rem;">${formatDt(item.createdAt)}</td>
+                        <td>
+                            <span class="${isActive ? 'badge-blocked' : 'badge-normal'}">${isActive ? '🔒 ' + remaining : '✅ Hết hạn'}</span>
+                        </td>
+                        <td>
+                            <button class="btn-unblock" onclick="unblockIp(${item.id}, '${item.ipAddress}')">Bỏ chặn</button>
+                        </td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch(e) {
+                container.innerHTML = '<div class="empty-state">⚠️ Không thể tải danh sách</div>';
+            }
+        }
+
+
+        async function unblockIp(id, ip) {
+            if (!confirm(`Bạn có chắc muốn bỏ chặn IP: ${ip}?`)) return;
+            try {
+                await TB.apiFetch(`/api/v1/admin/security/blocked-ips/${id}`, { method: 'DELETE' });
+                if (typeof showToast === 'function') showToast(`Đã bỏ chặn IP: ${ip}`, 'success');
+                await loadBlockedIps();
+                await loadStats();
+            } catch(e) {
+                if (typeof showToast === 'function') showToast('Lỗi khi bỏ chặn IP', 'error');
+            }
+        }
+
+        async function cleanupExpired() {
+            try {
+                await TB.apiFetch('/api/v1/admin/security/blocked-ips/cleanup', { method: 'DELETE' });
+                if (typeof showToast === 'function') showToast('Đã dọn dẹp các IP hết hạn', 'success');
+                await loadBlockedIps();
+            } catch(e) {
+                if (typeof showToast === 'function') showToast('Lỗi khi dọn dẹp', 'error');
+            }
+        }
+
+        async function loadAll() {
+            const btn = document.getElementById('refreshBtn');
+            const icon = document.getElementById('refreshIcon');
+            btn.disabled = true;
+            icon.style.animation = 'spin 1s linear infinite';
+            await Promise.all([loadStats(), loadCharts(), loadBlockedIps(), loadLogs()]);
+            document.getElementById('lastUpdated').textContent = 'Cập nhật lúc ' + getNow();
+            icon.style.animation = '';
+            btn.disabled = false;
+        }
+
+        // ── Audit Log ──────────────────────────────────────────
+        let currentLogFilter = 'ALL';
+
+        function setLogFilter(status) {
+            currentLogFilter = status;
+            // Update tab active styles
+            ['ALL','BLOCKED','SUSPICIOUS','NORMAL'].forEach(s => {
+                const tab = document.getElementById('tab-' + s);
+                if (!tab) return;
+                tab.className = 'log-tab' + (s === status ? ' active' : '');
+            });
+            loadLogs();
+        }
+
+        function statusBadge(s) {
+            if (!s) return '';
+            const map = { BLOCKED: 'badge-blocked', SUSPICIOUS: 'badge-suspicious', NORMAL: 'badge-normal' };
+            const icon = { BLOCKED: '🚫', SUSPICIOUS: '⚠️', NORMAL: '✅' };
+            return `<span class="${map[s] || 'badge-normal'}">${icon[s] || ''} ${s}</span>`;
+        }
+
+        function methodBadge(m) {
+            if (!m) return '-';
+            const cls = { POST: 'badge-method-post', DELETE: 'badge-method-delete', PUT: 'badge-method-put' };
+            return `<span class="badge-method ${cls[m] || ''}">${m}</span>`;
+        }
+
+        async function loadLogs() {
+            const container = document.getElementById('logsContainer');
+            container.innerHTML = '<div class="empty-state">Đang tải...</div>';
+            try {
+                const url = `/api/v1/admin/security/logs?limit=100&status=${currentLogFilter}`;
+                const list = await TB.apiFetch(url);
+                if (!list || !Array.isArray(list) || list.length === 0) {
+                    container.innerHTML = '<div class="empty-state">Không có log nào</div>';
+                    return;
+                }
+                let html = `<div style="overflow-x:auto">
+                <table class="blocked-table">
+                    <thead><tr>
+                        <th>#</th>
+                        <th>Thời gian</th>
+                        <th>Người dùng / IP</th>
+                        <th>Method</th>
+                        <th>Endpoint</th>
+                        <th>HTTP</th>
+                        <th>Thời gian xử lý</th>
+                        <th>Trạng thái</th>
+                    </tr></thead><tbody>`;
+                let displayIdx = 1;
+                list.forEach((log) => {
+                    if (log.userEmail === 'admin@gmail.com') return;
+                    const httpColor = log.statusCode >= 400 ? '#dc2626' : log.statusCode >= 300 ? '#d97706' : '#059669';
+                    const rawIp = log.ipAddress || '';
+                    let subjectBadge = '';
+                    if (log.userId) {
+                        subjectBadge = `<span style="background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-size:0.72rem;font-weight:600;margin-right:6px;display:inline-flex;align-items:center;">👤 User</span><code style="background:#f8fafc;padding:2px 6px;border-radius:4px;font-size:0.78rem;">${log.userEmail || log.userId}</code>`;
+                    } else {
+                        subjectBadge = `<span style="background:#f1f5f9;color:#475569;padding:1px 6px;border-radius:4px;font-size:0.72rem;font-weight:600;margin-right:4px;">🌐 IP</span><code style="background:#f8fafc;padding:2px 6px;border-radius:4px;font-size:0.78rem;">${rawIp || '-'}</code>`;
+                    }
+                    html += `<tr>
+                        <td style="color:var(--text-muted);font-size:0.78rem">${displayIdx++}</td>
+                        <td style="font-size:0.78rem;white-space:nowrap">${formatDt(log.createdAt)}</td>
+                        <td>${subjectBadge}</td>
+                        <td>${methodBadge(log.method)}</td>
+                        <td style="font-size:0.78rem;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${log.endpoint || ''}">${log.endpoint || '-'}</td>
+                        <td style="font-weight:700;color:${httpColor};font-size:0.85rem">${log.statusCode || '-'}</td>
+                        <td style="font-size:0.82rem;color:var(--text-muted)">${log.responseTimeMs != null ? log.responseTimeMs + ' ms' : '-'}</td>
+                        <td>${statusBadge(log.status)}</td>
+                    </tr>`;
+                });
+                if (displayIdx === 1) {
+                    container.innerHTML = '<div class="empty-state">Không có log nào</div>';
+                    return;
+                }
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+            } catch(e) {
+                container.innerHTML = '<div class="empty-state">⚠️ Không thể tải log</div>';
+                console.warn('Log error:', e);
+            }
+        }
+
+        // Initial load
+        loadAll();
+        // Auto-refresh every 30 seconds
+        setInterval(loadAll, 30000);
+    </script>
+</body>
+</html>
