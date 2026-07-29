@@ -124,8 +124,6 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         BigDecimal baseAmount = booking.getTotalPrice();
-        if (booking.getDiscountAmount() != null) baseAmount = baseAmount.subtract(booking.getDiscountAmount());
-        if (booking.getLoyaltyDiscountAmount() != null) baseAmount = baseAmount.subtract(booking.getLoyaltyDiscountAmount());
         if (baseAmount.compareTo(BigDecimal.ZERO) < 0) baseAmount = BigDecimal.ZERO;
         
         BigDecimal payAmount = request.getAmount() != null ? request.getAmount() : baseAmount;
@@ -171,8 +169,6 @@ public class PaymentServiceImpl implements PaymentService {
 
         Payment payment = getOrCreatePayment(booking);
         BigDecimal payAmount = booking.getTotalPrice();
-        if (booking.getDiscountAmount() != null) payAmount = payAmount.subtract(booking.getDiscountAmount());
-        if (booking.getLoyaltyDiscountAmount() != null) payAmount = payAmount.subtract(booking.getLoyaltyDiscountAmount());
         if (payAmount.compareTo(BigDecimal.ZERO) < 0) payAmount = BigDecimal.ZERO;
         
         payment.setAmount(payAmount);
@@ -205,8 +201,6 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         BigDecimal payAmount = booking.getTotalPrice();
-        if (booking.getDiscountAmount() != null) payAmount = payAmount.subtract(booking.getDiscountAmount());
-        if (booking.getLoyaltyDiscountAmount() != null) payAmount = payAmount.subtract(booking.getLoyaltyDiscountAmount());
         if (payAmount.compareTo(BigDecimal.ZERO) < 0) payAmount = BigDecimal.ZERO;
         if (payAmount == null || payAmount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new AppException(ErrorCode.INVALID_REQUEST);
@@ -613,7 +607,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private void awardLoyaltyAndSendMail(Booking booking, BigDecimal paidAmount) {
         if (booking.getUser() != null && paidAmount != null) {
-            loyaltyService.addPoint(booking.getUser().getId(), paidAmount.intValue() / 100000);
+            loyaltyService.addPoint(booking.getUser().getId(), paidAmount.intValue() / 10000, booking.getId());
             try {
                 mailService.sendPaymentSuccessEmail(
                         booking.getUser().getEmail(),

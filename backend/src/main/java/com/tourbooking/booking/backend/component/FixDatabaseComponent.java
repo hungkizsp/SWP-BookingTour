@@ -69,6 +69,9 @@ public class FixDatabaseComponent implements CommandLineRunner {
             // 9. Ensure extra tours for paging test
             seedExtraToursForPaging();
 
+            // 10. Seed Bookings and Reviews for testing
+            seedBookingsAndReviews();
+
         } catch (Exception e) {
             log.error("Initialization error (continuing app startup): {}", e.getMessage());
         }
@@ -956,6 +959,99 @@ public class FixDatabaseComponent implements CommandLineRunner {
             log.info("Seed: Updated WhyChooseUs description with 150+ words for {} tours", updated);
         } catch (Exception e) {
             log.error("Error updating WhyChooseUs: {}", e.getMessage());
+        }
+    }
+
+    private void seedBookingsAndReviews() {
+        try {
+            // Ensure customer exists
+            String customerEmail = "customer@gmail.com";
+            List<Map<String, Object>> customers = jdbcTemplate.queryForList("SELECT UserID FROM Users WHERE Email = ?", customerEmail);
+            Long customerId = null;
+            if (customers.isEmpty()) {
+                // BCrypt hash for "123456"
+                String passwordHash = "$2a$10$7vj26Aptw/yE0uT/8f6BGe.1e.W0U9WfNn0/2fV9rUfB5W1N8yD9w";
+                jdbcTemplate.update(
+                        "INSERT INTO Users (Email, FullName, PasswordHash, Role, IsActive, CreatedAt, UpdatedAt) VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        customerEmail, "Khách Hàng", passwordHash, "CUSTOMER");
+                customerId = jdbcTemplate.queryForObject("SELECT UserID FROM Users WHERE Email = ?", Long.class, customerEmail);
+                log.info("Seed: Created customer user {}", customerEmail);
+            } else {
+                customerId = ((Number) customers.get(0).get("UserID")).longValue();
+            }
+
+            // Find a schedule
+            List<Map<String, Object>> schedules = jdbcTemplate.queryForList("SELECT TOP 2 ScheduleID, TourID FROM TourSchedules ORDER BY ScheduleID ASC");
+            if (schedules.isEmpty()) {
+                log.warn("Cannot seed bookings: no schedules available.");
+                return;
+            }
+
+            // Check if our seeded payment already exists
+            List<Map<String, Object>> existingSeed = jdbcTemplate.queryForList("SELECT PaymentID FROM Payments WHERE TransactionCode = 'TX-SEED-1'");
+            if (!existingSeed.isEmpty()) {
+                log.info("Seeded bookings/reviews already exist. Skipping booking seeding.");
+                return;
+            }
+
+            // Create Booking 1: Completed & Reviewed
+            Long scheduleId1 = ((Number) schedules.get(0).get("ScheduleID")).longValue();
+            jdbcTemplate.update(
+                    "INSERT INTO Bookings (UserID, ScheduleID, BookingDate, NumberOfPeople, OccupiedSlots, TotalPrice, DiscountAmount, LoyaltyPointsUsed, LoyaltyDiscountAmount, Status, CreatedAt, UpdatedAt) " +
+                    "VALUES (?, ?, DATEADD(day, -5, GETDATE()), 2, 2, 1700000.00, 0.00, 0, 0.00, 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    customerId, scheduleId1
+            );
+            Long bookingId1 = jdbcTemplate.queryForObject("SELECT TOP 1 BookingID FROM Bookings WHERE UserID = ? ORDER BY BookingID DESC", Long.class, customerId);
+
+            // Create Passenger for Booking 1
+            jdbcTemplate.update(
+                    "INSERT INTO Passengers (BookingID, FullName, PassengerType, CreatedAt, UpdatedAt) VALUES (?, ?, 'ADULT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    bookingId1, "Khách Hàng A"
+            );
+            jdbcTemplate.update(
+                    "INSERT INTO Passengers (BookingID, FullName, PassengerType, CreatedAt, UpdatedAt) VALUES (?, ?, 'ADULT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    bookingId1, "Khách Hàng B"
+            );
+
+            // Create Payment for Booking 1
+            jdbcTemplate.update(
+                    "INSERT INTO Payments (BookingID, Amount, PaymentMethod, TransactionCode, PaymentDate, Status, CreatedAt, UpdatedAt) " +
+                    "VALUES (?, 1700000.00, 'CASH', 'TX-SEED-1', DATEADD(day, -5, GETDATE()), 'SUCCESS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    bookingId1
+            );
+
+            // Create Review for Booking 1
+            jdbcTemplate.update(
+                    "INSERT INTO Reviews (UserID, BookingID, Rating, Comment, ReviewDate, CreatedAt, UpdatedAt) " +
+                    "VALUES (?, ?, 5, N'Chuyến đi tuyệt vời, hướng dẫn viên nhiệt tình, cảnh đẹp xuất sắc!', DATEADD(day, -4, GETDATE()), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                    customerId, bookingId1
+            );
+
+            // Create Booking 2: Completed but NOT Reviewed (so the customer can click "Viết Đánh Giá" to test)
+            if (schedules.size() > 1) {
+                Long scheduleId2 = ((Number) schedules.get(1).get("ScheduleID")).longValue();
+                jdbcTemplate.update(
+                        "INSERT INTO Bookings (UserID, ScheduleID, BookingDate, NumberOfPeople, OccupiedSlots, TotalPrice, DiscountAmount, LoyaltyPointsUsed, LoyaltyDiscountAmount, Status, CreatedAt, UpdatedAt) " +
+                        "VALUES (?, ?, DATEADD(day, -3, GETDATE()), 1, 1, 850000.00, 0.00, 0, 0.00, 'COMPLETED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        customerId, scheduleId2
+                );
+                Long bookingId2 = jdbcTemplate.queryForObject("SELECT TOP 1 BookingID FROM Bookings WHERE UserID = ? ORDER BY BookingID DESC", Long.class, customerId);
+
+                jdbcTemplate.update(
+                        "INSERT INTO Passengers (BookingID, FullName, PassengerType, CreatedAt, UpdatedAt) VALUES (?, ?, 'ADULT', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        bookingId2, "Khách Hàng A"
+                );
+
+                jdbcTemplate.update(
+                        "INSERT INTO Payments (BookingID, Amount, PaymentMethod, TransactionCode, PaymentDate, Status, CreatedAt, UpdatedAt) " +
+                        "VALUES (?, 850000.00, 'CASH', 'TX-SEED-2', DATEADD(day, -3, GETDATE()), 'SUCCESS', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                        bookingId2
+                );
+            }
+
+            log.info("Seed: Seeded completed bookings and review successfully.");
+        } catch (Exception e) {
+            log.error("Error seeding bookings and reviews: {}", e.getMessage(), e);
         }
     }
 }

@@ -1,0 +1,9 @@
+target/
+uploads/
+.idea/
+.vscode/
+*.iml
+*.log
+.env
+.env.local
+compile_output.txt

@@ -33,7 +33,10 @@ public enum ErrorCode {
     BOOKING_DEADLINE_PASSED(1024, "Đã quá hạn đặt tour. Vui lòng chọn lịch khác."),
     SCHEDULE_SOLD_OUT(1025, "Tour đã hết chỗ."),
     INSUFFICIENT_SLOTS(1026, "Số chỗ trống không đủ cho số lượng hành khách yêu cầu."),
-    SCHEDULE_PENDING_GUIDE(1027, "Lịch trình này tạm thời không thể đặt vì chưa được phân công hướng dẫn viên.");
+    SCHEDULE_PENDING_GUIDE(1027, "Lịch trình này tạm thời không thể đặt vì chưa được phân công hướng dẫn viên."),
+    RATE_LIMIT_EXCEEDED(1028, "Tần suất gửi yêu cầu quá nhanh. Vui lòng thử lại sau ít phút."),
+    DUPLICATE_BOOKING(1029, "Yêu cầu đặt tour trùng lặp. Vui lòng thử lại sau 30 giây."),
+    IP_BLOCKED(1030, "Địa chỉ IP của bạn tạm thời bị khóa do có hành vi gửi yêu cầu bất thường.");
 
     private final int code;
     private final String message;

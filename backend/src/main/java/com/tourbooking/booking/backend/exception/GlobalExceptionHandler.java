@@ -169,4 +169,24 @@ public class GlobalExceptionHandler {
                 .build();
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
+
+    /**
+     * Centralized handling for IOException / ClientAbortException (abrupt client disconnection).
+     * Prevents cluttering console logs with giant ERROR-level stack traces when users
+     * refresh, log out, or navigate away from active SSE streams or HTTP requests.
+     */
+    @ExceptionHandler(java.io.IOException.class)
+    public void handleIOException(java.io.IOException ex, HttpServletRequest request, HttpServletResponse response) {
+        String exName = ex.getClass().getSimpleName();
+        String exMsg = ex.getMessage() != null ? ex.getMessage() : "";
+        if ("ClientAbortException".equals(exName) || 
+            exMsg.toLowerCase().contains("broken pipe") ||
+            exMsg.toLowerCase().contains("connection reset") ||
+            exMsg.toLowerCase().contains("aborted by the software") ||
+            exMsg.toLowerCase().contains("connection was aborted")) {
+            log.debug("[Network] Client disconnected abruptly (normal lifecycle): {} ({})", exMsg, exName);
+            return;
+        }
+        log.error("[Network] Centralized IO Exception occurred: {}", exMsg, ex);
+    }
 }

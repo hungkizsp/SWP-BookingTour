@@ -23,6 +23,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByBookingDateBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
     List<Booking> findByCreatedAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
     long countByStatus(BookingStatus status);
+
+    /** Duplicate booking protection: count bookings by the user created after a given time */
+    long countByUser_IdAndBookingDateAfter(Long userId, LocalDateTime after);
     
     // UC18: Booking History with filters, search, and pagination
     /**

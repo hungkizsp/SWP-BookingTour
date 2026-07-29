@@ -339,8 +339,16 @@ public class BookingServiceImpl implements BookingService {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
+        // ── Duplicate booking protection (30-second window) ────────────────────
+        LocalDateTime thirtySecondsAgo = LocalDateTime.now().minusSeconds(30);
+        long recentBookings = bookingRepository.countByUser_IdAndBookingDateAfter(request.getUserId(), thirtySecondsAgo);
+        if (recentBookings > 0) {
+            throw new AppException(ErrorCode.DUPLICATE_BOOKING);
+        }
+
         TourSchedule schedule = tourScheduleRepository.findByIdWithLock(request.getScheduleId())
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+
 
         LocalDateTime now = LocalDateTime.now();
         com.tourbooking.booking.backend.model.entity.enums.TourStatus currentStatus = schedule.getStatus();
@@ -447,13 +455,6 @@ public class BookingServiceImpl implements BookingService {
         applyDiscountIfPresent(saved, request.getDiscountCode());
 
         Booking savedBooking = bookingRepository.save(saved);
-
-        try {
-            mailService.sendBookingCreatedEmail(user.getEmail(), user.getFullName(), savedBooking.getId(),
-                    savedBooking.getTotalPrice());
-        } catch (Exception e) {
-            log.warn("Could not send booking creation email: " + e.getMessage());
-        }
 
         return BookingMapper.toResponse(savedBooking);
     }
@@ -931,11 +932,13 @@ public class BookingServiceImpl implements BookingService {
             tourScheduleService.releaseGuideIfNoActiveBookings(schedule.getId());
         }
 
-        // Send email
-        String tourName = (schedule != null && schedule.getTour() != null) ? schedule.getTour().getTourName() : "N/A";
-        if (booking.getUser() != null && booking.getUser().getEmail() != null) {
-            mailService.sendTourCancellationEmail(booking.getUser().getEmail(), booking.getUser().getFullName(),
-                    booking.getId(), tourName, booking.getCancellationReason());
+        // Send email only if the booking was previously confirmed or paid
+        if (originalStatus == BookingStatus.CONFIRMED || originalStatus == BookingStatus.PAID || originalStatus == BookingStatus.SUCCESS) {
+            String tourName = (schedule != null && schedule.getTour() != null) ? schedule.getTour().getTourName() : "N/A";
+            if (booking.getUser() != null && booking.getUser().getEmail() != null) {
+                mailService.sendTourCancellationEmail(booking.getUser().getEmail(), booking.getUser().getFullName(),
+                        booking.getId(), tourName, booking.getCancellationReason());
+            }
         }
 
         return BookingMapper.toResponse(booking);
@@ -1427,9 +1430,22 @@ public class BookingServiceImpl implements BookingService {
                 }
             }
 
-            if ((newStatus == BookingStatus.CONFIRMED || newStatus == BookingStatus.SUCCESS)
-                    && booking.getStatus() == BookingStatus.PENDING) {
-                incrementDiscountUsage(booking);
+            if ((newStatus == BookingStatus.CONFIRMED || newStatus == BookingStatus.SUCCESS || newStatus == BookingStatus.PAID)
+                    && (booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.PENDING_CASH)) {
+                
+                com.tourbooking.booking.backend.model.dto.request.PaymentRequest paymentRequest = new com.tourbooking.booking.backend.model.dto.request.PaymentRequest();
+                paymentRequest.setBookingId(id);
+                paymentRequest.setPaymentMethod("CASH");
+                paymentService.confirmManualPayment(paymentRequest);
+
+                // Re-fetch booking from DB to ensure local entity state is synchronized
+                booking = bookingRepository.findById(id)
+                        .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+            } else {
+                if ((newStatus == BookingStatus.CONFIRMED || newStatus == BookingStatus.SUCCESS)
+                        && booking.getStatus() == BookingStatus.PENDING) {
+                    incrementDiscountUsage(booking);
+                }
             }
 
             booking.setStatus(newStatus);

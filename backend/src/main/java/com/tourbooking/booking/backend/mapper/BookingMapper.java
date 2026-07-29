@@ -50,6 +50,7 @@ public class BookingMapper {
         response.setDiscountCode(booking.getDiscountCode());
         response.setStatus(booking.getStatus());
         response.setCancellationReason(booking.getCancellationReason());
+        response.setReviewed(booking.getReview() != null);
 
         if (booking.getPassengers() != null) {
             java.util.List<com.tourbooking.booking.backend.model.dto.response.PassengerResponse> passengerResponses = booking

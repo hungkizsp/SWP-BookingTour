@@ -38,6 +38,12 @@ public class LoyaltyServiceImpl implements LoyaltyService {
 
     @Override
     public void addPoint(Long userId, int point) {
+        addPoint(userId, point, null);
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void addPoint(Long userId, int point, Long bookingId) {
         LoyaltyPoint lp = getPoint(userId);
         if (lp == null || point <= 0) {
             return;
@@ -52,6 +58,10 @@ public class LoyaltyServiceImpl implements LoyaltyService {
         tx.setPoints(point);
         tx.setTransactionType("EARN");
         tx.setDescription("Cộng " + point + " điểm tích lũy");
+        if (bookingId != null) {
+            tx.setBooking(bookingRepository.findById(bookingId).orElse(null));
+            tx.setDescription("Cộng " + point + " điểm tích lũy cho booking #" + bookingId);
+        }
         tx.setCreatedAt(java.time.LocalDateTime.now());
         loyaltyTransactionRepository.save(tx);
     }
@@ -143,6 +153,9 @@ public class LoyaltyServiceImpl implements LoyaltyService {
             if (booking != null) {
                 booking.setLoyaltyPointsUsed(request.getPointsToRedeem());
                 booking.setLoyaltyDiscountAmount(validateRes.getDiscountAmount());
+                if (booking.getTotalPrice() != null) {
+                    booking.setTotalPrice(booking.getTotalPrice().subtract(validateRes.getDiscountAmount()));
+                }
                 bookingRepository.save(booking);
             }
         }

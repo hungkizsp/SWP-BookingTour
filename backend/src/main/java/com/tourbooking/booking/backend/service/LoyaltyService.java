@@ -6,6 +6,7 @@ public interface LoyaltyService {
 
     LoyaltyPoint getPoint(Long userId);
     void addPoint(Long userId, int point);
+    void addPoint(Long userId, int point, Long bookingId);
     
     com.tourbooking.booking.backend.model.dto.response.LoyaltyPointResponse getMyPoints(Long userId);
     com.tourbooking.booking.backend.model.dto.response.LoyaltyRedeemResponse validateRedeem(Long userId, com.tourbooking.booking.backend.model.dto.request.LoyaltyRedeemRequest request);

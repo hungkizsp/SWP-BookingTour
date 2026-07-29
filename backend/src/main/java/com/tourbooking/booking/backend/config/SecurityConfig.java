@@ -16,6 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.tourbooking.booking.backend.security.JwtAuthenticationFilter;
+import com.tourbooking.booking.backend.security.filter.BookingSecurityFilter;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -25,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final BookingSecurityFilter bookingSecurityFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -54,6 +56,7 @@ public class SecurityConfig {
                             response.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED,
                                     authException.getMessage());
                         }))
+                .addFilterBefore(bookingSecurityFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         // Allow ASYNC and FORWARD dispatcher types to bypass security checks.
@@ -91,6 +94,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/payments/**").authenticated()
 
                         // --- ADMIN & STAFF FEATURES ---
+                        .requestMatchers("/api/v1/admin/security/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
                         .requestMatchers("/api/v1/admin/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
                         .requestMatchers("/api/v1/staff/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
 

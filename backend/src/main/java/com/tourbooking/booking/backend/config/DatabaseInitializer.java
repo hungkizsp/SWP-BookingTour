@@ -25,6 +25,7 @@ public class DatabaseInitializer {
         initTourScheduleColumns();
         initTourGroupMessages();
         initUserNotifications();
+        initSecurityTables();
         log.info("=== DatabaseInitializer: Done. ===");
     }
 
@@ -197,6 +198,79 @@ public class DatabaseInitializer {
             log.info("  [CREATED] Column {}.{}.", tableName, columnName);
         } catch (Exception e) {
             log.error("  [ERROR] Failed to add column {}.{}: {}", tableName, columnName, e.getMessage());
+        }
+    }
+
+    // =========================================================
+    // Bảng security_logs và blocked_ips (Security Module)
+    // =========================================================
+    private void initSecurityTables() {
+        // --- security_logs ---
+        try {
+            Integer cnt = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'security_logs'",
+                Integer.class);
+            if (cnt != null && cnt > 0) {
+                log.info("  [OK] Table security_logs already exists.");
+            } else {
+                jdbcTemplate.execute("""
+                    CREATE TABLE security_logs (
+                        id               BIGINT IDENTITY(1,1) PRIMARY KEY,
+                        ip_address       NVARCHAR(64)  NOT NULL,
+                        user_id          BIGINT        NULL,
+                        user_email       NVARCHAR(255) NULL,
+                        endpoint         NVARCHAR(255) NULL,
+                        method           NVARCHAR(10)  NULL,
+                        status_code      INT           NULL,
+                        response_time_ms BIGINT        NULL,
+                        status           NVARCHAR(20)  NULL,
+                        created_at       DATETIME2     NOT NULL DEFAULT SYSDATETIME()
+                    )
+                """);
+                jdbcTemplate.execute("CREATE INDEX idx_security_logs_ip ON security_logs(ip_address)");
+                jdbcTemplate.execute("CREATE INDEX idx_security_logs_created ON security_logs(created_at)");
+                log.info("  [CREATED] Table security_logs.");
+            }
+        } catch (Exception e) {
+            log.error("  [ERROR] Failed to init security_logs: {}", e.getMessage());
+        }
+
+        // --- Migrate: add user_email column if missing (for existing DBs) ---
+        try {
+            Integer colCnt = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'security_logs' AND COLUMN_NAME = 'user_email'",
+                Integer.class);
+            if (colCnt == null || colCnt == 0) {
+                jdbcTemplate.execute("ALTER TABLE security_logs ADD user_email NVARCHAR(255) NULL");
+                log.info("  [MIGRATED] Added user_email column to security_logs.");
+            }
+        } catch (Exception e) {
+            log.warn("  [WARN] Could not add user_email column to security_logs: {}", e.getMessage());
+        }
+
+        // --- blocked_ips ---
+        try {
+            Integer cnt = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'blocked_ips'",
+                Integer.class);
+            if (cnt != null && cnt > 0) {
+                log.info("  [OK] Table blocked_ips already exists.");
+            } else {
+                jdbcTemplate.execute("""
+                    CREATE TABLE blocked_ips (
+                        id            BIGINT IDENTITY(1,1) PRIMARY KEY,
+                        ip_address    NVARCHAR(64)  NOT NULL,
+                        reason        NVARCHAR(255) NULL,
+                        blocked_until DATETIME2     NOT NULL,
+                        created_at    DATETIME2     NOT NULL DEFAULT SYSDATETIME()
+                    )
+                """);
+                jdbcTemplate.execute("CREATE INDEX idx_blocked_ips_address ON blocked_ips(ip_address)");
+                jdbcTemplate.execute("CREATE INDEX idx_blocked_ips_until ON blocked_ips(blocked_until)");
+                log.info("  [CREATED] Table blocked_ips.");
+            }
+        } catch (Exception e) {
+            log.error("  [ERROR] Failed to init blocked_ips: {}", e.getMessage());
         }
     }
 }
