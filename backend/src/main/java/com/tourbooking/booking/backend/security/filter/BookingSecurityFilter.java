@@ -39,8 +39,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BookingSecurityFilter extends OncePerRequestFilter {
 
     private static final int  BOOKING_RATE_LIMIT   = 10;    // per minute — demo: 10 POST /bookings
-    private static final int  SUSPICIOUS_THRESHOLD = 2;     // per minute on sensitive paths — mark SUSPICIOUS
-    private static final int  BLOCK_THRESHOLD      = 3;     // per minute on sensitive paths — auto-blacklist
+    private static final int  SUSPICIOUS_THRESHOLD = 15;    // per minute on sensitive paths — mark SUSPICIOUS
+    private static final int  BLOCK_THRESHOLD      = 20;    // per minute on sensitive paths — auto-blacklist
     private static final long WINDOW_MS            = 60_000L;
     private static final long BLOCK_DURATION_MIN   = 10L;
 
@@ -51,8 +51,10 @@ public class BookingSecurityFilter extends OncePerRequestFilter {
      * catches Postman rapid-fire spam (4+ calls to the same path = blocked).
      */
     private static final java.util.Set<String> RATE_LIMITED_PATHS = java.util.Set.of(
-            "/api/v1/auth/me",
-            "/api/v1/auth/login"
+            "/api/v1/auth/me"
+            // NOTE: /auth/login is intentionally excluded — the SPA calls login once
+            // and then immediately fetches /auth/me multiple times for role/profile hydration.
+            // Counting login itself would cause immediate false-positive blocks on normal usage.
     );
 
     private final ConcurrentHashMap<String, Queue<Long>> bookingCounters = new ConcurrentHashMap<>();

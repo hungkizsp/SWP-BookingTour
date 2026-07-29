@@ -64,3 +64,12 @@ build/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# ==========================================
+# 5) Uploads (Excluded folders)
+# ==========================================
+uploads/
+backend/uploads/
+frontend/uploads/
+.postman/
+*.docx

@@ -129,11 +129,11 @@
     const policies = discountRes.data || discountRes || [];
     const loyaltyData = loyaltyRes.data;
     
-    if (loyaltyData && loyaltyData.totalPoints > 0) {
-      loyaltyPointsAvailable = loyaltyData.totalPoints;
+    if (loyaltyData) {
+      loyaltyPointsAvailable = loyaltyData.totalPoints || 0;
       document.getElementById('loyaltySection').style.display = 'block';
       document.getElementById('loyaltyTotalPoints').textContent = loyaltyPointsAvailable.toLocaleString('vi-VN');
-      document.getElementById('loyaltyTotalValue').textContent = loyaltyData.pointsValue.toLocaleString('vi-VN');
+      document.getElementById('loyaltyTotalValue').textContent = (loyaltyData.pointsValue || 0).toLocaleString('vi-VN');
     }
     currentPrice = tourData.price;
     tourStartDate = parseTourStartDate(scheduleData.startDate);
