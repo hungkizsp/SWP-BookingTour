@@ -707,12 +707,7 @@
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.95rem;">
                     <div><strong style="color:var(--text-faint);">Khởi hành:</strong> ${b.departureDate || 'Chưa rõ'}</div>
                     <div><strong style="color:var(--text-faint);">Trở về:</strong> ${b.returnDate || 'Chưa rõ'}</div>
-                    <div style="grid-column: 1 / -1; margin-top: 8px;">
-                        <strong style="color:var(--text-faint);">Tour Guide:</strong>
-                        ${renderGuideCard(b, false)}
-                    </div>
                 </div>
-                ${renderItinerary(b.tourItinerary, resolveTourId(b))}
                 ${operatorCancelBanner}
             </div>
             <div class="booking-actions">
@@ -726,7 +721,7 @@
           </div>
         `;
       }).join('');
-      loadItineraryBlocks();
+      // loadItineraryBlocks() intentionally removed — itinerary now loads only in the details modal
     }
 
     function renderPagination(totalPages) {
