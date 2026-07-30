@@ -13,9 +13,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const actions = res.data || [];
     
     if (actions.length > 0) {
-      // Create and show modal
-      const firstAction = actions[0]; // We can just show one by one, or loop them.
-      showSuspensionActionModal(firstAction);
+      // Lấy first action
+      const firstAction = actions[0];
+      
+      // Kiểm tra URL hiện tại xem có đang xử lý booking này qua query params không
+      const urlParams = new URLSearchParams(window.location.search);
+      const isRescheduling = String(urlParams.get('reschedule')) === String(firstAction.bookingId);
+      const isRefunding = String(urlParams.get('refund')) === String(firstAction.bookingId);
+      
+      if (!isRescheduling && !isRefunding) {
+        // Chỉ hiển thị modal nếu chưa chọn xử lý
+        showSuspensionActionModal(firstAction);
+      }
     }
   } catch (err) {
     console.error('Error fetching suspension actions', err);
@@ -115,29 +124,38 @@ function showSuspensionActionModal(action) {
 
   document.body.appendChild(overlay);
 
+  function closeSuspensionModal() {
+    const modal = document.getElementById('suspensionActionModal');
+    if (modal) modal.remove();
+  }
+
   // Handlers
   if (action.canReschedule) {
     document.getElementById('wa-reschedule').onclick = () => {
       // Redirect to history page with param so we can auto-open reschedule modal
       if (window.location.pathname.includes('history.html')) {
-        overlay.remove();
+        closeSuspensionModal();
         if (typeof openRescheduleModal === 'function') {
           openRescheduleModal(action.bookingId, action.tourName, action.departureDate);
+        } else {
+          window.location.href = window.location.pathname + '?reschedule=' + action.bookingId;
         }
       } else {
-        window.location.href = '/pages/user/history.html?reschedule=' + action.bookingId;
+        window.location.href = '/user/history.html?reschedule=' + action.bookingId;
       }
     };
   }
 
   document.getElementById('wa-refund').onclick = () => {
     if (window.location.pathname.includes('history.html')) {
-      overlay.remove();
+      closeSuspensionModal();
       if (typeof openRefundModal === 'function') {
         openRefundModal(action.bookingId);
+      } else {
+        window.location.href = window.location.pathname + '?refund=' + action.bookingId;
       }
     } else {
-      window.location.href = '/pages/user/history.html?refund=' + action.bookingId;
+      window.location.href = '/user/history.html?refund=' + action.bookingId;
     }
   };
 

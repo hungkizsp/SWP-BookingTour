@@ -22,4 +22,6 @@ public class TourResponse {
     private String categoryName;
     private String suspensionReasonType;
     private java.time.LocalDate suspendedUntil;
+    private Integer totalFutureSchedules;
+    private Integer suspendedFutureSchedules;
 }

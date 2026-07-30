@@ -39,7 +39,7 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
             @Param("minRating") Double minRating,
             @Param("startDate") LocalDate startDate);
 
-    @Query("SELECT DISTINCT t FROM Tour t LEFT JOIN t.schedules ts LEFT JOIN t.city tc WHERE " +
+    @Query("SELECT DISTINCT t FROM Tour t LEFT JOIN t.city tc WHERE " +
             "(:keyword IS NULL OR LOWER(t.tourName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
             "OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keywordPattern, '%')) " +
             "OR LOWER(t.startLocation) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
@@ -47,9 +47,13 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
             "(:minPrice IS NULL OR t.price >= :minPrice) AND " +
             "(:maxPrice IS NULL OR t.price <= :maxPrice) AND " +
             "(:minRating IS NULL OR t.rating >= :minRating) AND " +
-            "(:startDate IS NULL OR ts.startDate >= :startDate) AND " +
+            "(:startDate IS NULL OR EXISTS (SELECT 1 FROM TourSchedule tsSub WHERE tsSub.tour = t AND tsSub.startDate >= :startDate)) AND " +
             "(:categoryId IS NULL OR t.category.id = :categoryId) AND " +
-            "(:transportType IS NULL OR LOWER(t.transportType) = LOWER(:transportType))")
+            "(:transportType IS NULL OR LOWER(t.transportType) = LOWER(:transportType)) AND " +
+            "(:hideSuspended = false OR NOT (" +
+            "  EXISTS (SELECT 1 FROM TourSchedule tsFut WHERE tsFut.tour = t AND tsFut.startDate >= CURRENT_DATE) AND " +
+            "  NOT EXISTS (SELECT 1 FROM TourSchedule tsFut2 WHERE tsFut2.tour = t AND tsFut2.startDate >= CURRENT_DATE AND tsFut2.status <> com.tourbooking.booking.backend.model.entity.enums.TourStatus.SUSPENDED)" +
+            "))")
 
     Page<Tour> browseTours(@Param("keyword") String keyword,
             @Param("keywordPattern") String keywordPattern,
@@ -59,6 +63,7 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
             @Param("startDate") LocalDate startDate,
             @Param("categoryId") Long categoryId,
             @Param("transportType") String transportType,
+            @Param("hideSuspended") boolean hideSuspended,
             Pageable pageable);
 
     // Popularity sort (booking count)
@@ -83,6 +88,10 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
                     SELECT 1 FROM dbo.TourSchedules ts
                     WHERE ts.TourID = t.TourID AND ts.StartDate >= :startDate
                 ))
+                AND (:hideSuspended = false OR NOT (
+                    EXISTS (SELECT 1 FROM dbo.TourSchedules ts1 WHERE ts1.TourID = t.TourID AND ts1.StartDate >= CAST(GETDATE() AS DATE))
+                    AND NOT EXISTS (SELECT 1 FROM dbo.TourSchedules ts2 WHERE ts2.TourID = t.TourID AND ts2.StartDate >= CAST(GETDATE() AS DATE) AND ts2.Status <> 'SUSPENDED')
+                ))
             ORDER BY ISNULL(bc.BookingCount, 0) DESC, t.TourID ASC
             OFFSET :#{#pageable.offset} ROWS FETCH NEXT :#{#pageable.pageSize} ROWS ONLY
             """, countQuery = """
@@ -100,6 +109,10 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
                     SELECT 1 FROM dbo.TourSchedules ts
                     WHERE ts.TourID = t.TourID AND ts.StartDate >= :startDate
                 ))
+                AND (:hideSuspended = 0 OR NOT (
+                    EXISTS (SELECT 1 FROM dbo.TourSchedules ts1 WHERE ts1.TourID = t.TourID AND ts1.StartDate >= CAST(GETDATE() AS DATE))
+                    AND NOT EXISTS (SELECT 1 FROM dbo.TourSchedules ts2 WHERE ts2.TourID = t.TourID AND ts2.StartDate >= CAST(GETDATE() AS DATE) AND ts2.Status <> 'SUSPENDED')
+                ))
             """, nativeQuery = true)
     Page<Tour> browseToursByPopularity(@Param("keyword") String keyword,
             @Param("minPrice") BigDecimal minPrice,
@@ -108,6 +121,7 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
             @Param("startDate") LocalDate startDate,
             @Param("categoryId") Long categoryId,
             @Param("transportType") String transportType,
+            @Param("hideSuspended") int hideSuspended,
             Pageable pageable);
 
     // Distance sort
@@ -126,6 +140,10 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
                 AND (:startDate IS NULL OR EXISTS (
                     SELECT 1 FROM dbo.TourSchedules ts
                     WHERE ts.TourID = t.TourID AND ts.StartDate >= :startDate
+                ))
+                AND (:hideSuspended = 0 OR NOT (
+                    EXISTS (SELECT 1 FROM dbo.TourSchedules ts1 WHERE ts1.TourID = t.TourID AND ts1.StartDate >= CAST(GETDATE() AS DATE))
+                    AND NOT EXISTS (SELECT 1 FROM dbo.TourSchedules ts2 WHERE ts2.TourID = t.TourID AND ts2.StartDate >= CAST(GETDATE() AS DATE) AND ts2.Status <> 'SUSPENDED')
                 ))
             ORDER BY
                 (6371.0 * ACOS(
@@ -151,6 +169,10 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
                     SELECT 1 FROM dbo.TourSchedules ts
                     WHERE ts.TourID = t.TourID AND ts.StartDate >= :startDate
                 ))
+                AND (:hideSuspended = 0 OR NOT (
+                    EXISTS (SELECT 1 FROM dbo.TourSchedules ts1 WHERE ts1.TourID = t.TourID AND ts1.StartDate >= CAST(GETDATE() AS DATE))
+                    AND NOT EXISTS (SELECT 1 FROM dbo.TourSchedules ts2 WHERE ts2.TourID = t.TourID AND ts2.StartDate >= CAST(GETDATE() AS DATE) AND ts2.Status <> 'SUSPENDED')
+                ))
             """, nativeQuery = true)
     Page<Tour> browseToursByDistance(@Param("keyword") String keyword,
             @Param("minPrice") BigDecimal minPrice,
@@ -161,6 +183,7 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
             @Param("transportType") String transportType,
             @Param("lat") double lat,
             @Param("lng") double lng,
+            @Param("hideSuspended") int hideSuspended,
             Pageable pageable);
 
     boolean existsByTourNameAndStartLocationIgnoreCase(String tourName, String startLocation);
@@ -173,7 +196,7 @@ public interface TourRepository extends JpaRepository<Tour, Long> {
 
     long countBySourceAndStartLocationIgnoreCase(String source, String startLocation);
 
-    @EntityGraph(attributePaths = { "images", "highlights", "schedules", "faqs", "category", "city" })
+    @EntityGraph(attributePaths = { "images", "category", "city" })
     @Query("SELECT t FROM Tour t WHERE t.id = :id")
     Optional<Tour> findByIdWithDetails(@Param("id") Long id);
 

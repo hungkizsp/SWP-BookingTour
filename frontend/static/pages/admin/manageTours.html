@@ -363,7 +363,10 @@
                     
                     let badgeHtml = '';
                     let actionHtml = '';
-                    if (t.suspensionReasonType) {
+                    
+                    if (t.suspendedFutureSchedules > 0) {
+                        let isFullySuspended = (t.suspendedFutureSchedules === t.totalFutureSchedules);
+                        
                         let typeIcon = 'ℹ️';
                         let typeLabel = 'Khác';
                         switch (t.suspensionReasonType) {
@@ -375,18 +378,34 @@
                         
                         let dateHtml = t.suspendedUntil ? ` đến ${t.suspendedUntil}` : '';
                         
-                        badgeHtml = `<div style="margin-top:4px;">
-                                        <span class="badge bg-danger" style="font-size:0.75rem; padding:4px 6px;">
-                                            ${typeIcon} Tạm ngưng: ${typeLabel}${dateHtml}
-                                        </span>
-                                     </div>`;
+                        if (isFullySuspended) {
+                            badgeHtml = `<div style="margin-top:4px;">
+                                            <span class="badge bg-danger" style="font-size:0.75rem; padding:4px 6px;">
+                                                ${typeIcon} Tạm ngưng toàn bộ: ${typeLabel}${dateHtml}
+                                            </span>
+                                         </div>`;
+                        } else {
+                            badgeHtml = `<div style="margin-top:4px;">
+                                            <span class="badge bg-warning text-dark" style="font-size:0.75rem; padding:4px 6px;">
+                                                ⚠️ Tạm ngưng ${t.suspendedFutureSchedules}/${t.totalFutureSchedules} lịch trình
+                                            </span>
+                                         </div>`;
+                        }
                         
                         // Overdue check
                         if (t.suspendedUntil && new Date(t.suspendedUntil) < new Date()) {
                             badgeHtml += `<div style="margin-top:2px; color:var(--danger); font-size:0.75rem; font-weight:600;">⏰ Đã quá hạn dự kiến, vui lòng kiểm tra!</div>`;
                         }
 
-                        actionHtml = `<button onclick="showResumeModal(${t.id})" class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background:#f59e0b; color:#fff; border:none;">Mở lại</button>`;
+                        // Actions
+                        if (isFullySuspended) {
+                            actionHtml = `<button onclick="showResumeModal(${t.id})" class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background:#f59e0b; color:#fff; border:none;">Mở lại</button>`;
+                        } else {
+                            actionHtml = `
+                                <button onclick="showSuspendModal(${t.id}, '${escapeHtml(t.tourName)}')" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; margin-bottom: 2px;">Tạm ngưng</button>
+                                <button onclick="showResumeModal(${t.id})" class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background:#f59e0b; color:#fff; border:none;">Mở lại</button>
+                            `;
+                        }
                     } else {
                         actionHtml = `<button onclick="showSuspendModal(${t.id}, '${escapeHtml(t.tourName)}')" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Tạm ngưng</button>`;
                     }

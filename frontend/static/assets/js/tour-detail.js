@@ -24,6 +24,7 @@
     BOOKING_CLOSED: { label: 'Đã đóng đặt chỗ', color: '#d97706', bg: '#fef3c7', icon: '🔒' },
     SOLD_OUT: { label: 'Hết chỗ', color: '#dc2626', bg: '#fee2e2', icon: '🔴' },
     PENDING_GUIDE: { label: 'Tạm thời không khả dụng', color: '#b45309', bg: '#fef9c3', icon: '⚠️' },
+    SUSPENDED: { label: 'Tạm ngưng', color: '#7c3aed', bg: '#ede9fe', icon: '⏸️' },
     IN_PROGRESS: { label: 'Đang diễn ra', color: '#2563eb', bg: '#dbeafe', icon: '🚀' },
     COMPLETED: { label: 'Đã hoàn thành', color: '#64748b', bg: '#f1f5f9', icon: '✅' },
     CANCELLED: { label: 'Đã hủy', color: '#9ca3af', bg: '#f3f4f6', icon: '❌' },
@@ -44,19 +45,27 @@
     const status = String(s.status || '').toUpperCase();
     const now = new Date();
 
-    if (status === 'CANCELLED') return { canBook: false, reason: 'Lịch trình đã bị hủy.', isPendingGuide: false };
-    if (s.isExpired) return { canBook: false, reason: 'Lịch trình này đã khởi hành (Giờ khởi hành đã qua so với giờ hiện tại).', isPendingGuide: false };
-    if (status === 'CANCELLED_BY_OPERATOR') return { canBook: false, reason: 'Lịch trình đã bị hủy bởi nhà điều hành.', isPendingGuide: false };
-    if (status === 'COMPLETED') return { canBook: false, reason: 'Tour đã hoàn thành.', isPendingGuide: false };
-    if (status === 'IN_PROGRESS') return { canBook: false, reason: 'Tour đang diễn ra, không thể đặt thêm.', isPendingGuide: false };
-    if (status === 'BOOKING_CLOSED') return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.', isPendingGuide: false };
-    if (status === 'SOLD_OUT') return { canBook: false, reason: 'Tour đã hết chỗ.', isPendingGuide: false };
-    if (status === 'EXPIRED_NO_BOOKING') return { canBook: false, reason: 'Lịch trình đã hết hạn và không có lịch khởi hành do không đủ khách.', isPendingGuide: false };
+    if (status === 'CANCELLED') return { canBook: false, reason: 'Lịch trình đã bị hủy.', isPendingGuide: false, isSuspended: false };
+    if (s.isExpired) return { canBook: false, reason: 'Lịch trình này đã khởi hành (Giờ khởi hành đã qua so với giờ hiện tại).', isPendingGuide: false, isSuspended: false };
+    if (status === 'CANCELLED_BY_OPERATOR') return { canBook: false, reason: 'Lịch trình đã bị hủy bởi nhà điều hành.', isPendingGuide: false, isSuspended: false };
+    if (status === 'COMPLETED') return { canBook: false, reason: 'Tour đã hoàn thành.', isPendingGuide: false, isSuspended: false };
+    if (status === 'IN_PROGRESS') return { canBook: false, reason: 'Tour đang diễn ra, không thể đặt thêm.', isPendingGuide: false, isSuspended: false };
+    if (status === 'BOOKING_CLOSED') return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.', isPendingGuide: false, isSuspended: false };
+    if (status === 'SOLD_OUT') return { canBook: false, reason: 'Tour đã hết chỗ.', isPendingGuide: false, isSuspended: false };
+    if (status === 'EXPIRED_NO_BOOKING') return { canBook: false, reason: 'Lịch trình đã hết hạn và không có lịch khởi hành do không đủ khách.', isPendingGuide: false, isSuspended: false };
     // PENDING_GUIDE: departure is < 1h away and no guide assigned — booking is blocked
     if (status === 'PENDING_GUIDE') return {
       canBook: false,
       reason: 'Tour temporarily unavailable. Please contact support.',
-      isPendingGuide: true
+      isPendingGuide: true,
+      isSuspended: false
+    };
+    // SUSPENDED: tour temporarily halted by admin
+    if (status === 'SUSPENDED') return {
+      canBook: false,
+      reason: 'Lịch này đang tạm ngưng. Vui lòng chọn ngày khác hoặc liên hệ hỗ trợ.',
+      isPendingGuide: false,
+      isSuspended: true
     };
 
     // Additional client-side checks against deadline (backend is authoritative, this is UX only)
@@ -65,9 +74,9 @@
       if (now >= deadline) return { canBook: false, reason: 'Hạn đặt tour đã kết thúc.', isPendingGuide: false };
     }
 
-    if ((s.availableSlots ?? 1) <= 0) return { canBook: false, reason: 'Tour đã hết chỗ.', isPendingGuide: false };
+    if ((s.availableSlots ?? 1) <= 0) return { canBook: false, reason: 'Tour đã hết chỗ.', isPendingGuide: false, isSuspended: false };
 
-    return { canBook: true, reason: '', isPendingGuide: false };
+    return { canBook: true, reason: '', isPendingGuide: false, isSuspended: false };
   }
 
   // ── Date/time parsing helpers ─────────────────────────────────────────────
@@ -394,7 +403,8 @@
     renderItinerary(t.id);
     const visibleSchedules = (t.schedules || []).filter(s => {
       const status = String(s.status || '').toUpperCase();
-      return status === 'OPEN' || status === 'IN_PROGRESS';
+      // Hide SUSPENDED, completed, cancelled schedules - only show bookable/visible ones
+      return status === 'OPEN' || status === 'IN_PROGRESS' || status === 'PENDING_GUIDE' || status === 'BOOKING_CLOSED' || status === 'SOLD_OUT';
     });
 
     renderSchedules(visibleSchedules);

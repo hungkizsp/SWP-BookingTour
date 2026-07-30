@@ -23,6 +23,7 @@ import com.tourbooking.booking.backend.model.entity.TourSchedule;
 import com.tourbooking.booking.backend.repository.CategoryRepository;
 import com.tourbooking.booking.backend.repository.CityRepository;
 import com.tourbooking.booking.backend.repository.ReviewRepository;
+import com.tourbooking.booking.backend.repository.TourImageRepository;
 import com.tourbooking.booking.backend.repository.TourItineraryDayRepository;
 import com.tourbooking.booking.backend.repository.TourRepository;
 import com.tourbooking.booking.backend.service.TourService;
@@ -36,18 +37,37 @@ public class TourServiceImpl implements TourService {
     private final com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo;
     private final ReviewRepository reviewRepo;
     private final TourItineraryDayRepository itineraryDayRepo;
+    private final TourImageRepository tourImageRepo;
 
     public TourServiceImpl(TourRepository tourRepo, CategoryRepository categoryRepo, CityRepository cityRepository,
             com.tourbooking.booking.backend.repository.TourScheduleRepository tourScheduleRepo,
             ReviewRepository reviewRepo,
-            TourItineraryDayRepository itineraryDayRepo) {
+            TourItineraryDayRepository itineraryDayRepo,
+            TourImageRepository tourImageRepo) {
         this.tourRepo = tourRepo;
         this.categoryRepo = categoryRepo;
         this.cityRepository = cityRepository;
         this.tourScheduleRepo = tourScheduleRepo;
         this.reviewRepo = reviewRepo;
         this.itineraryDayRepo = itineraryDayRepo;
+        this.tourImageRepo = tourImageRepo;
     }
+
+    /**
+     * Post-loads images for a list of tours (needed because native queries and JPQL
+     * without JOIN FETCH do not hydrate the lazy images collection).
+     */
+    private void enrichToursWithImages(java.util.List<Tour> tours) {
+        if (tours == null || tours.isEmpty()) return;
+        java.util.List<Long> ids = tours.stream().map(Tour::getId).toList();
+        java.util.Map<Long, java.util.List<com.tourbooking.booking.backend.model.entity.TourImage>> byTourId =
+            tourImageRepo.findByTourIdIn(ids).stream()
+                .collect(java.util.stream.Collectors.groupingBy(img -> img.getTour().getId()));
+        for (Tour t : tours) {
+            t.setImages(byTourId.getOrDefault(t.getId(), java.util.List.of()));
+        }
+    }
+
 
     @Override
     @Transactional(readOnly = true)
@@ -60,8 +80,25 @@ public class TourServiceImpl implements TourService {
     @Override
     @Transactional(readOnly = true)
     public TourDetailResponse getTourById(Long id) {
-        Tour tour = tourRepo.findById(id)
+        // findByIdWithDetails uses @EntityGraph to eagerly load images, highlights, schedules etc.
+        Tour tour = tourRepo.findByIdWithDetails(id)
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
+
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdmin = auth != null && auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
+
+        if (!isAdmin) {
+            boolean hasFutureSchedules = tour.getSchedules().stream()
+                    .anyMatch(s -> s.getStartDate() != null && s.getStartDate().isAfter(java.time.LocalDate.now().minusDays(1)));
+            boolean allSuspended = hasFutureSchedules && tour.getSchedules().stream()
+                    .filter(s -> s.getStartDate() != null && s.getStartDate().isAfter(java.time.LocalDate.now().minusDays(1)))
+                    .allMatch(s -> s.getStatus() == com.tourbooking.booking.backend.model.entity.enums.TourStatus.SUSPENDED);
+            
+            if (allSuspended) {
+                throw new AppException(ErrorCode.TOUR_NOT_FOUND);
+            }
+        }
+
         TourDetailResponse resp = TourMapper.toDetailResponse(tour);
         resp.setReviewCount((int) reviewRepo.findByTourId(id).size());
         resp.setItineraryDaysCount((int) itineraryDayRepo.findByTourIdOrderByDayNumberAsc(id).size());
@@ -336,20 +373,32 @@ public class TourServiceImpl implements TourService {
         String pattern = (keyword == null || keyword.trim().isEmpty()) ? null
                 : "%" + keyword.trim().toLowerCase() + "%";
 
+        // Admin/Staff can see all tours including suspended ones
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        boolean isAdminOrStaff = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ROLE_STAFF"));
+        boolean hideSuspended = !isAdminOrStaff;
+
         Page<Tour> page;
         if ("popularity".equals(normalizedSortBy)) {
             page = tourRepo.browseToursByPopularity(keyword, minPrice, maxPrice, minRating, startDate, categoryId,
-                    transportType, pageable);
+                    transportType, hideSuspended ? 1 : 0, pageable);
         } else if ("distance".equals(normalizedSortBy)) {
             double[] coords = resolveCoords(cityId, lat, lng);
             page = tourRepo.browseToursByDistance(keyword, minPrice, maxPrice, minRating, startDate, categoryId,
-                    transportType, coords[0], coords[1], pageable);
+                    transportType, coords[0], coords[1], hideSuspended ? 1 : 0, pageable);
         } else {
             page = tourRepo.browseTours(keyword, pattern, minPrice, maxPrice, minRating, startDate, categoryId,
-                    transportType, pageable);
+                    transportType, hideSuspended, pageable);
         }
+
+        // Post-load images: native queries & JPQL without JOIN FETCH do not hydrate
+        // the lazy images collection. We batch-load in a single extra query.
+        java.util.List<Tour> tours = page.getContent();
+        enrichToursWithImages(tours);
+
         return PagedResponse.<TourResponse>builder()
-                .content(page.getContent().stream().map(TourMapper::toResponse).toList())
+                .content(tours.stream().map(TourMapper::toResponse).toList())
                 .page(page.getNumber())
                 .size(page.getSize())
                 .totalElements(page.getTotalElements())

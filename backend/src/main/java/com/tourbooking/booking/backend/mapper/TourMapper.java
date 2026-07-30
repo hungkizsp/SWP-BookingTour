@@ -40,13 +40,22 @@ public class TourMapper {
         }
 
         if (tour.getSchedules() != null) {
+            int totalFuture = 0;
+            int suspendedFuture = 0;
             for (TourSchedule schedule : tour.getSchedules()) {
-                if (schedule.getStatus() == TourStatus.SUSPENDED) {
-                    response.setSuspensionReasonType(schedule.getSuspensionReasonType() != null ? schedule.getSuspensionReasonType().name() : null);
-                    response.setSuspendedUntil(schedule.getSuspendedUntil());
-                    break;
+                if (schedule.getStartDate() != null && schedule.getStartDate().isAfter(java.time.LocalDate.now().minusDays(1))) {
+                    totalFuture++;
+                    if (schedule.getStatus() == TourStatus.SUSPENDED) {
+                        suspendedFuture++;
+                        if (response.getSuspensionReasonType() == null) {
+                            response.setSuspensionReasonType(schedule.getSuspensionReasonType() != null ? schedule.getSuspensionReasonType().name() : null);
+                            response.setSuspendedUntil(schedule.getSuspendedUntil());
+                        }
+                    }
                 }
             }
+            response.setTotalFutureSchedules(totalFuture);
+            response.setSuspendedFutureSchedules(suspendedFuture);
         }
 
         return response;

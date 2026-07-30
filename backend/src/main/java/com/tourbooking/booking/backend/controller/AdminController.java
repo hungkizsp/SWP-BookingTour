@@ -116,11 +116,29 @@ public class AdminController {
     }
 
     @GetMapping("/tour-schedules/{scheduleId}/affected-bookings")
-    public ApiResponse<List<com.tourbooking.booking.backend.model.entity.Booking>> getAffectedBookings(@PathVariable Long scheduleId) {
-        return ApiResponse.<List<com.tourbooking.booking.backend.model.entity.Booking>>builder()
+    public ApiResponse<List<com.tourbooking.booking.backend.model.dto.response.AffectedBookingResponse>> getAffectedBookings(@PathVariable Long scheduleId) {
+        List<com.tourbooking.booking.backend.model.entity.Booking> bookings = tourScheduleService.getAffectedBookings(scheduleId);
+        List<com.tourbooking.booking.backend.model.dto.response.AffectedBookingResponse> dtoList = bookings.stream().map(b -> {
+            java.time.LocalDateTime dateToUse = b.getBookingDate() != null ? b.getBookingDate() : java.time.LocalDateTime.now();
+            String code = String.format("TOUR-%d-%06d", dateToUse.getYear(), b.getId());
+            return com.tourbooking.booking.backend.model.dto.response.AffectedBookingResponse.builder()
+                    .bookingId(b.getId())
+                    .bookingCode(code)
+                    .customerName(b.getUser() != null ? b.getUser().getFullName() : "")
+                    .contactEmail(b.getUser() != null ? b.getUser().getEmail() : "")
+                    .contactPhone(b.getUser() != null ? b.getUser().getPhoneNumber() : "")
+                    .tourName(b.getSchedule() != null && b.getSchedule().getTour() != null ? b.getSchedule().getTour().getTourName() : "")
+                    .startDate(b.getSchedule() != null ? b.getSchedule().getStartDate() : null)
+                    .numberOfPeople(b.getNumberOfPeople())
+                    .totalPrice(b.getTotalPrice())
+                    .status(b.getStatus())
+                    .build();
+        }).collect(java.util.stream.Collectors.toList());
+
+        return ApiResponse.<List<com.tourbooking.booking.backend.model.dto.response.AffectedBookingResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Affected bookings retrieved")
-                .data(tourScheduleService.getAffectedBookings(scheduleId))
+                .data(dtoList)
                 .build();
     }
 
