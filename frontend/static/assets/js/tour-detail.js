@@ -382,6 +382,7 @@
     el('price').textContent = t.price ? `${Number(t.price).toLocaleString()}` : 'Liên hệ';
     el('duration').textContent = t.duration ? t.duration + ' Ngày' : 'Liên hệ';
     if (el('departure')) el('departure').textContent = t.startLocation || 'Đà Nẵng';
+    if (el('endLocation')) el('endLocation').textContent = t.endLocation || 'Đang cập nhật';
     if (el('transport')) el('transport').textContent = t.transportType || 'Xe du lịch đời mới';
     if (el('tourCode')) el('tourCode').textContent = `DB-${t.id || id}`;
 
@@ -442,14 +443,13 @@
 
   async function loadFaqs() {
     try {
-      const BACKEND = 'http://localhost:8080';
       const [tourRes, globalRes] = await Promise.all([
-        fetch(`${BACKEND}/api/v1/faqs/tour/${id}`),
-        fetch(`${BACKEND}/api/v1/faqs/global`)
+        TB.apiFetch(`/api/v1/faqs/tour/${id}`),
+        TB.apiFetch(`/api/v1/faqs/global`)
       ]);
 
-      const tourFaqs = tourRes.ok ? await tourRes.json() : [];
-      const globalFaqs = globalRes.ok ? await globalRes.json() : [];
+      const tourFaqs = (tourRes && tourRes.data) ? tourRes.data : (Array.isArray(tourRes) ? tourRes : []);
+      const globalFaqs = (globalRes && globalRes.data) ? globalRes.data : (Array.isArray(globalRes) ? globalRes : []);
       const list = [...(Array.isArray(tourFaqs) ? tourFaqs : []),
       ...(Array.isArray(globalFaqs) ? globalFaqs : [])];
 

@@ -88,12 +88,26 @@
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div class="form-group">
                     <label>Điểm xuất phát *</label>
-                    <input type="text" id="startLocation" class="form-control" placeholder="e.g., Hanoi, Ho Chi Minh">
+                    <div id="startLocationContainer" style="display: flex; gap: 10px;">
+                        <select id="startProvince" class="form-control" onchange="loadDistricts('start')">
+                            <option value="">-- Chọn Tỉnh/Thành --</option>
+                        </select>
+                        <select id="startDistrict" class="form-control">
+                            <option value="">-- Chọn Quận/Huyện --</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="form-group">
                     <label>Điểm kết thúc *</label>
-                    <input type="text" id="endLocation" class="form-control" placeholder="e.g., Da Nang, Nha Trang">
+                    <div id="endLocationContainer" style="display: flex; gap: 10px;">
+                        <select id="endProvince" class="form-control" onchange="loadDistricts('end')">
+                            <option value="">-- Chọn Tỉnh/Thành --</option>
+                        </select>
+                        <select id="endDistrict" class="form-control">
+                            <option value="">-- Chọn Quận/Huyện --</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -367,6 +381,7 @@
                 document.getElementById("detail").innerHTML = `
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
                         <p><strong>Tour Name:</strong> ${escapeHtml(t.tourName)}</p>
+                        <p><strong>Category:</strong> ${escapeHtml(t.categoryName || 'N/A')}</p>
                         <p><strong>Price:</strong> ${formatPrice(t.price)}</p>
                         <p><strong>Duration:</strong> ${t.duration} days</p>
                         <p><strong>Start Location:</strong> ${escapeHtml(t.startLocation || 'N/A')}</p>
@@ -390,16 +405,134 @@
             }
         }
 
+        // Dropdown functions
+        let provincesData = null;
+        let useLocationDropdowns = true;
+
+        async function fetchProvinces() {
+            if (provincesData) return;
+            try {
+                const res = await fetch('https://provinces.open-api.vn/api/?depth=2');
+                if (!res.ok) throw new Error('API failed');
+                provincesData = await res.json();
+                useLocationDropdowns = true;
+            } catch (err) {
+                console.error('Lỗi tải danh sách Tỉnh/Thành:', err);
+                useLocationDropdowns = false;
+                document.getElementById('startLocationContainer').innerHTML = '<input type="text" id="startLocationText" class="form-control" placeholder="e.g., Hanoi, Ho Chi Minh">';
+                document.getElementById('endLocationContainer').innerHTML = '<input type="text" id="endLocationText" class="form-control" placeholder="e.g., Da Nang, Nha Trang">';
+            }
+        }
+
+        function renderProvinceDropdown(selectId) {
+            if (!useLocationDropdowns) return;
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="">-- Chọn Tỉnh/Thành --</option>';
+            if (!provincesData) return;
+            provincesData.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.name;
+                opt.textContent = p.name;
+                opt.dataset.code = p.code;
+                select.appendChild(opt);
+            });
+        }
+
+        function loadDistricts(type) {
+            if (!useLocationDropdowns) return;
+            const provSelect = document.getElementById(type + 'Province');
+            const distSelect = document.getElementById(type + 'District');
+            distSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+            
+            const selectedOpt = provSelect.options[provSelect.selectedIndex];
+            if (!selectedOpt || !selectedOpt.dataset.code) return;
+            
+            const provCode = selectedOpt.dataset.code;
+            const province = provincesData.find(p => p.code == provCode);
+            if (province && province.districts) {
+                province.districts.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d.name;
+                    opt.textContent = d.name;
+                    distSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function resetLocationDropdown(type) {
+            if (!useLocationDropdowns) {
+                document.getElementById(type + 'LocationText').value = '';
+                return;
+            }
+            const provSelect = document.getElementById(type + 'Province');
+            const distSelect = document.getElementById(type + 'District');
+            provSelect.options[0].textContent = "-- Chọn Tỉnh/Thành --";
+            provSelect.value = '';
+            distSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+        }
+
+        function setLocationDropdowns(type, fullLocation) {
+            if (!useLocationDropdowns) {
+                document.getElementById(type + 'LocationText').value = fullLocation || '';
+                return;
+            }
+            const provSelect = document.getElementById(type + 'Province');
+            const distSelect = document.getElementById(type + 'District');
+            
+            provSelect.value = "";
+            distSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+            provSelect.options[0].textContent = "-- Chọn Tỉnh/Thành --";
+            
+            if (!fullLocation) return;
+            
+            const parts = fullLocation.split(',').map(s => s.trim());
+            if (parts.length === 2) {
+                const districtName = parts[0];
+                const provinceName = parts[1];
+                
+                let pMatch = Array.from(provSelect.options).find(opt => opt.value === provinceName);
+                if (pMatch) {
+                    provSelect.value = provinceName;
+                    loadDistricts(type);
+                    let dMatch = Array.from(distSelect.options).find(opt => opt.value === districtName);
+                    if (dMatch) {
+                        distSelect.value = districtName;
+                        return;
+                    }
+                }
+            }
+            
+            // If mismatch
+            provSelect.value = "";
+            distSelect.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+            provSelect.options[0].textContent = "-- Chưa xác định, vui lòng chọn lại --";
+        }
+
+        function getLocationValue(type) {
+            if (!useLocationDropdowns) {
+                return document.getElementById(type + 'LocationText').value.trim();
+            }
+            const provVal = document.getElementById(type + 'Province').value;
+            const distVal = document.getElementById(type + 'District').value;
+            if (!provVal || !distVal) return null;
+            return `${distVal}, ${provVal}`;
+        }
+
         // SHOW CREATE MODAL
-        function showCreateModal() {
+        async function showCreateModal() {
             currentEditId = null;
-            document.getElementById('modalTitle').innerText = 'Create New Tour';
+            document.getElementById('modalTitle').innerText = 'Tạo tour mới';
             document.getElementById('tourId').value = '';
             document.getElementById('tourName').value = '';
             document.getElementById('price').value = '';
             document.getElementById('duration').value = '';
-            document.getElementById('startLocation').value = '';
-            document.getElementById('endLocation').value = '';
+            
+            await fetchProvinces();
+            renderProvinceDropdown('startProvince');
+            renderProvinceDropdown('endProvince');
+            resetLocationDropdown('start');
+            resetLocationDropdown('end');
+            
             document.getElementById('transportType').value = '';
             document.getElementById('description').value = '';
             document.getElementById('itineraryContainer').innerHTML = '';
@@ -421,13 +554,18 @@
                 const response = await TB.apiFetch(`${PUBLIC_API}/${id}`);
                 const t = response.data;
                 currentEditId = id;
-                document.getElementById('modalTitle').innerText = 'Edit Tour';
+                document.getElementById('modalTitle').innerText = 'Chỉnh sửa Tour';
                 document.getElementById('tourId').value = t.id;
                 document.getElementById('tourName').value = t.tourName || '';
                 document.getElementById('price').value = t.price || '';
                 document.getElementById('duration').value = t.duration || '';
-                document.getElementById('startLocation').value = t.startLocation || '';
-                document.getElementById('endLocation').value = t.endLocation || '';
+                
+                await fetchProvinces();
+                renderProvinceDropdown('startProvince');
+                renderProvinceDropdown('endProvince');
+                setLocationDropdowns('start', t.startLocation);
+                setLocationDropdowns('end', t.endLocation);
+
                 document.getElementById('transportType').value = t.transportType || '';
                 document.getElementById('description').value = t.description || '';
                 document.getElementById('categoryId').value = t.categoryId || '';
@@ -532,7 +670,7 @@
                     </div>
                 </div>
                 <div style="margin-bottom: 10px;">
-                    <label>Phương Tiện Tham Quan</label>
+                    <label>Điểm Tham Quan Nổi Bật</label>
                     <input type="text" class="form-control i-highlights" value="${dayData?.highlights || ''}" placeholder="Vd: Bà Nà Hills, Cầu Vàng...">
                 </div>
                 <div style="margin-bottom: 10px;">
@@ -705,8 +843,8 @@
             const tourName = document.getElementById('tourName').value.trim();
             const price = parseFloat(document.getElementById('price').value);
             const duration = parseInt(document.getElementById('duration').value);
-            const startLocation = document.getElementById('startLocation').value.trim();
-            const endLocation = document.getElementById('endLocation').value.trim();
+            const startLocation = getLocationValue('start');
+            const endLocation = getLocationValue('end');
             const transportType = document.getElementById('transportType').value.trim();
             const description = document.getElementById('description').value.trim();
             const categoryId = document.getElementById('categoryId').value;
@@ -746,8 +884,12 @@
                 showToast('Số ngày tối đa là 60.', 'error');
                 return;
             }
-            if (!startLocation || !endLocation) {
-                showToast('Vui lòng nhập Điểm khởi hành và Điểm đến.', 'error');
+            if (!startLocation) {
+                showToast('Vui lòng chọn Tỉnh/Thành và Quận/Huyện cho Điểm xuất phát.', 'error');
+                return;
+            }
+            if (!endLocation) {
+                showToast('Vui lòng chọn Tỉnh/Thành và Quận/Huyện cho Điểm kết thúc.', 'error');
                 return;
             }
             if (!transportType) {
@@ -787,17 +929,16 @@
                 Array.from(fileInput.files).forEach(f => formData.append("files", f));
 
                 try {
-                    const uploadRes = await fetch("http://localhost:8080/api/v1/admin/tours/upload", {
+                    const uploadRes = await TB.apiFetch('/api/v1/admin/tours/upload', {
                         method: 'POST',
-                        headers: {
-                            "Authorization": `Bearer ${sessionStorage.getItem('token')}`
-                        },
                         body: formData
                     });
-                    const uploadData = await uploadRes.json();
-                    if (!uploadRes.ok) throw new Error(uploadData.message || 'Image upload failed');
+                    
+                    if (uploadRes.code && uploadRes.code !== 200) throw new Error(uploadRes.message || 'Image upload failed');
+                    // Get data from standard wrapper if available
+                    const uploadData = uploadRes.data || uploadRes;
                     // Gắn thêm ảnh mới vào danh sách ảnh cũ (nếu có)
-                    finalImageUrls = finalImageUrls.concat(uploadData.data);
+                    finalImageUrls = finalImageUrls.concat(uploadData);
                 } catch (error) {
                     console.error('Upload error:', error);
                     showToast('Lỗi khi tải ảnh lên: ' + error.message, 'error');
@@ -816,7 +957,7 @@
                 transportType: transportType,
                 categoryId: categoryId ? parseInt(categoryId) : null,
                 imageUrls: finalImageUrls.length > 0 ? finalImageUrls : null,
-                schedules: getScheduleData(),
+                schedules: schedules,
                 itineraryDays: itineraryData
             };
 
