@@ -265,4 +265,24 @@ public class BookingController {
                 .data(bookingService.getRescheduleCandidates(bookingId))
                 .build();
     }
+
+    @GetMapping("/pending-suspension-actions")
+    public ApiResponse<?> getPendingSuspensionActions(org.springframework.security.core.Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated() || 
+            !(authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails)) {
+            return ApiResponse.builder().code(HttpStatus.UNAUTHORIZED.value()).message("Unauthorized").build();
+        }
+
+        String email = ((org.springframework.security.core.userdetails.UserDetails) authentication.getPrincipal()).getUsername();
+        com.tourbooking.booking.backend.model.entity.User currentUser =
+                userRepository.findByEmail(email)
+                        .orElseThrow(() -> new com.tourbooking.booking.backend.exception.AppException(
+                                com.tourbooking.booking.backend.exception.ErrorCode.USER_NOT_FOUND));
+
+        return ApiResponse.builder()
+                .code(HttpStatus.OK.value())
+                .message("Pending suspension actions retrieved")
+                .data(bookingService.getPendingSuspensionActions(currentUser.getId()))
+                .build();
+    }
 }

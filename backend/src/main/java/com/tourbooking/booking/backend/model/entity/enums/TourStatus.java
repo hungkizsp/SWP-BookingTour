@@ -11,6 +11,7 @@ package com.tourbooking.booking.backend.model.entity.enums;
  *   <li>COMPLETED – tour has returned</li>
  *   <li>CANCELLED – manually cancelled by admin</li>
  *   <li>CANCELLED_BY_OPERATOR – auto-cancelled because no guide was assigned by departure time</li>
+ *   <li>SUSPENDED – tour temporarily halted (e.g. weather, policy, safety), customers notified to reschedule/refund</li>
  * </ul>
  */
 public enum TourStatus {
@@ -22,5 +23,6 @@ public enum TourStatus {
     COMPLETED,
     CANCELLED,
     CANCELLED_BY_OPERATOR,
-    EXPIRED_NO_BOOKING
+    EXPIRED_NO_BOOKING,
+    SUSPENDED
 }

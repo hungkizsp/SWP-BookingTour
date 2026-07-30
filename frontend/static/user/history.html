@@ -1196,8 +1196,19 @@
     }
 
     // Khởi tạo
-    loadBookings();
+    loadBookings().then(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const rescheduleId = urlParams.get('reschedule');
+        const refundId = urlParams.get('refund');
+        if (rescheduleId && typeof openRescheduleModal === 'function') {
+            const b = allBookings.find(x => Number(x.id) === Number(rescheduleId));
+            if (b) openRescheduleModal(b.id, b.tourName, b.tourStartDate);
+        } else if (refundId && typeof openRefundModal === 'function') {
+            openRefundModal(refundId);
+        }
+    });
   </script>
+  <script src="../assets/js/suspension-action.js"></script>
 </body>
 
 </html>

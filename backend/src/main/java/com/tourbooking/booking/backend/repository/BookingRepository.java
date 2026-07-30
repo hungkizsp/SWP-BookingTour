@@ -162,5 +162,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "LEFT JOIN FETCH s.tour " +
            "LEFT JOIN FETCH s.guide")
     List<Booking> findAllWithDetails();
+
+    @Query("SELECT b FROM Booking b " +
+           "JOIN FETCH b.schedule s " +
+           "JOIN FETCH s.tour t " +
+           "WHERE b.user.id = :userId " +
+           "AND s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.SUSPENDED " +
+           "AND b.status IN (com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PENDING, com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PENDING_CASH, com.tourbooking.booking.backend.model.entity.enums.BookingStatus.CONFIRMED, com.tourbooking.booking.backend.model.entity.enums.BookingStatus.PAID) " +
+           "AND (b.suspensionActionStatus IS NULL OR b.suspensionActionStatus = com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.PENDING_CUSTOMER_ACTION)")
+    List<Booking> findPendingSuspensionActionsByUserId(@Param("userId") Long userId);
 }
 

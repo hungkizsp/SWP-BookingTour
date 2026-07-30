@@ -236,4 +236,60 @@ public class TourScheduleServiceImpl implements TourScheduleService {
 
         return tourScheduleRepository.saveAll(schedulesToSave);
     }
+
+    @Override
+    @Transactional
+    public void suspendSchedule(com.tourbooking.booking.backend.model.dto.request.SuspendScheduleRequest request) {
+        TourSchedule schedule = tourScheduleRepository.findById(request.getScheduleId())
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+        if (schedule.getStatus() == TourStatus.CANCELLED || schedule.getStatus() == TourStatus.CANCELLED_BY_OPERATOR) {
+            throw new IllegalStateException("Không thể tạm ngưng lịch trình đã bị hủy.");
+        }
+
+        schedule.setStatus(TourStatus.SUSPENDED);
+        schedule.setSuspensionReasonType(request.getSuspensionReasonType());
+        schedule.setSuspensionReason(request.getSuspensionReason());
+        schedule.setSuspendedFrom(request.getSuspendedFrom() != null ? request.getSuspendedFrom() : java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
+        schedule.setSuspendedUntil(request.getSuspendedUntil());
+        tourScheduleRepository.save(schedule);
+
+        // Mark all active bookings as PENDING_CUSTOMER_ACTION
+        List<com.tourbooking.booking.backend.model.entity.Booking> affected = bookingRepository.findByScheduleIdAndStatusIn(
+                schedule.getId(), List.of(BookingStatus.CONFIRMED, BookingStatus.PAID, BookingStatus.PENDING, BookingStatus.PENDING_CASH));
+        for (com.tourbooking.booking.backend.model.entity.Booking booking : affected) {
+            booking.setSuspensionActionStatus(com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.PENDING_CUSTOMER_ACTION);
+        }
+        bookingRepository.saveAll(affected);
+
+        log.info("[SUSPEND] Schedule #{} suspended. Reason: {} | Type: {} | AffectedBookings: {}",
+                schedule.getId(), request.getSuspensionReason(), request.getSuspensionReasonType(), affected.size());
+    }
+
+    @Override
+    @Transactional
+    public void resumeSchedule(Long scheduleId) {
+        TourSchedule schedule = tourScheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+
+        if (schedule.getStatus() != TourStatus.SUSPENDED) {
+            throw new IllegalStateException("Lịch trình này không đang ở trạng thái tạm ngưng.");
+        }
+
+        schedule.setStatus(TourStatus.OPEN);
+        schedule.setSuspensionReason(null);
+        schedule.setSuspensionReasonType(null);
+        schedule.setSuspendedFrom(null);
+        schedule.setSuspendedUntil(null);
+        tourScheduleRepository.save(schedule);
+
+        log.info("[RESUME] Schedule #{} resumed to OPEN.", scheduleId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.tourbooking.booking.backend.model.entity.Booking> getAffectedBookings(Long scheduleId) {
+        return bookingRepository.findByScheduleIdAndStatusIn(scheduleId,
+                List.of(BookingStatus.CONFIRMED, BookingStatus.PAID, BookingStatus.PENDING, BookingStatus.PENDING_CASH));
+    }
 }

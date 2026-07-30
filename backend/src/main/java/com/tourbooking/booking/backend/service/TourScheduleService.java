@@ -21,4 +21,13 @@ public interface TourScheduleService {
      * Releases the assigned guide when no active bookings remain on the schedule.
      */
     void releaseGuideIfNoActiveBookings(Long scheduleId);
+
+    /** Suspend a schedule: sets status SUSPENDED, stores reason/type/dates, marks affected bookings PENDING_CUSTOMER_ACTION. */
+    void suspendSchedule(com.tourbooking.booking.backend.model.dto.request.SuspendScheduleRequest request);
+
+    /** Resume a suspended schedule: sets status back to OPEN, clears suspension fields. */
+    void resumeSchedule(Long scheduleId);
+
+    /** Return active bookings for a schedule (for preview before suspend). */
+    java.util.List<com.tourbooking.booking.backend.model.entity.Booking> getAffectedBookings(Long scheduleId);
 }

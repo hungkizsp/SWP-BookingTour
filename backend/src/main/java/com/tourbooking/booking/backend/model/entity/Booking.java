@@ -1,6 +1,7 @@
 package com.tourbooking.booking.backend.model.entity;
 
 import com.tourbooking.booking.backend.model.entity.enums.BookingStatus;
+import com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -60,6 +61,15 @@ public class Booking extends Base {
 
     @Column(name = "CancellationReason", length = 500)
     private String cancellationReason;
+
+    /**
+     * Tracks whether customer has responded to a suspension event affecting this booking.
+     * NULL = not affected by any suspension. PENDING_CUSTOMER_ACTION = awaiting decision.
+     * RESOLVED = customer already chose reschedule or refund.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "SuspensionActionStatus", length = 50)
+    private SuspensionActionStatus suspensionActionStatus;
 
     @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Payment payment;

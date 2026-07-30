@@ -72,4 +72,6 @@ public interface BookingService {
 
     java.util.List<com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse> getRescheduleCandidates(
             Long bookingId);
+
+    java.util.List<com.tourbooking.booking.backend.model.dto.response.PendingSuspensionActionResponse> getPendingSuspensionActions(Long userId);
 }

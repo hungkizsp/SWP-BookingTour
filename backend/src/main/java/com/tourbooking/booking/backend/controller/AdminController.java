@@ -96,6 +96,34 @@ public class AdminController {
                 .build();
     }
 
+    @PostMapping("/tour-schedules/{scheduleId}/suspend")
+    public ApiResponse<Void> suspendSchedule(@PathVariable Long scheduleId, @RequestBody com.tourbooking.booking.backend.model.dto.request.SuspendScheduleRequest request) {
+        request.setScheduleId(scheduleId);
+        tourScheduleService.suspendSchedule(request);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Schedule suspended successfully")
+                .build();
+    }
+
+    @PostMapping("/tour-schedules/{scheduleId}/resume")
+    public ApiResponse<Void> resumeSchedule(@PathVariable Long scheduleId) {
+        tourScheduleService.resumeSchedule(scheduleId);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Schedule resumed successfully")
+                .build();
+    }
+
+    @GetMapping("/tour-schedules/{scheduleId}/affected-bookings")
+    public ApiResponse<List<com.tourbooking.booking.backend.model.entity.Booking>> getAffectedBookings(@PathVariable Long scheduleId) {
+        return ApiResponse.<List<com.tourbooking.booking.backend.model.entity.Booking>>builder()
+                .code(HttpStatus.OK.value())
+                .message("Affected bookings retrieved")
+                .data(tourScheduleService.getAffectedBookings(scheduleId))
+                .build();
+    }
+
     @PutMapping("/tours/{id}")
     public ApiResponse<TourResponse> updateTour(@PathVariable Long id, @RequestBody TourRequest request) {
         return ApiResponse.<TourResponse>builder()

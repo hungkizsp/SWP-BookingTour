@@ -61,6 +61,24 @@ public class TourSchedule extends Base {
     @Column(name = "CurrentProgress", columnDefinition = "NVARCHAR(MAX)")
     private String currentProgress;
 
+    // ── Suspension fields ────────────────────────────────────────────────────
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "SuspensionReasonType", length = 50)
+    private com.tourbooking.booking.backend.model.entity.enums.SuspensionReasonType suspensionReasonType;
+
+    /** Reason admin provided when suspending this schedule (e.g. "Ảnh hưởng bão số 5"). */
+    @Column(name = "SuspensionReason", columnDefinition = "NVARCHAR(500)")
+    private String suspensionReason;
+
+    /** When the suspension period starts (VN-aware). */
+    @Column(name = "SuspendedFrom")
+    private java.time.LocalDate suspendedFrom;
+
+    /** When the suspension period ends / tour is expected to resume. */
+    @Column(name = "SuspendedUntil")
+    private java.time.LocalDate suspendedUntil;
+
     @Column(name = "ReportContent", columnDefinition = "NVARCHAR(MAX)")
     private String reportContent;
 

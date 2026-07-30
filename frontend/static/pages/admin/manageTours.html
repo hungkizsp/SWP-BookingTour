@@ -63,6 +63,47 @@
         </main>
     </div>
 
+    <!-- Suspend Schedule Modal -->
+    <div id="suspendModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <h3>Tạm ngưng Lịch trình - <span id="suspendTourNameDisplay"></span></h3>
+            <input type="hidden" id="suspendTourId">
+            
+            <div class="form-group">
+                <label>Chọn lịch trình muốn tạm ngưng *</label>
+                <select id="suspendScheduleSelect" class="form-control">
+                    <option value="">-- Đang tải lịch trình... --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Lý do tạm ngưng (Phân loại) *</label>
+                <select id="suspendReasonType" class="form-control">
+                    <option value="WEATHER">🌧️ Thời tiết (Bão, Lũ lụt, ...)</option>
+                    <option value="POLICY">📋 Chính sách công ty</option>
+                    <option value="LOCATION_UNAVAILABLE">📍 Địa điểm không khả dụng (Đóng cửa, ...)</option>
+                    <option value="SAFETY">⚠️ An toàn (Bạo động, Dịch bệnh, ...)</option>
+                    <option value="OTHER">ℹ️ Khác</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Chi tiết lý do</label>
+                <textarea id="suspendReasonText" class="form-control" rows="2" placeholder="Ví dụ: Bão số 3 đổ bộ..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Ngày dự kiến mở lại (Tùy chọn)</label>
+                <input type="date" id="suspendUntilDate" class="form-control">
+            </div>
+
+            <div class="modal-buttons">
+                <button onclick="closeSuspendModal()" class="btn btn-secondary">Hủy</button>
+                <button onclick="submitSuspend()" class="btn btn-danger">Xác nhận Tạm ngưng</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal for Create/Edit -->
     <div id="tourModal" class="modal">
         <div class="modal-content">
@@ -319,10 +360,44 @@
                 let html = "";
                 tours.forEach(t => {
                     const location = `${t.startLocation || '?'} - ${t.endLocation || '?'}`;
+                    
+                    let badgeHtml = '';
+                    let actionHtml = '';
+                    if (t.suspensionReasonType) {
+                        let typeIcon = 'ℹ️';
+                        let typeLabel = 'Khác';
+                        switch (t.suspensionReasonType) {
+                            case 'WEATHER': typeIcon = '🌧️'; typeLabel = 'Thời tiết'; break;
+                            case 'POLICY': typeIcon = '📋'; typeLabel = 'Chính sách'; break;
+                            case 'LOCATION_UNAVAILABLE': typeIcon = '📍'; typeLabel = 'Địa điểm'; break;
+                            case 'SAFETY': typeIcon = '⚠️'; typeLabel = 'An toàn'; break;
+                        }
+                        
+                        let dateHtml = t.suspendedUntil ? ` đến ${t.suspendedUntil}` : '';
+                        
+                        badgeHtml = `<div style="margin-top:4px;">
+                                        <span class="badge bg-danger" style="font-size:0.75rem; padding:4px 6px;">
+                                            ${typeIcon} Tạm ngưng: ${typeLabel}${dateHtml}
+                                        </span>
+                                     </div>`;
+                        
+                        // Overdue check
+                        if (t.suspendedUntil && new Date(t.suspendedUntil) < new Date()) {
+                            badgeHtml += `<div style="margin-top:2px; color:var(--danger); font-size:0.75rem; font-weight:600;">⏰ Đã quá hạn dự kiến, vui lòng kiểm tra!</div>`;
+                        }
+
+                        actionHtml = `<button onclick="showResumeModal(${t.id})" class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background:#f59e0b; color:#fff; border:none;">Mở lại</button>`;
+                    } else {
+                        actionHtml = `<button onclick="showSuspendModal(${t.id}, '${escapeHtml(t.tourName)}')" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Tạm ngưng</button>`;
+                    }
+
                     html += `
                         <tr>
                             <td>${t.id}</td>
-                            <td><strong>${escapeHtml(t.tourName)}</strong></td>
+                            <td>
+                                <strong>${escapeHtml(t.tourName)}</strong>
+                                ${badgeHtml}
+                            </td>
                             <td>${escapeHtml(t.categoryName || '-')}</td>
                             <td>${formatPrice(t.price)}</td>
                             <td>${t.duration || '-'} days</td>
@@ -331,6 +406,7 @@
                                 <button onclick="viewTour(${t.id})" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Xem</button>
                                 <button onclick="showEditModal(${t.id})" class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Sửa</button>
                                 <button onclick="showBulkScheduleModal(${t.id})" class="btn btn-info" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background-color: var(--primary); color: white; border-color: var(--primary);">Tạo 1 tour giống</button>
+                                ${actionHtml}
                                 <button onclick="deleteTour(${t.id})" class="btn btn-danger" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Xóa</button>
                             </td>
                         </tr>
@@ -1102,10 +1178,13 @@
         window.onclick = function (event) {
             const modal = document.getElementById('tourModal');
             const bulkModal = document.getElementById('bulkScheduleModal');
+            const suspendModal = document.getElementById('suspendModal');
             if (event.target === modal) {
                 closeModal();
             } else if (event.target === bulkModal) {
                 closeBulkModal();
+            } else if (event.target === suspendModal) {
+                closeSuspendModal();
             }
         }
 
@@ -1227,6 +1306,133 @@
             } catch (error) {
                 console.error('Error creating bulk schedules:', error);
                 showToast('Lỗi: ' + error.message, 'error');
+            }
+        }
+
+        // SUSPEND / RESUME LOGIC
+        async function showSuspendModal(tourId, tourName) {
+            document.getElementById('suspendTourId').value = tourId;
+            document.getElementById('suspendTourNameDisplay').innerText = tourName;
+            document.getElementById('suspendReasonType').value = 'WEATHER';
+            document.getElementById('suspendReasonText').value = '';
+            document.getElementById('suspendUntilDate').value = '';
+
+            const select = document.getElementById('suspendScheduleSelect');
+            select.innerHTML = '<option value="">-- Đang tải lịch trình... --</option>';
+
+            document.getElementById('suspendModal').style.display = 'flex';
+
+            try {
+                // Fetch the tour details to get schedules
+                const response = await TB.apiFetch(`${PUBLIC_API}/${tourId}`);
+                const schedules = response.data.schedules || [];
+                // Filter open/active schedules
+                const activeSchedules = schedules.filter(s => 
+                    s.status === 'OPEN' || s.status === 'SOLD_OUT' || !s.status
+                );
+
+                if (activeSchedules.length === 0) {
+                    select.innerHTML = '<option value="">-- Tour này không có lịch trình nào khả dụng để tạm ngưng --</option>';
+                    return;
+                }
+
+                let opts = '<option value="">-- Vui lòng chọn lịch trình --</option>';
+                activeSchedules.forEach(s => {
+                    const time = s.departureTime ? s.departureTime.substring(0,5) : '';
+                    opts += `<option value="${s.scheduleId}">Ngày ${s.startDate} ${time}</option>`;
+                });
+                select.innerHTML = opts;
+            } catch (err) {
+                console.error("Error fetching schedules for suspend", err);
+                select.innerHTML = '<option value="">Lỗi tải lịch trình</option>';
+            }
+        }
+
+        function closeSuspendModal() {
+            document.getElementById('suspendModal').style.display = 'none';
+        }
+
+        async function submitSuspend() {
+            const scheduleId = document.getElementById('suspendScheduleSelect').value;
+            if (!scheduleId) {
+                showToast('Vui lòng chọn một lịch trình!', 'error');
+                return;
+            }
+            const reasonType = document.getElementById('suspendReasonType').value;
+            const reason = document.getElementById('suspendReasonText').value.trim();
+            const until = document.getElementById('suspendUntilDate').value;
+
+            if (!reason) {
+                showToast('Vui lòng nhập chi tiết lý do!', 'error');
+                return;
+            }
+            
+            // Preview bookings before submitting
+            try {
+                const res = await TB.apiFetch(`/api/v1/admin/tour-schedules/${scheduleId}/affected-bookings`);
+                const bookings = res.data || [];
+                let msg = `Bạn sắp tạm ngưng lịch trình này với lý do: ${reasonType}. \n`;
+                if (bookings.length > 0) {
+                    msg += `CẢNH BÁO: Có ${bookings.length} booking sẽ bị ảnh hưởng và chuyển sang trạng thái chờ xử lý.\n`;
+                } else {
+                    msg += `Hiện chưa có booking nào cho lịch trình này.\n`;
+                }
+                msg += `Bạn có chắc chắn muốn Tạm ngưng không?`;
+
+                if (!confirm(msg)) {
+                    return; // user cancelled
+                }
+            } catch (err) {
+                console.error("Error previewing bookings", err);
+                if (!confirm("Không thể tải trước số lượng booking bị ảnh hưởng. Bạn vẫn muốn tiếp tục tạm ngưng?")) {
+                    return;
+                }
+            }
+
+            try {
+                await TB.apiFetch(`/api/v1/admin/tour-schedules/${scheduleId}/suspend`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        suspensionReasonType: reasonType,
+                        suspensionReason: reason,
+                        suspendedUntil: until || null
+                    })
+                });
+                showToast('Tạm ngưng lịch trình thành công!', 'success');
+                closeSuspendModal();
+                loadTours(currentPage);
+            } catch (err) {
+                console.error("Suspend error", err);
+                showToast(err.message || 'Lỗi khi tạm ngưng', 'error');
+            }
+        }
+
+        async function showResumeModal(tourId) {
+            // Because the frontend only knows that SOME schedule is suspended via the tour badge,
+            // we will fetch the tour details, find the suspended schedule(s), and resume them.
+            if (!confirm("Bạn xác nhận điều kiện đã ổn định trở lại và muốn mở lại tour này?")) return;
+            try {
+                const response = await TB.apiFetch(`${PUBLIC_API}/${tourId}`);
+                const schedules = response.data.schedules || [];
+                const suspendedSchedules = schedules.filter(s => s.status === 'SUSPENDED');
+                
+                if (suspendedSchedules.length === 0) {
+                    showToast('Không tìm thấy lịch trình bị tạm ngưng.', 'error');
+                    loadTours(currentPage);
+                    return;
+                }
+
+                // If there are multiple, loop and resume all
+                for (const s of suspendedSchedules) {
+                    await TB.apiFetch(`/api/v1/admin/tour-schedules/${s.scheduleId}/resume`, {
+                        method: 'POST'
+                    });
+                }
+                showToast('Mở lại lịch trình thành công!', 'success');
+                loadTours(currentPage);
+            } catch (err) {
+                console.error("Resume error", err);
+                showToast(err.message || 'Lỗi khi mở lại', 'error');
             }
         }
 

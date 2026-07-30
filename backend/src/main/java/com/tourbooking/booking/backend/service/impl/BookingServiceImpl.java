@@ -31,6 +31,10 @@ import com.tourbooking.booking.backend.service.TourScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.tourbooking.booking.backend.model.dto.request.VoucherRequest;
@@ -75,6 +79,9 @@ public class BookingServiceImpl implements BookingService {
     private final PaymentService paymentService;
     private final Environment environment;
     private final com.tourbooking.booking.backend.service.MailService mailService;
+    
+    @Value("${booking.suspension.reschedule-window-days:30}")
+    private int rescheduleWindowDays;
 
     private final com.tourbooking.booking.backend.repository.DiscountPolicyRepository discountPolicyRepository;
     private final ReviewRepository reviewRepository;
@@ -971,6 +978,7 @@ public class BookingServiceImpl implements BookingService {
 
         // ── Cập nhật trạng thái Booking ───────────────────────────────────────
         booking.setStatus(BookingStatus.REFUND_REQUESTED);
+        booking.setSuspensionActionStatus(com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.RESOLVED);
         bookingRepository.save(booking);
 
         // ── Tạo chuỗi Reason chứa thông tin ngân hàng + lý do khách ─────────
@@ -1042,6 +1050,7 @@ public class BookingServiceImpl implements BookingService {
         tourScheduleRepository.save(newSchedule);
 
         booking.setSchedule(newSchedule);
+        booking.setSuspensionActionStatus(com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.RESOLVED);
         bookingRepository.save(booking);
 
         return BookingMapper.toResponse(booking);
@@ -1082,6 +1091,38 @@ public class BookingServiceImpl implements BookingService {
                         .status(s.getStatus() != null ? s.getStatus().name() : null)
                         .build())
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<com.tourbooking.booking.backend.model.dto.response.PendingSuspensionActionResponse> getPendingSuspensionActions(Long userId) {
+        java.util.List<Booking> pendingBookings = bookingRepository.findPendingSuspensionActionsByUserId(userId);
+        
+        final int finalWindowDays = rescheduleWindowDays;
+        
+        return pendingBookings.stream().map(booking -> {
+            boolean canReschedule = false;
+            java.util.List<com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse> candidates = getRescheduleCandidates(booking.getId());
+            
+            if (candidates != null && !candidates.isEmpty()) {
+                java.time.LocalDate limitDate = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(finalWindowDays);
+                canReschedule = candidates.stream().anyMatch(c -> c.getStartDate() != null && !c.getStartDate().isAfter(limitDate));
+            }
+            
+            TourSchedule schedule = booking.getSchedule();
+            return com.tourbooking.booking.backend.model.dto.response.PendingSuspensionActionResponse.builder()
+                .bookingId(booking.getId())
+                .scheduleId(schedule.getId())
+                .tourName(schedule.getTour() != null ? schedule.getTour().getTourName() : "")
+                .departureDate(schedule.getStartDate())
+                .totalPrice(booking.getTotalPrice())
+                .suspensionReasonType(schedule.getSuspensionReasonType())
+                .suspensionReason(schedule.getSuspensionReason())
+                .suspendedFrom(schedule.getSuspendedFrom())
+                .suspendedUntil(schedule.getSuspendedUntil())
+                .canReschedule(canReschedule)
+                .build();
+        }).toList();
     }
 
     /**

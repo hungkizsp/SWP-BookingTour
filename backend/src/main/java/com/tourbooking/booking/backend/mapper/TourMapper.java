@@ -39,6 +39,16 @@ public class TourMapper {
             response.setCategoryName(tour.getCategory().getCategoryName());
         }
 
+        if (tour.getSchedules() != null) {
+            for (TourSchedule schedule : tour.getSchedules()) {
+                if (schedule.getStatus() == TourStatus.SUSPENDED) {
+                    response.setSuspensionReasonType(schedule.getSuspensionReasonType() != null ? schedule.getSuspensionReasonType().name() : null);
+                    response.setSuspendedUntil(schedule.getSuspendedUntil());
+                    break;
+                }
+            }
+        }
+
         return response;
     }
 

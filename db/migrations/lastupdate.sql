@@ -1288,3 +1288,11 @@ GO
 ALTER TABLE Users ADD EmailVerified BIT NOT NULL DEFAULT 0;
 GO
 UPDATE Users SET EmailVerified = 1;
+
+-- V11: Add suspension reason types
+ALTER TABLE TourSchedules ADD SuspensionReasonType VARCHAR(50);
+ALTER TABLE Bookings ADD SuspensionActionStatus VARCHAR(50);
+-- Previously added in weather suspension:
+-- ALTER TABLE TourSchedules ADD SuspensionReason NVARCHAR(500);
+-- ALTER TABLE TourSchedules ADD SuspendedFrom DATE;
+-- ALTER TABLE TourSchedules ADD SuspendedUntil DATE;

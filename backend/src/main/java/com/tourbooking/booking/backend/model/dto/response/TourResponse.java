@@ -20,4 +20,6 @@ public class TourResponse {
     private String externalId;
     private Long categoryId;
     private String categoryName;
+    private String suspensionReasonType;
+    private java.time.LocalDate suspendedUntil;
 }
