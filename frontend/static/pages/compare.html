@@ -260,6 +260,60 @@
         grid-template-columns: 1fr;
       }
     }
+
+    /* AI Compare Block */
+    .ai-compare-section {
+      background: linear-gradient(135deg, #f8fafc, #eff6ff);
+      border: 1px solid #bfdbfe;
+      border-radius: var(--radius-lg);
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .ai-compare-section::before {
+      content: '🤖 AI Khuyên Dùng';
+      position: absolute;
+      top: -10px;
+      right: -20px;
+      font-size: 5rem;
+      opacity: 0.03;
+      font-weight: 800;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .ai-compare-result {
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: var(--text-base);
+    }
+
+    .ai-compare-result h3 {
+      color: var(--primary-dark);
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+      font-size: 1.1rem;
+    }
+    
+    .ai-compare-result p {
+      margin-bottom: 1em;
+    }
+
+    .ai-compare-result ul {
+      margin-bottom: 1em;
+      padding-left: 20px;
+    }
+
+    .ai-compare-result li {
+      margin-bottom: 0.5em;
+    }
+
+    .ai-compare-result strong {
+      color: var(--primary);
+    }
   </style>
 </head>
 
@@ -316,6 +370,23 @@
     </div>
 
     <div id="gridWrapper" class="compare-wrapper" style="display: none;">
+      
+      <!-- AI Compare Button & Results -->
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+        <button id="aiCompareBtn" class="btn" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); border: none; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);">
+          <span style="margin-right: 8px;">🤖</span> Phân tích & So sánh bằng AI
+        </button>
+      </div>
+      
+      <div id="aiCompareResultBlock" class="ai-compare-section" style="display: none;">
+        <h3 style="margin-top: 0; color: #1e40af; border-bottom: 2px solid #bfdbfe; padding-bottom: 10px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+          <span>🤖</span> AI Phân Tích So Sánh
+        </h3>
+        <div id="aiCompareContent" class="ai-compare-result">
+          <!-- AI results go here -->
+        </div>
+      </div>
+
       <table class="compare-table">
         <thead id="tableHead"></thead>
         <tbody id="tableBody"></tbody>

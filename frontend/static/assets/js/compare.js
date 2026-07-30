@@ -14,6 +14,15 @@
       .replaceAll("'", '&#039;');
   }
 
+  function formatAiText(text) {
+    if (!text) return '';
+    let html = escapeHtml(text);
+    html = html.replace(/\[(.+?)\]\((https?:\/\/.+?)\)/g, '<a href="$2" target="_blank" style="color: var(--primary); font-weight: 800; text-decoration: underline;">$1</a>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\n/g, '<br>');
+    return html;
+  }
+
   if (ids.length === 0) {
     empty.style.display = 'block';
     return;
@@ -45,6 +54,41 @@
 
       empty.style.display = 'none';
       gridWrapper.style.display = 'block';
+      
+      const aiCompareBtn = document.getElementById('aiCompareBtn');
+      if (aiCompareBtn && currentTours.length >= 2) {
+        aiCompareBtn.onclick = async () => {
+          const btn = aiCompareBtn;
+          const resultBlock = document.getElementById('aiCompareResultBlock');
+          const contentBlock = document.getElementById('aiCompareContent');
+          
+          btn.disabled = true;
+          btn.innerHTML = `<span style="margin-right: 8px;">🤖</span> Đang phân tích (có thể mất 30-60 giây)...`;
+          
+          try {
+            const res = await TB.apiFetch('/api/v1/tours/compare-ai', {
+              method: 'POST',
+              body: JSON.stringify({ tourIds: currentTours.map(t => t.id) })
+            });
+            
+            resultBlock.style.display = 'block';
+            contentBlock.innerHTML = formatAiText(res.data.analysis);
+            
+            // Scroll to result smoothly
+            resultBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } catch (err) {
+            console.error("AI Compare error:", err);
+            // Fallback message handles by frontend
+            resultBlock.style.display = 'block';
+            contentBlock.innerHTML = `<div style="color: #dc2626; padding: 15px; background: #fee2e2; border-radius: 8px;">🤖 Không thể phân tích lúc này, vui lòng thử lại sau. (Lỗi: ${escapeHtml(err.message)})</div>`;
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = `<span style="margin-right: 8px;">🤖</span> Cập nhật phân tích AI`;
+          }
+        };
+      } else if (aiCompareBtn) {
+        aiCompareBtn.style.display = 'none';
+      }
 
       // 1. Render Header Row (Images & Titles)
       tableHead.innerHTML = `

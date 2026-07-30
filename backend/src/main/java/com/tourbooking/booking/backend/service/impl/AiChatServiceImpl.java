@@ -11,8 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.tourbooking.booking.backend.component.GeminiClient;
 import com.tourbooking.booking.backend.model.dto.request.AiChatRequest;
 import com.tourbooking.booking.backend.model.dto.response.AiChatResponse;
 import com.tourbooking.booking.backend.model.entity.ChatMessages;
@@ -37,11 +37,7 @@ public class AiChatServiceImpl implements AiChatService {
     private final UserRepository userRepo;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${gemini.api.key}")
-    private String geminiApiKey;
-
-    @Value("${gemini.api.url}")
-    private String geminiApiUrl;
+    private final GeminiClient geminiClient;
 
     @Value("${app.public-base-url:http://localhost:8080}")
     private String baseUrl;
@@ -91,42 +87,7 @@ public class AiChatServiceImpl implements AiChatService {
                 tourContext.replace("\"", "\\\"").replace("\n", "\\n") + "\\n\\n" +
                 "Yêu cầu của khách: " + userMessage.replace("\"", "\\\"").replace("\n", "\\n");
 
-            String jsonBody = "{"
-                + "\"contents\":[{"
-                + "\"parts\":[{\"text\":\"" + systemPrompt + "\"}]"
-                + "}],"
-                + "\"generationConfig\":{"
-                + "\"temperature\":0.5,"
-                + "\"maxOutputTokens\":2048,"
-                + "\"topP\":0.9"
-                + "}"
-                + "}";
-
-            RestTemplate restTemplate = new RestTemplate();
-            restTemplate.getMessageConverters().add(0, new StringHttpMessageConverter(StandardCharsets.UTF_8));
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("X-goog-api-key", geminiApiKey);
-
-            HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(geminiApiUrl, entity, String.class);
-
-            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
-                JsonNode root = objectMapper.readTree(response.getBody());
-                JsonNode text = root
-                        .path("candidates").get(0)
-                        .path("content")
-                        .path("parts").get(0)
-                        .path("text");
-
-                if (!text.isMissingNode()) {
-                    return text.asText();
-                }
-            }
-
-            log.warn("[Gemini] Unexpected response status: {}", response.getStatusCode());
-            return fallbackResponse(userMessage);
+            return geminiClient.callGeminiRaw(systemPrompt, userMessage);
 
         } catch (Exception e) {
             log.error("[Gemini] API call failed: {}", e.getMessage());

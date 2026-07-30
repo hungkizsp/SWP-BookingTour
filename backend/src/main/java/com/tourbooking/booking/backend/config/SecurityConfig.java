@@ -131,6 +131,7 @@ public class SecurityConfig {
 
                         // Tours: Public GET, Staff/Admin manage
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/tours/**").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/tours/compare-ai").permitAll()
                         .requestMatchers("/api/v1/tours/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_STAFF")
 
                         // FAQs: fully public (no auth needed to browse FAQs)
