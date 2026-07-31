@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
@@ -28,6 +29,7 @@ import java.security.Principal;
 public class GuideController {
 
         private final GuideService guideService;
+        private final com.tourbooking.booking.backend.service.TourAttendanceService tourAttendanceService;
         private final UserService userService;
 
         @GetMapping("/assigned-tours")
@@ -123,5 +125,33 @@ public class GuideController {
                                 .message("Tour report submitted successfully")
                                 .data(null)
                                 .build();
+        }
+
+        @GetMapping("/assigned-tours/{scheduleId}/attendances")
+        @PreAuthorize("hasRole('GUIDE')")
+        public ResponseEntity<ApiResponse<List<com.tourbooking.booking.backend.model.dto.response.AttendanceResponse>>> getAttendances(
+                        @PathVariable Long scheduleId, Authentication authentication) {
+                UserResponse user = userService.getUserByEmail(authentication.getName());
+                List<com.tourbooking.booking.backend.model.dto.response.AttendanceResponse> list = tourAttendanceService.getAttendancesForSchedule(user.getId(), scheduleId);
+                return ResponseEntity.ok(ApiResponse.<List<com.tourbooking.booking.backend.model.dto.response.AttendanceResponse>>builder()
+                                .code(200)
+                                .data(list)
+                                .build());
+        }
+
+        @PutMapping("/assigned-tours/{scheduleId}/attendances/{attendanceId}")
+        @PreAuthorize("hasRole('GUIDE')")
+        public ResponseEntity<ApiResponse<com.tourbooking.booking.backend.model.dto.response.AttendanceResponse>> updateAttendance(
+                        @PathVariable Long scheduleId,
+                        @PathVariable Long attendanceId,
+                        @RequestBody com.tourbooking.booking.backend.model.dto.request.UpdateAttendanceRequest request,
+                        Authentication authentication) {
+                UserResponse user = userService.getUserByEmail(authentication.getName());
+                com.tourbooking.booking.backend.model.dto.response.AttendanceResponse res = tourAttendanceService.updateAttendance(user.getId(), scheduleId, attendanceId, request);
+                return ResponseEntity.ok(ApiResponse.<com.tourbooking.booking.backend.model.dto.response.AttendanceResponse>builder()
+                                .code(200)
+                                .message("Đã cập nhật điểm danh")
+                                .data(res)
+                                .build());
         }
 }

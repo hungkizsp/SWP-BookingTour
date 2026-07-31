@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Exposes REST endpoints for the Operational Readiness Dashboard.
@@ -38,6 +40,7 @@ public class OperationalController {
     private final OperationalAlertRepository operationalAlertRepository;
     private final TourScheduleRepository tourScheduleRepository;
     private final BookingRepository bookingRepository;
+    private final com.tourbooking.booking.backend.service.TourAttendanceService tourAttendanceService;
 
     /**
      * Returns all active (unresolved) operational alerts — OPEN schedules that have had
@@ -151,6 +154,25 @@ public class OperationalController {
             alertList.add(card);
         }
 
+        // ── NO-SHOW Alerts (from Attendances) ──
+        List<com.tourbooking.booking.backend.model.entity.TourAttendance> noShows = tourAttendanceService.getAttendancesByStatus(
+                com.tourbooking.booking.backend.model.entity.enums.AttendanceStatus.ABSENT);
+        for (com.tourbooking.booking.backend.model.entity.TourAttendance att : noShows) {
+            // Only show for active schedules (OPEN, IN_PROGRESS)
+            if (att.getSchedule().getStatus() == TourStatus.OPEN || att.getSchedule().getStatus() == TourStatus.IN_PROGRESS) {
+                Map<String, Object> card = new HashMap<>();
+                card.put("type", "NO_SHOW");
+                card.put("scheduleId", att.getSchedule().getId());
+                card.put("tourName", att.getSchedule().getTour() != null ? att.getSchedule().getTour().getTourName() : "N/A");
+                card.put("customerName", att.getBooking() != null && att.getBooking().getUser() != null ? att.getBooking().getUser().getFullName() : "N/A");
+                card.put("departureDateTime", att.getSchedule().getDepartureDateTime() != null ? att.getSchedule().getDepartureDateTime().toString() : null);
+                card.put("markedAt", att.getMarkedAt() != null ? att.getMarkedAt().toString() : null);
+                card.put("guideName", att.getSchedule().getGuide() != null ? att.getSchedule().getGuide().getFullName() : "N/A");
+                card.put("isUrgent", true); // Always urgent
+                alertList.add(card);
+            }
+        }
+
         Map<String, Object> response = new HashMap<>();
         response.put("alerts", alertList);
         response.put("totalAlerts", alertList.size());
@@ -246,5 +268,35 @@ public class OperationalController {
         });
 
         return ResponseEntity.ok(results);
+    }
+
+    /**
+     * Attendance overview for Admin/Staff — shows attendance status per schedule that is IN_PROGRESS.
+     */
+    @GetMapping("/attendance/{scheduleId}")
+    @PreAuthorize("hasAnyRole('ADMIN','STAFF')")
+    public ResponseEntity<Map<String, Object>> getAttendanceForSchedule(
+            @PathVariable Long scheduleId) {
+        List<com.tourbooking.booking.backend.model.dto.response.AttendanceResponse> attendances =
+                tourAttendanceService.getAttendancesForAdmin(scheduleId);
+
+        TourSchedule schedule = tourScheduleRepository.findById(scheduleId).orElse(null);
+
+        long present = attendances.stream().filter(a -> a.getStatus() ==
+                com.tourbooking.booking.backend.model.entity.enums.AttendanceStatus.PRESENT).count();
+        long absent = attendances.stream().filter(a -> a.getStatus() ==
+                com.tourbooking.booking.backend.model.entity.enums.AttendanceStatus.ABSENT).count();
+        long pending = attendances.stream().filter(a -> a.getStatus() ==
+                com.tourbooking.booking.backend.model.entity.enums.AttendanceStatus.PENDING).count();
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("scheduleId", scheduleId);
+        result.put("tourName", schedule != null && schedule.getTour() != null ? schedule.getTour().getTourName() : "N/A");
+        result.put("currentProgress", schedule != null ? schedule.getCurrentProgress() : null);
+        result.put("presentCount", present);
+        result.put("absentCount", absent);
+        result.put("pendingCount", pending);
+        result.put("attendances", attendances);
+        return ResponseEntity.ok(result);
     }
 }

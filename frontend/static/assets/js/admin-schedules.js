@@ -78,6 +78,9 @@ function renderSchedulesPage() {
             <td>${s.startDate} - ${s.endDate}</td>
             <td>${s.guideId ? 'Guide #' + s.guideId : '<span style="color:#d97706">Unassigned</span>'}</td>
             <td><span style="display:inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; ${statusStyle}">${statusLabel}</span></td>
+            <td>
+                <button class="action-btn" style="background:#0ea5e9; color:white; padding:4px 8px; font-size:0.75rem;" onclick="openAdminAttendanceModal(${s.id}, '${s.tourName}')">Điểm danh</button>
+            </td>
         `;
         tbody.appendChild(row);
     });
@@ -248,4 +251,90 @@ window.resetScheduleSearch = function() {
     document.getElementById('scheduleSearchId').value = '';
     currentPage = 0;
     loadSchedules();
+};
+
+// --- Attendance Modal for Admin/Staff ---
+window.openAdminAttendanceModal = async function(scheduleId, tourName) {
+    let overlay = document.getElementById('adminAttModalOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'adminAttModalOverlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        overlay.innerHTML = `
+            <div style="background:#fff;border-radius:16px;padding:0;width:min(800px,96vw);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.4);">
+                <div style="padding:1.25rem 1.5rem;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+                    <h3 style="margin:0;font-size:1.1rem;font-weight:700;color:#1e293b;">📋 Tình hình điểm danh — <span id="adminAttTourNameLabel"></span></h3>
+                    <button onclick="document.getElementById('adminAttModalOverlay').style.display='none'" style="background:none;border:none;cursor:pointer;font-size:1.4rem;color:#64748b;">✕</button>
+                </div>
+                <div style="padding:1rem 1.5rem;overflow-y:auto;flex:1;">
+                    <div id="adminAttStats" style="display:flex;gap:1rem;margin-bottom:1rem;flex-wrap:wrap;"></div>
+                    <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+                        <thead>
+                            <tr style="background:#f1f5f9;">
+                                <th style="padding:10px;text-align:left;border-bottom:2px solid #e2e8f0;">Khách hàng</th>
+                                <th style="padding:10px;text-align:left;border-bottom:2px solid #e2e8f0;">Liên hệ</th>
+                                <th style="padding:10px;text-align:center;border-bottom:2px solid #e2e8f0;">Trạng thái</th>
+                                <th style="padding:10px;text-align:center;border-bottom:2px solid #e2e8f0;">Thời điểm</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminAttBody">
+                            <tr><td colspan="4" style="text-align:center;padding:20px;color:#94a3b8;">Đang tải...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+    document.getElementById('adminAttTourNameLabel').textContent = tourName || ('Lịch #' + scheduleId);
+    const body = document.getElementById('adminAttBody');
+    const stats = document.getElementById('adminAttStats');
+    body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#94a3b8;">Đang tải...</td></tr>';
+    stats.innerHTML = '';
+    
+    try {
+        const res = await TB.apiFetch(`/api/v1/admin/attendance/${scheduleId}`);
+        const data = res.data || res;
+        
+        stats.innerHTML = `
+            <span style="background:#dcfce7;color:#15803d;border-radius:8px;padding:4px 12px;font-size:.8rem;font-weight:600;">✅ Có mặt: ${data.presentCount || 0}</span>
+            <span style="background:#fee2e2;color:#dc2626;border-radius:8px;padding:4px 12px;font-size:.8rem;font-weight:600;">❌ Vắng: ${data.absentCount || 0}</span>
+            <span style="background:#fef9c3;color:#92400e;border-radius:8px;padding:4px 12px;font-size:.8rem;font-weight:600;">⏳ Chưa điểm: ${data.pendingCount || 0}</span>
+        `;
+        
+        if (!data.attendances || data.attendances.length === 0) {
+            body.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:#94a3b8;">Không có dữ liệu điểm danh.</td></tr>';
+            return;
+        }
+        
+        body.innerHTML = data.attendances.map(a => {
+            const statusBadge = {
+                PRESENT: '<span style="background:#dcfce7;color:#15803d;border-radius:6px;padding:2px 10px;font-size:.78rem;font-weight:600;">✅ Có mặt</span>',
+                ABSENT: '<span style="background:#fee2e2;color:#dc2626;border-radius:6px;padding:2px 10px;font-size:.78rem;font-weight:600;">❌ Vắng</span>',
+                PENDING: '<span style="background:#fef9c3;color:#92400e;border-radius:6px;padding:2px 10px;font-size:.78rem;font-weight:600;">⏳ Chưa điểm</span>',
+            }[a.status] || a.status;
+
+            const lateTag = (a.status === 'PRESENT' && a.lateMinutes) 
+                ? `<br><span title="${a.lateNote || ''}" style="background:#fff7ed;color:#c2410c;border-radius:6px;padding:2px 8px;font-size:.75rem;font-weight:600;display:inline-block;margin-top:4px;cursor:help;">⏰ Trễ ${a.lateMinutes}p</span>` 
+                : '';
+
+            return `<tr style="border-bottom:1px solid #f1f5f9;">
+                <td style="padding:10px;">
+                    <div style="font-weight:600;color:#1e293b;">${a.customerName}</div>
+                    <div style="font-size:.75rem;color:#94a3b8;">Booking #${a.bookingId}</div>
+                </td>
+                <td style="padding:10px;">
+                    <div style="font-size:.82rem;color:#475569;">📱 ${a.customerPhone}</div>
+                    <div style="font-size:.82rem;color:#475569;">✉ ${a.customerEmail}</div>
+                </td>
+                <td style="padding:10px;text-align:center;">${statusBadge}${lateTag}</td>
+                <td style="padding:10px;text-align:center;font-size:0.8rem;color:#64748b;">
+                    ${a.markedAt ? new Date(a.markedAt).toLocaleString('vi-VN') : '—'}
+                </td>
+            </tr>`;
+        }).join('');
+    } catch (e) {
+        body.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:20px;color:red;">Lỗi: ${e.message}</td></tr>`;
+    }
 };

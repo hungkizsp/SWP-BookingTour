@@ -972,6 +972,25 @@
             });
 
             container.innerHTML = sorted.map(alert => {
+                if (alert.type === 'NO_SHOW') {
+                    return `
+                        <div class="alert-card urgent">
+                            <div style="background:#fee2e2;border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:0.78rem;font-weight:700;color:#991b1b;">
+                                ?? Kh·ch h‡ng v?ng m?t (No-Show)
+                            </div>
+                            <div class="alert-header" style="margin-bottom:6px;">
+                                <span class="alert-tour-name" style="color:#b91c1c; font-size:1.1rem;">${alert.customerName}</span>
+                            </div>
+                            <div class="alert-meta">
+                                <div>Tour: <b>${alert.tourName}</b> (L?ch #${alert.scheduleId})</div>
+                                <div>Guide: ${alert.guideName}</div>
+                                <div>Gi? KH: ${alert.departureDateTime ? new Date(alert.departureDateTime).toLocaleString('vi-VN') : 'ó'}</div>
+                                <div style="color:#b91c1c; margin-top:4px; font-weight:bold;">–·nh v?ng l˙c: ${alert.markedAt ? new Date(alert.markedAt).toLocaleString('vi-VN') : 'ó'}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 const mins = alert.minutesRemaining ?? 0;
                 const isPendingGuide = alert.type === 'PENDING_GUIDE';
                 const isUrgent = alert.isUrgent || isPendingGuide;
@@ -1002,7 +1021,7 @@
                             Action Required: Tour Guide missing for ${alert.tourName} - Departure in ${mins} minutes.
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
-                            <select id="quick-assign-${scheduleId}" class="guide-select-dropdown" style="flex:1; padding:6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.8rem; max-width: 250px;">
+                            <select id="quick-assign-${scheduleId} class="guide-select-dropdown" style="flex:1; padding:6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.8rem; max-width: 250px;">
                                 <option value="">-- Select a Guide --</option>
                             </select>
                             <button onclick="quickAssign(${scheduleId})" class="btn-assign-guide" style="padding:6px 12px; margin:0;">Assign</button>
@@ -1011,11 +1030,11 @@
                 }
 
                 return `
-                <div class="alert-card ${cardClass}" id="ops-alert-${scheduleId}">
+                <div class="alert-card ${cardClass} id="ops-alert-${scheduleId}>
                     ${urgentBanner}
                     <div class="alert-card-header">
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <span class="alert-badge ${badgeClass}">
+                            <span class="alert-badge ${badgeClass}>
                                 ${isPendingGuide ? 'üî¥ PENDING GUIDE' : '‚ö†Ô∏è ' + (alert.alertWindow || 'ALERT')}
                             </span>
                         </div>
@@ -1150,3 +1169,6 @@
 </body>
 
 </html>
+
+
+

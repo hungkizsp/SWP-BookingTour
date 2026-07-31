@@ -30,9 +30,36 @@ async function loadScheduleDetails(sid) {
         document.getElementById('tourTitle').innerText = s.tourName || ('Schedule SD-' + sid);
         renderProgressHistory(s.progressLogs || []);
         renderUploadedGallery(s.imageUrls || []);
+
+        // Check attendance status to enable/disable Update Progress
+        checkAttendanceStatusForProgress(sid);
     } catch (err) {
         console.error('Error loading details:', err);
         document.getElementById('tourTitle').innerText = 'Error Loading Details';
+    }
+}
+
+async function checkAttendanceStatusForProgress(sid) {
+    try {
+        const res = await TB.apiFetch(`/api/v1/guides/assigned-tours/${sid}/attendances`);
+        const list = res.data || [];
+        const btn = document.querySelector('button[onclick="updateProgress()"]');
+        if (btn) {
+            const hasPending = list.some(a => a.status === 'PENDING');
+            if (hasPending || list.length === 0) {
+                btn.disabled = true;
+                btn.title = 'Vui lòng hoàn thành điểm danh tất cả khách hàng (Có mặt hoặc Vắng) để cập nhật tiến độ.';
+                btn.style.opacity = '0.5';
+                btn.style.cursor = 'not-allowed';
+            } else {
+                btn.disabled = false;
+                btn.title = '';
+                btn.style.opacity = '1';
+                btn.style.cursor = 'pointer';
+            }
+        }
+    } catch (e) {
+        // Ignored
     }
 }
 

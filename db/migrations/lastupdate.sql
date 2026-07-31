@@ -1296,3 +1296,17 @@ ALTER TABLE Bookings ADD SuspensionActionStatus VARCHAR(50);
 -- ALTER TABLE TourSchedules ADD SuspensionReason NVARCHAR(500);
 -- ALTER TABLE TourSchedules ADD SuspendedFrom DATE;
 -- ALTER TABLE TourSchedules ADD SuspendedUntil DATE;
+CREATE TABLE [dbo].[TourAttendances](
+    [id] [bigint] IDENTITY(1,1) NOT NULL,
+    [ScheduleID] [bigint] NOT NULL,
+    [BookingID] [bigint] NOT NULL,
+    [Status] [varchar](20) NOT NULL DEFAULT 'PENDING',
+    [MarkedAt] [datetime2](7) NULL,
+    [LateNote] [nvarchar](500) NULL,
+    [LateMinutes] [int] NULL,
+    [CreatedAt] [datetime2](7) NOT NULL DEFAULT sysdatetime(),
+    PRIMARY KEY CLUSTERED ([id] ASC),
+    CONSTRAINT [FK_TourAttendances_Schedules] FOREIGN KEY([ScheduleID]) REFERENCES [dbo].[TourSchedules] ([ScheduleID]) ON DELETE CASCADE,
+    CONSTRAINT [FK_TourAttendances_Bookings] FOREIGN KEY([BookingID]) REFERENCES [dbo].[Bookings] ([BookingID]) ON DELETE NO ACTION
+)
+GO
