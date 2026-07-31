@@ -970,8 +970,16 @@ public class BookingServiceImpl implements BookingService {
                     "Chỉ có thể yêu cầu hoàn tiền với đơn ở trạng thái CONFIRMED hoặc SUCCESS.");
         }
 
-        // ── Tính số tiền hoàn theo chính sách ngày khởi hành ─────────────────
-        BigDecimal refundAmount = calculateRefundAmount(booking);
+        // ── Tính số tiền hoàn theo chính sách ngày khởi hành hoặc lỗi hệ thống ──
+        BigDecimal refundAmount;
+        boolean isOperatorInitiated = request.isOperatorInitiated() 
+                || booking.getSuspensionActionStatus() == com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.PENDING_CUSTOMER_ACTION;
+        
+        if (isOperatorInitiated) {
+            refundAmount = booking.getTotalPrice(); // 100% refund for operator/suspension
+        } else {
+            refundAmount = calculateRefundAmount(booking);
+        }
 
         // Lưu vết trạng thái gốc trước khi cập nhật
         BookingStatus originalStatus = booking.getStatus();
@@ -982,11 +990,14 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.save(booking);
 
         // ── Tạo chuỗi Reason chứa thông tin ngân hàng + lý do khách ─────────
-        String bankInfo = String.format("Ngân hàng: %s | STK: %s | Chủ TK: %s",
+        String bankInfo = request.getRefundInfo() != null ? request.getRefundInfo() : String.format("Ngân hàng: %s | STK: %s | Chủ TK: %s",
                 request.getBankName() != null ? request.getBankName() : "N/A",
                 request.getAccountNumber() != null ? request.getAccountNumber() : "N/A",
                 request.getAccountHolderName() != null ? request.getAccountHolderName() : "N/A");
         String fullReason = bankInfo + " | Lý do: " + (request.getReason() != null ? request.getReason() : "Không có");
+        if (isOperatorInitiated) {
+            fullReason = "[SUSPENSION/OPERATOR] " + fullReason;
+        }
 
         // ── Insert RefundRequest vào DB ───────────────────────────────────────
         com.tourbooking.booking.backend.model.entity.RefundRequest refundEntity = new com.tourbooking.booking.backend.model.entity.RefundRequest();
@@ -995,6 +1006,10 @@ public class BookingServiceImpl implements BookingService {
         refundEntity.setReason(fullReason);
         refundEntity.setStatus(com.tourbooking.booking.backend.model.entity.enums.RefundStatus.PENDING);
         refundEntity.setOriginalBookingStatus(originalStatus); // Lưu trạng thái gốc
+        
+        // If it was operator initiated, we mark a staff note flag implicitly by prefixing reason or we could add a field.
+        // The admin processRefund can just approve this 100%.
+        
         refundRequestRepository.save(refundEntity);
 
         log.info("[Refund] BookingID={} | RefundAmount={} | OriginalStatus={} | Reason={}",

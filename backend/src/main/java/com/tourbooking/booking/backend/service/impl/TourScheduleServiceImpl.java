@@ -6,6 +6,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.tourbooking.booking.backend.exception.AppException;
 import com.tourbooking.booking.backend.exception.BadRequestException;
 import com.tourbooking.booking.backend.exception.ErrorCode;
+import com.tourbooking.booking.backend.model.dto.request.SuspendTourRequest;
+import com.tourbooking.booking.backend.model.dto.response.SuspendPreviewResponse;
 import com.tourbooking.booking.backend.model.entity.TourSchedule;
 import com.tourbooking.booking.backend.model.entity.enums.TourStatus;
 import com.tourbooking.booking.backend.repository.TourScheduleRepository;
@@ -19,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import com.tourbooking.booking.backend.repository.BookingRepository;
 import com.tourbooking.booking.backend.repository.RefundRequestRepository;
 import com.tourbooking.booking.backend.service.MailService;
+import java.time.LocalDate;
 import java.util.List;
 import com.tourbooking.booking.backend.model.entity.enums.BookingStatus;
 import com.tourbooking.booking.backend.model.entity.enums.RefundStatus;
@@ -188,7 +191,7 @@ public class TourScheduleServiceImpl implements TourScheduleService {
 
     @Override
     @Transactional
-    public java.util.List<TourSchedule> bulkCreateSchedules(
+    public List<TourSchedule> bulkCreateSchedules(
             com.tourbooking.booking.backend.model.dto.request.TourScheduleBulkRequest request) {
         if (request.getRangeStartDate() == null || request.getRangeEndDate() == null) {
             throw new BadRequestException("Range start and end dates are required");
@@ -206,9 +209,9 @@ public class TourScheduleServiceImpl implements TourScheduleService {
         com.tourbooking.booking.backend.model.entity.Tour tour = tourRepository.findById(request.getTourId())
                 .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
 
-        java.util.List<TourSchedule> schedulesToSave = new java.util.ArrayList<>();
-        java.time.LocalDate today = java.time.LocalDate.now();
-        java.time.LocalDate current = request.getRangeStartDate();
+        List<TourSchedule> schedulesToSave = new java.util.ArrayList<>();
+        LocalDate today = LocalDate.now();
+        LocalDate current = request.getRangeStartDate();
 
         int durationDays = tour.getDuration() != null && tour.getDuration() > 0 ? tour.getDuration() - 1 : 0;
 
@@ -227,7 +230,22 @@ public class TourScheduleServiceImpl implements TourScheduleService {
                 schedule.setDepartureTime(request.getDepartureTime());
                 schedule.setMaxSlots(request.getMaxSlots());
                 schedule.setAvailableSlots(request.getMaxSlots());
-                schedule.setStatus(TourStatus.OPEN);
+
+                // ── Auto-suspend if this date falls in an active suspension window ──
+                List<TourSchedule> activeSuspensions = tourScheduleRepository.findActiveSuspensionCoveringDate(
+                        tour.getId(), current);
+                if (!activeSuspensions.isEmpty()) {
+                    TourSchedule ref = activeSuspensions.get(0);
+                    schedule.setStatus(TourStatus.SUSPENDED);
+                    schedule.setSuspensionReasonType(ref.getSuspensionReasonType());
+                    schedule.setSuspensionReason(ref.getSuspensionReason());
+                    schedule.setSuspendedFrom(ref.getSuspendedFrom());
+                    schedule.setSuspendedUntil(ref.getSuspendedUntil());
+                    log.info("[BULK-CREATE] Schedule on {} auto-suspended (covers active suspension window of tour #{}).",
+                            current, tour.getId());
+                } else {
+                    schedule.setStatus(TourStatus.OPEN);
+                }
 
                 schedulesToSave.add(schedule);
             }
@@ -237,53 +255,118 @@ public class TourScheduleServiceImpl implements TourScheduleService {
         return tourScheduleRepository.saveAll(schedulesToSave);
     }
 
+    // ── New date-range suspension methods ─────────────────────────────────────
+
     @Override
-    @Transactional
-    public void suspendSchedule(com.tourbooking.booking.backend.model.dto.request.SuspendScheduleRequest request) {
-        TourSchedule schedule = tourScheduleRepository.findById(request.getScheduleId())
-                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+    @Transactional(readOnly = true)
+    public List<SuspendPreviewResponse> previewSuspension(Long tourId, LocalDate from, LocalDate until) {
+        List<TourSchedule> schedules = tourScheduleRepository.findByTourIdAndDateRange(tourId, from, until);
 
-        if (schedule.getStatus() == TourStatus.CANCELLED || schedule.getStatus() == TourStatus.CANCELLED_BY_OPERATOR) {
-            throw new IllegalStateException("Không thể tạm ngưng lịch trình đã bị hủy.");
-        }
-
-        schedule.setStatus(TourStatus.SUSPENDED);
-        schedule.setSuspensionReasonType(request.getSuspensionReasonType());
-        schedule.setSuspensionReason(request.getSuspensionReason());
-        schedule.setSuspendedFrom(request.getSuspendedFrom() != null ? request.getSuspendedFrom() : java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
-        schedule.setSuspendedUntil(request.getSuspendedUntil());
-        tourScheduleRepository.save(schedule);
-
-        // Mark all active bookings as PENDING_CUSTOMER_ACTION
-        List<com.tourbooking.booking.backend.model.entity.Booking> affected = bookingRepository.findByScheduleIdAndStatusIn(
-                schedule.getId(), List.of(BookingStatus.CONFIRMED, BookingStatus.PAID, BookingStatus.PENDING, BookingStatus.PENDING_CASH));
-        for (com.tourbooking.booking.backend.model.entity.Booking booking : affected) {
-            booking.setSuspensionActionStatus(com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.PENDING_CUSTOMER_ACTION);
-        }
-        bookingRepository.saveAll(affected);
-
-        log.info("[SUSPEND] Schedule #{} suspended. Reason: {} | Type: {} | AffectedBookings: {}",
-                schedule.getId(), request.getSuspensionReason(), request.getSuspensionReasonType(), affected.size());
+        return schedules.stream().map(s -> {
+            long bookingCount = bookingRepository.countByScheduleIdAndStatusIn(
+                    s.getId(),
+                    List.of(BookingStatus.CONFIRMED, BookingStatus.PAID,
+                            BookingStatus.PENDING, BookingStatus.PENDING_CASH));
+            return SuspendPreviewResponse.builder()
+                    .scheduleId(s.getId())
+                    .startDate(s.getStartDate())
+                    .departureTime(s.getDepartureTime() != null ? s.getDepartureTime().toString() : null)
+                    .affectedBookingCount((int) bookingCount)
+                    .currentStatus(s.getStatus() != null ? s.getStatus().name() : "UNKNOWN")
+                    .build();
+        }).collect(java.util.stream.Collectors.toList());
     }
 
     @Override
     @Transactional
-    public void resumeSchedule(Long scheduleId) {
-        TourSchedule schedule = tourScheduleRepository.findById(scheduleId)
-                .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
+    public void suspendTourByDateRange(Long tourId, SuspendTourRequest request) {
+        com.tourbooking.booking.backend.model.entity.Tour tour = tourRepository.findById(tourId)
+                .orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
 
-        if (schedule.getStatus() != TourStatus.SUSPENDED) {
-            throw new IllegalStateException("Lịch trình này không đang ở trạng thái tạm ngưng.");
+        // Find all schedules in range
+        List<TourSchedule> inRange = tourScheduleRepository.findByTourIdAndDateRange(
+                tourId, request.getSuspendedFrom(), request.getSuspendedUntil());
+
+        if (inRange.isEmpty()) {
+            throw new BadRequestException("Không có lịch trình nào trong khoảng ngày đã chọn.");
         }
 
-        schedule.setStatus(TourStatus.OPEN);
-        schedule.setSuspensionReason(null);
-        schedule.setSuspensionReasonType(null);
-        schedule.setSuspendedFrom(null);
-        schedule.setSuspendedUntil(null);
-        tourScheduleRepository.save(schedule);
+        // Filter to only those included by admin (deselected ones are excluded)
+        List<TourSchedule> toSuspend;
+        if (request.getIncludedScheduleIds() != null && !request.getIncludedScheduleIds().isEmpty()) {
+            java.util.Set<Long> included = new java.util.HashSet<>(request.getIncludedScheduleIds());
+            toSuspend = inRange.stream()
+                    .filter(s -> included.contains(s.getId()))
+                    .collect(java.util.stream.Collectors.toList());
+        } else {
+            toSuspend = inRange;
+        }
 
-        log.info("[RESUME] Schedule #{} resumed to OPEN.", scheduleId);
+        int totalAffectedBookings = 0;
+        for (TourSchedule schedule : toSuspend) {
+            if (schedule.getStatus() == TourStatus.CANCELLED
+                    || schedule.getStatus() == TourStatus.CANCELLED_BY_OPERATOR
+                    || schedule.getStatus() == TourStatus.COMPLETED) {
+                continue; // Skip irreversible statuses
+            }
+
+            schedule.setStatus(TourStatus.SUSPENDED);
+            schedule.setSuspensionReasonType(request.getSuspensionReasonType());
+            schedule.setSuspensionReason(request.getSuspensionReason());
+            schedule.setSuspendedFrom(request.getSuspendedFrom());
+            schedule.setSuspendedUntil(request.getSuspendedUntil());
+            
+            // Notify Guide if assigned
+            if (schedule.getGuide() != null) {
+                mailService.sendTourSuspendedEmailToGuide(
+                        schedule.getGuide().getEmail(),
+                        schedule.getGuide().getFullName(),
+                        tour.getTourName(),
+                        request.getSuspensionReason(),
+                        schedule.getStartDate()
+                );
+            }
+
+            // Mark active bookings PENDING_CUSTOMER_ACTION
+            List<com.tourbooking.booking.backend.model.entity.Booking> affected = bookingRepository
+                    .findByScheduleIdAndStatusIn(
+                            schedule.getId(),
+                            List.of(BookingStatus.CONFIRMED, BookingStatus.PAID,
+                                    BookingStatus.PENDING, BookingStatus.PENDING_CASH));
+            for (com.tourbooking.booking.backend.model.entity.Booking booking : affected) {
+                booking.setSuspensionActionStatus(
+                        com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.PENDING_CUSTOMER_ACTION);
+            }
+            bookingRepository.saveAll(affected);
+            totalAffectedBookings += affected.size();
+        }
+
+        tourScheduleRepository.saveAll(toSuspend);
+        log.info("[SUSPEND-RANGE] Tour #{} – suspended {} schedules ({}->{}) | Reason: {} | AffectedBookings: {}",
+                tourId, toSuspend.size(), request.getSuspendedFrom(), request.getSuspendedUntil(),
+                request.getSuspensionReason(), totalAffectedBookings);
+    }
+
+    @Override
+    @Transactional
+    public void resumeTour(Long tourId) {
+        tourRepository.findById(tourId).orElseThrow(() -> new AppException(ErrorCode.TOUR_NOT_FOUND));
+
+        List<TourSchedule> suspended = tourScheduleRepository.findSuspendedByTourId(tourId);
+        if (suspended.isEmpty()) {
+            throw new IllegalStateException("Tour này không có lịch trình nào đang bị tạm ngưng.");
+        }
+
+        for (TourSchedule schedule : suspended) {
+            schedule.setStatus(TourStatus.OPEN);
+            schedule.setSuspensionReason(null);
+            schedule.setSuspensionReasonType(null);
+            schedule.setSuspendedFrom(null);
+            schedule.setSuspendedUntil(null);
+        }
+        tourScheduleRepository.saveAll(suspended);
+
+        log.info("[RESUME-TOUR] Tour #{} – resumed {} suspended schedules.", tourId, suspended.size());
     }
 
     @Override

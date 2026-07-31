@@ -2,6 +2,8 @@ package com.tourbooking.booking.backend.service;
 
 import com.tourbooking.booking.backend.model.entity.TourSchedule;
 import com.tourbooking.booking.backend.model.dto.request.TourScheduleBulkRequest;
+import com.tourbooking.booking.backend.model.dto.request.SuspendTourRequest;
+import com.tourbooking.booking.backend.model.dto.response.SuspendPreviewResponse;
 import java.util.List;
 
 public interface TourScheduleService {
@@ -22,11 +24,27 @@ public interface TourScheduleService {
      */
     void releaseGuideIfNoActiveBookings(Long scheduleId);
 
-    /** Suspend a schedule: sets status SUSPENDED, stores reason/type/dates, marks affected bookings PENDING_CUSTOMER_ACTION. */
-    void suspendSchedule(com.tourbooking.booking.backend.model.dto.request.SuspendScheduleRequest request);
+    // ── New date-range suspension API ────────────────────────────────────────
 
-    /** Resume a suspended schedule: sets status back to OPEN, clears suspension fields. */
-    void resumeSchedule(Long scheduleId);
+    /**
+     * Preview schedules falling in [from, until] for the given tour.
+     * Returns a lightweight list so admin can deselect specific ones before submitting.
+     */
+    List<SuspendPreviewResponse> previewSuspension(Long tourId, java.time.LocalDate from, java.time.LocalDate until);
+
+    /**
+     * Suspend a tour by date range:
+     * - Suspends only schedules whose id is in request.includedScheduleIds (all if null/empty means all in range).
+     * - Sets SUSPENDED + stores reason/type/dates on each affected schedule.
+     * - Marks active bookings PENDING_CUSTOMER_ACTION.
+     */
+    void suspendTourByDateRange(Long tourId, SuspendTourRequest request);
+
+    /**
+     * Resume ALL suspended schedules of a tour (admin "Mở lại"):
+     * - Sets status OPEN, clears suspension fields.
+     */
+    void resumeTour(Long tourId);
 
     /** Return active bookings for a schedule (for preview before suspend). */
     java.util.List<com.tourbooking.booking.backend.model.entity.Booking> getAffectedBookings(Long scheduleId);

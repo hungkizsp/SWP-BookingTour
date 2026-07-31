@@ -47,6 +47,7 @@ public class GuideServiceImpl implements GuideService {
         List<TourSchedule> schedules = tourScheduleRepository.findByGuide_Id(guideId);
         log.info("Found {} schedules for guide ID: {}", schedules.size(), guideId);
         return schedules.stream()
+                .filter(s -> s.getStatus() != TourStatus.SUSPENDED)
                 .filter(s -> bookingRepository.countByScheduleIdAndStatusIn(s.getId(), ActiveBookingStatuses.STATUSES) > 0)
                 .map(s -> mapToResponse(s, false))
                 .collect(Collectors.toList());
@@ -61,6 +62,10 @@ public class GuideServiceImpl implements GuideService {
         if (!schedule.getGuide().getId().equals(guideId)) {
             throw new RuntimeException("You are not assigned to this tour");
         }
+        
+        if (schedule.getStatus() == TourStatus.SUSPENDED) {
+            throw new RuntimeException("Lịch trình này đang tạm ngưng, không thể thao tác");
+        }
 
         return mapToResponse(schedule, true);
     }
@@ -73,6 +78,10 @@ public class GuideServiceImpl implements GuideService {
 
         if (!schedule.getGuide().getId().equals(guideId)) {
             throw new RuntimeException("You are not assigned to this tour");
+        }
+        
+        if (schedule.getStatus() == TourStatus.SUSPENDED) {
+            throw new RuntimeException("Lịch trình này đang tạm ngưng, không thể thao tác");
         }
 
         schedule.setCurrentProgress(progress);
@@ -110,6 +119,10 @@ public class GuideServiceImpl implements GuideService {
 
         if (!schedule.getGuide().getId().equals(guideId)) {
             throw new RuntimeException("You are not assigned to this tour");
+        }
+        
+        if (schedule.getStatus() == TourStatus.SUSPENDED) {
+            throw new RuntimeException("Lịch trình này đang tạm ngưng, không thể thao tác");
         }
 
         if (photos == null || photos.isEmpty()) return;
@@ -150,6 +163,10 @@ public class GuideServiceImpl implements GuideService {
 
         if (!schedule.getGuide().getId().equals(guideId)) {
             throw new RuntimeException("You are not assigned to this tour");
+        }
+        
+        if (schedule.getStatus() == TourStatus.SUSPENDED) {
+            throw new RuntimeException("Lịch trình này đang tạm ngưng, không thể thao tác");
         }
 
         schedule.setReportContent(reportContent);

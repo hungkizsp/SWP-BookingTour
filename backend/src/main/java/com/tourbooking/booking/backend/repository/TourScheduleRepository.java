@@ -160,4 +160,32 @@ public interface TourScheduleRepository extends JpaRepository<TourSchedule, Long
               "LEFT JOIN FETCH s.tour " +
               "LEFT JOIN FETCH s.guide")
        List<TourSchedule> findAllWithDetails();
+
+       // ── Suspension by date range ──────────────────────────────────────────
+
+       /** Find all schedules of a tour whose startDate falls in [from, until]. */
+       @Query("SELECT s FROM TourSchedule s WHERE s.tour.id = :tourId " +
+              "AND s.startDate >= :from AND s.startDate <= :until " +
+              "ORDER BY s.startDate ASC")
+       List<TourSchedule> findByTourIdAndDateRange(
+               @Param("tourId") Long tourId,
+               @Param("from") LocalDate from,
+               @Param("until") LocalDate until);
+
+       /** Find all SUSPENDED schedules of a tour. */
+       @Query("SELECT s FROM TourSchedule s WHERE s.tour.id = :tourId " +
+              "AND s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.SUSPENDED")
+       List<TourSchedule> findSuspendedByTourId(@Param("tourId") Long tourId);
+
+       /**
+        * Find any SUSPENDED schedule for the given tour with an active suspension window
+        * that covers the given date. Used when creating new schedules to auto-suspend.
+        */
+       @Query("SELECT s FROM TourSchedule s WHERE s.tour.id = :tourId " +
+              "AND s.status = com.tourbooking.booking.backend.model.entity.enums.TourStatus.SUSPENDED " +
+              "AND s.suspendedFrom IS NOT NULL AND s.suspendedUntil IS NOT NULL " +
+              "AND :date >= s.suspendedFrom AND :date <= s.suspendedUntil")
+       List<TourSchedule> findActiveSuspensionCoveringDate(
+               @Param("tourId") Long tourId,
+               @Param("date") LocalDate date);
 }

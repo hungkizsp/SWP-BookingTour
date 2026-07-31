@@ -825,10 +825,13 @@
       return { rate: 0, label: 'Không hoàn tiền vì hủy trong hoặc sau ngày khởi hành' };
     }
 
-    function openCancelModal(bookingId) {
+    function openCancelModal(bookingId, isSuspension = false) {
       currentBooking = allBookings.find(b => Number(b.id) === Number(bookingId)) || null;
       if (!currentBooking) return;
       $('cancelCode').innerText = '#' + currentBooking.id;
+
+      // Keep a flag on the modal to know if we're submitting a suspension refund
+      $('cancelModal').dataset.isSuspension = isSuspension ? "true" : "false";
 
       const status = String(currentBooking.status || '').toUpperCase();
       const isPaid = (status === 'CONFIRMED' || status === 'SUCCESS');
@@ -843,6 +846,13 @@
           infoEl.style.background = '#f0fdf4';
           infoEl.style.borderColor = '#86efac';
           infoEl.style.color = '#166534';
+        } else if (isSuspension) {
+          const refundAmt = Math.round(currentBooking.totalPrice || 0);
+          infoEl.innerHTML = `✅ <b>Hoàn 100% tiền do tour tạm ngưng bởi admin/công ty. Đây không phải lỗi từ phía quý khách.</b><br>
+            Số tiền sẽ được hoàn: <b style="color:#0f766e; font-size:1rem;">${refundAmt.toLocaleString('vi-VN')} ₫</b>`;
+          infoEl.style.background = '#f0fdf4';
+          infoEl.style.borderColor = '#86efac';
+          infoEl.style.color = '#0369a1';
         } else {
           const startDateRaw = currentBooking.departureDate
             || currentBooking.startDate
@@ -1035,6 +1045,7 @@
       const reason = $('cancelReason').value.trim();
       const status = String(currentBooking.status || '').toUpperCase();
       const isPaid = (status === 'CONFIRMED' || status === 'SUCCESS');
+      const isSuspension = $('cancelModal').dataset.isSuspension === "true";
 
       if (!reason) {
         alert("Vui lòng nhập lý do hủy đặt tour!");
@@ -1057,7 +1068,12 @@
           // Nếu đã thanh toán -> Gửi yêu cầu hoàn tiền (Service sẽ đổi status sang REFUND_REQUESTED)
           await TB.apiFetch(`/api/v1/bookings/${encodeURIComponent(currentBooking.id)}/refund`, {
             method: 'POST',
-            body: JSON.stringify({ bookingId: currentBooking.id, reason: reason, refundInfo: refundInfoStr })
+            body: JSON.stringify({ 
+                bookingId: currentBooking.id, 
+                reason: reason, 
+                refundInfo: refundInfoStr,
+                isOperatorInitiated: isSuspension
+            })
           });
           alert("Đã gửi yêu cầu hoàn tiền thành công. Admin sẽ kiểm tra và xác nhận sớm nhất.");
         } else {
@@ -1207,7 +1223,7 @@
             if (b) openRescheduleModal(b.id, b.tourName, b.tourStartDate);
         } else if (refundId && typeof openCancelModal === 'function') {
             const b = allBookings.find(x => Number(x.id) === Number(refundId));
-            if (b) openCancelModal(b.id);
+            if (b) openCancelModal(b.id, urlParams.get('reason') === 'suspension');
         }
     })();
   </script>

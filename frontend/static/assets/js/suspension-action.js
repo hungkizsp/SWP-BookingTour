@@ -149,13 +149,15 @@ function showSuspensionActionModal(action) {
   document.getElementById('wa-refund').onclick = () => {
     if (window.location.pathname.includes('history.html')) {
       closeSuspensionModal();
-      if (typeof openRefundModal === 'function') {
-        openRefundModal(action.bookingId);
+      if (typeof openCancelModal === 'function') {
+        // history.html uses openCancelModal, so we should append reason=suspension in url if we just call it directly?
+        // Let's reload to be safe so urlParams pick it up, or just update the url.
+        window.location.href = window.location.pathname + '?refund=' + action.bookingId + '&reason=suspension';
       } else {
-        window.location.href = window.location.pathname + '?refund=' + action.bookingId;
+        window.location.href = window.location.pathname + '?refund=' + action.bookingId + '&reason=suspension';
       }
     } else {
-      window.location.href = '/user/history.html?refund=' + action.bookingId;
+      window.location.href = '/user/history.html?refund=' + action.bookingId + '&reason=suspension';
     }
   };
 

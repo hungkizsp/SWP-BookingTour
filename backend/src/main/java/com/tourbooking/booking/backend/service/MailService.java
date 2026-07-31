@@ -232,5 +232,26 @@ public class MailService {
             log.error("Failed to send cancellation email to {}: {}", toEmail, e.getMessage(), e);
         }
     }
+    public void sendTourSuspendedEmailToGuide(String toEmail, String guideName, String tourName, String reason, java.time.LocalDate startDate) {
+        try {
+            jakarta.mail.internet.MimeMessage mimeMessage = mailSender.createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper helper = new org.springframework.mail.javamail.MimeMessageHelper(mimeMessage, "utf-8");
+            
+            helper.setFrom(resolveFromAddress());
+            helper.setTo(toEmail);
+            helper.setSubject("[TourBooking] Lịch trình tour " + tourName + " tạm ngưng");
+            
+            String htmlMsg = "<h3>Xin chào " + guideName + ",</h3>" +
+                    "<p>Lịch trình tour <strong>" + tourName + "</strong> (khởi hành: " + startDate + ") mà bạn được phân công đã bị <strong>tạm ngưng</strong> bởi ban quản lý.</p>" +
+                    "<p><strong>Lý do:</strong> " + reason + "</p>" +
+                    "<p>Lịch trình này sẽ không còn hiển thị trong danh sách tour được phân công của bạn cho đến khi có thông báo mới.</p>" +
+                    "<br><p>Trân trọng,<br>Đội ngũ TourBooking</p>";
+                    
+            helper.setText(htmlMsg, true);
+            mailSender.send(mimeMessage);
+            log.info("Suspension email sent to guide {}", toEmail);
+        } catch (Exception e) {
+            log.error("Failed to send suspension email to guide {}: {}", toEmail, e.getMessage(), e);
+        }
+    }
 }
-

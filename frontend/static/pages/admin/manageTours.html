@@ -63,46 +63,68 @@
         </main>
     </div>
 
-    <!-- Suspend Schedule Modal -->
+    <!-- Suspend Tour Modal (Date-range, 2-step) -->
     <div id="suspendModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <h3>Tạm ngưng Lịch trình - <span id="suspendTourNameDisplay"></span></h3>
+        <div class="modal-content" style="max-width: 680px;">
+            <h3>🌧️ Tạm ngưng Tour - <span id="suspendTourNameDisplay"></span></h3>
             <input type="hidden" id="suspendTourId">
-            
-            <div class="form-group">
-                <label>Chọn lịch trình muốn tạm ngưng *</label>
-                <select id="suspendScheduleSelect" class="form-control">
-                    <option value="">-- Đang tải lịch trình... --</option>
-                </select>
+
+            <!-- STEP 1: Date range & reason input -->
+            <div id="suspendStep1">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                    <div class="form-group">
+                        <label>Ngày bắt đầu tạm ngưng *</label>
+                        <input type="date" id="suspendFrom" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Ngày dự kiến mở lại *</label>
+                        <input type="date" id="suspendUntil" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Loại lý do *</label>
+                    <select id="suspendReasonType" class="form-control">
+                        <option value="WEATHER">🌧️ Thời tiết (Bão, Lũ lụt, ...)</option>
+                        <option value="POLICY">📋 Chính sách công ty</option>
+                        <option value="LOCATION_UNAVAILABLE">📍 Địa điểm không khả dụng</option>
+                        <option value="SAFETY">⚠️ An toàn (Bạo động, Dịch bệnh, ...)</option>
+                        <option value="OTHER">ℹ️ Khác</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Chi tiết lý do *</label>
+                    <textarea id="suspendReasonText" class="form-control" rows="2" placeholder="Ví dụ: Bão số 3 đổ bộ dự kiến đến ngày 01/08..."></textarea>
+                </div>
+
+                <div class="modal-buttons">
+                    <button onclick="closeSuspendModal()" class="btn btn-secondary">Hủy</button>
+                    <button onclick="loadSuspendPreview()" class="btn btn-primary">Xem trước lịch trình →</button>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label>Lý do tạm ngưng (Phân loại) *</label>
-                <select id="suspendReasonType" class="form-control">
-                    <option value="WEATHER">🌧️ Thời tiết (Bão, Lũ lụt, ...)</option>
-                    <option value="POLICY">📋 Chính sách công ty</option>
-                    <option value="LOCATION_UNAVAILABLE">📍 Địa điểm không khả dụng (Đóng cửa, ...)</option>
-                    <option value="SAFETY">⚠️ An toàn (Bạo động, Dịch bệnh, ...)</option>
-                    <option value="OTHER">ℹ️ Khác</option>
-                </select>
-            </div>
+            <!-- STEP 2: Preview list with checkboxes -->
+            <div id="suspendStep2" style="display:none;">
+                <div style="background:#fff8e1; border:1px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:1rem; font-size:0.9rem;">
+                    <strong>⚠️ Tick bỏ</strong> những lịch trình bạn muốn <strong>LOẠI TRỪ</strong> (không bị tạm ngưng). Tất cả còn lại sẽ bị tạm ngưng.
+                </div>
+                <div id="suspendPreviewSummary" style="margin-bottom:0.5rem; font-size:0.85rem; color:#6b7280;"></div>
+                <div id="suspendPreviewList" style="max-height:300px; overflow-y:auto; border:1px solid var(--border); border-radius:8px; padding:8px;"></div>
 
-            <div class="form-group">
-                <label>Chi tiết lý do</label>
-                <textarea id="suspendReasonText" class="form-control" rows="2" placeholder="Ví dụ: Bão số 3 đổ bộ..."></textarea>
-            </div>
+                <div style="margin-top:1rem; display:flex; gap:0.5rem;">
+                    <button onclick="selectAllPreview(true)" class="btn btn-secondary" style="font-size:0.8rem; padding:4px 10px;">Chọn tất cả</button>
+                    <button onclick="selectAllPreview(false)" class="btn btn-secondary" style="font-size:0.8rem; padding:4px 10px;">Bỏ chọn tất cả</button>
+                </div>
 
-            <div class="form-group">
-                <label>Ngày dự kiến mở lại (Tùy chọn)</label>
-                <input type="date" id="suspendUntilDate" class="form-control">
-            </div>
-
-            <div class="modal-buttons">
-                <button onclick="closeSuspendModal()" class="btn btn-secondary">Hủy</button>
-                <button onclick="submitSuspend()" class="btn btn-danger">Xác nhận Tạm ngưng</button>
+                <div class="modal-buttons" style="margin-top:1rem;">
+                    <button onclick="backToSuspendStep1()" class="btn btn-secondary">← Quay lại</button>
+                    <button onclick="submitSuspend()" class="btn btn-danger" id="suspendSubmitBtn">Xác nhận Tạm ngưng</button>
+                </div>
             </div>
         </div>
     </div>
+
 
     <!-- Modal for Create/Edit -->
     <div id="tourModal" class="modal">
@@ -1328,132 +1350,180 @@
             }
         }
 
-        // SUSPEND / RESUME LOGIC
-        async function showSuspendModal(tourId, tourName) {
+        // ── SUSPEND / RESUME LOGIC (date-range model) ────────────────────────
+
+        // State for the 2-step suspend modal
+        let _suspendPreviewData = []; // raw preview from API
+
+        function showSuspendModal(tourId, tourName) {
             document.getElementById('suspendTourId').value = tourId;
             document.getElementById('suspendTourNameDisplay').innerText = tourName;
             document.getElementById('suspendReasonType').value = 'WEATHER';
             document.getElementById('suspendReasonText').value = '';
-            document.getElementById('suspendUntilDate').value = '';
 
-            const select = document.getElementById('suspendScheduleSelect');
-            select.innerHTML = '<option value="">-- Đang tải lịch trình... --</option>';
+            // Default: from = today, until = today + 7 days
+            const today = new Date();
+            const until = new Date(today);
+            until.setDate(until.getDate() + 7);
+            document.getElementById('suspendFrom').value = today.toISOString().substring(0, 10);
+            document.getElementById('suspendUntil').value = until.toISOString().substring(0, 10);
 
+            // Reset to step 1
+            document.getElementById('suspendStep1').style.display = '';
+            document.getElementById('suspendStep2').style.display = 'none';
             document.getElementById('suspendModal').style.display = 'flex';
-
-            try {
-                // Fetch the tour details to get schedules
-                const response = await TB.apiFetch(`${PUBLIC_API}/${tourId}`);
-                const schedules = response.data.schedules || [];
-                // Filter open/active schedules
-                const activeSchedules = schedules.filter(s => 
-                    s.status === 'OPEN' || s.status === 'SOLD_OUT' || !s.status
-                );
-
-                if (activeSchedules.length === 0) {
-                    select.innerHTML = '<option value="">-- Tour này không có lịch trình nào khả dụng để tạm ngưng --</option>';
-                    return;
-                }
-
-                let opts = '<option value="">-- Vui lòng chọn lịch trình --</option>';
-                activeSchedules.forEach(s => {
-                    const time = s.departureTime ? s.departureTime.substring(0,5) : '';
-                    opts += `<option value="${s.scheduleId}">Ngày ${s.startDate} ${time}</option>`;
-                });
-                select.innerHTML = opts;
-            } catch (err) {
-                console.error("Error fetching schedules for suspend", err);
-                select.innerHTML = '<option value="">Lỗi tải lịch trình</option>';
-            }
         }
 
         function closeSuspendModal() {
             document.getElementById('suspendModal').style.display = 'none';
         }
 
-        async function submitSuspend() {
-            const scheduleId = document.getElementById('suspendScheduleSelect').value;
-            if (!scheduleId) {
-                showToast('Vui lòng chọn một lịch trình!', 'error');
+        function backToSuspendStep1() {
+            document.getElementById('suspendStep1').style.display = '';
+            document.getElementById('suspendStep2').style.display = 'none';
+        }
+
+        function selectAllPreview(checked) {
+            document.querySelectorAll('.suspend-schedule-cb').forEach(cb => cb.checked = checked);
+        }
+
+        async function loadSuspendPreview() {
+            const tourId = document.getElementById('suspendTourId').value;
+            const from   = document.getElementById('suspendFrom').value;
+            const until  = document.getElementById('suspendUntil').value;
+            const reason = document.getElementById('suspendReasonText').value.trim();
+
+            if (!from || !until) {
+                showToast('Vui lòng chọn ngày bắt đầu và ngày mở lại!', 'error');
                 return;
             }
-            const reasonType = document.getElementById('suspendReasonType').value;
-            const reason = document.getElementById('suspendReasonText').value.trim();
-            const until = document.getElementById('suspendUntilDate').value;
-
+            if (from > until) {
+                showToast('Ngày bắt đầu không được lớn hơn ngày mở lại!', 'error');
+                return;
+            }
             if (!reason) {
                 showToast('Vui lòng nhập chi tiết lý do!', 'error');
                 return;
             }
-            
-            // Preview bookings before submitting
-            try {
-                const res = await TB.apiFetch(`/api/v1/admin/tour-schedules/${scheduleId}/affected-bookings`);
-                const bookings = res.data || [];
-                let msg = `Bạn sắp tạm ngưng lịch trình này với lý do: ${reasonType}. \n`;
-                if (bookings.length > 0) {
-                    msg += `CẢNH BÁO: Có ${bookings.length} booking sẽ bị ảnh hưởng và chuyển sang trạng thái chờ xử lý.\n`;
-                } else {
-                    msg += `Hiện chưa có booking nào cho lịch trình này.\n`;
-                }
-                msg += `Bạn có chắc chắn muốn Tạm ngưng không?`;
 
-                if (!confirm(msg)) {
-                    return; // user cancelled
-                }
-            } catch (err) {
-                console.error("Error previewing bookings", err);
-                if (!confirm("Không thể tải trước số lượng booking bị ảnh hưởng. Bạn vẫn muốn tiếp tục tạm ngưng?")) {
+            const previewList = document.getElementById('suspendPreviewList');
+            const summary     = document.getElementById('suspendPreviewSummary');
+            previewList.innerHTML = '<p style="text-align:center; color:#6b7280; padding:1rem;">Đang tải...</p>';
+            document.getElementById('suspendStep1').style.display = 'none';
+            document.getElementById('suspendStep2').style.display = '';
+
+            try {
+                const res = await TB.apiFetch(
+                    `/api/v1/admin/tours/${tourId}/suspend/preview?from=${from}&until=${until}`,
+                    { method: 'POST' }
+                );
+                _suspendPreviewData = res.data || [];
+
+                if (_suspendPreviewData.length === 0) {
+                    previewList.innerHTML = `
+                        <p style="text-align:center; color:#6b7280; padding:1rem;">
+                            Không tìm thấy lịch trình nào trong khoảng từ <strong>${from}</strong> đến <strong>${until}</strong>.
+                        </p>`;
+                    summary.textContent = '';
+                    document.getElementById('suspendSubmitBtn').disabled = true;
                     return;
                 }
+
+                document.getElementById('suspendSubmitBtn').disabled = false;
+
+                const totalBookings = _suspendPreviewData.reduce((s, r) => s + r.affectedBookingCount, 0);
+                summary.innerHTML = `Tìm thấy <strong>${_suspendPreviewData.length}</strong> lịch trình &nbsp;|&nbsp; ` +
+                    `Tổng booking bị ảnh hưởng: <strong style="color:#dc2626">${totalBookings}</strong>`;
+
+                previewList.innerHTML = _suspendPreviewData.map(s => {
+                    const time = s.departureTime ? s.departureTime.substring(0, 5) : '';
+                    const bookingBadge = s.affectedBookingCount > 0
+                        ? `<span style="color:#dc2626; font-weight:600; font-size:0.8rem; margin-left:6px;">⚠️ ${s.affectedBookingCount} booking</span>`
+                        : '<span style="color:#16a34a; font-size:0.8rem; margin-left:6px;">Chưa có booking</span>';
+                    const statusBadge = s.currentStatus === 'SUSPENDED'
+                        ? '<span style="background:#fef3c7; color:#b45309; font-size:0.75rem; padding:1px 6px; border-radius:4px; margin-left:4px;">Đã ngưng</span>'
+                        : '';
+                    return `
+                        <label style="display:flex; align-items:center; gap:10px; padding:8px 6px; border-bottom:1px solid #f3f4f6; cursor:pointer;">
+                            <input type="checkbox" class="suspend-schedule-cb" value="${s.scheduleId}" checked
+                                style="width:16px; height:16px; flex-shrink:0;">
+                            <span>
+                                <strong>${s.startDate}</strong> ${time}
+                                ${statusBadge}
+                                ${bookingBadge}
+                            </span>
+                        </label>`;
+                }).join('');
+
+            } catch (err) {
+                console.error('Preview error', err);
+                previewList.innerHTML = `<p style="color:#dc2626; text-align:center; padding:1rem;">Lỗi tải dữ liệu preview: ${err.message}</p>`;
+            }
+        }
+
+        async function submitSuspend() {
+            const tourId      = document.getElementById('suspendTourId').value;
+            const from        = document.getElementById('suspendFrom').value;
+            const until       = document.getElementById('suspendUntil').value;
+            const reasonType  = document.getElementById('suspendReasonType').value;
+            const reason      = document.getElementById('suspendReasonText').value.trim();
+
+            // Collect checked schedule IDs
+            const checked = [...document.querySelectorAll('.suspend-schedule-cb:checked')]
+                .map(cb => Number(cb.value));
+
+            if (checked.length === 0) {
+                showToast('Bạn chưa chọn lịch trình nào để tạm ngưng!', 'error');
+                return;
             }
 
+            const totalBookings = _suspendPreviewData
+                .filter(s => checked.includes(s.scheduleId))
+                .reduce((sum, s) => sum + s.affectedBookingCount, 0);
+
+            const confirmMsg = totalBookings > 0
+                ? `Sẽ tạm ngưng ${checked.length} lịch trình.\n⚠️ ${totalBookings} booking sẽ chuyển sang "Chờ xử lý".\nXác nhận?`
+                : `Sẽ tạm ngưng ${checked.length} lịch trình (không có booking nào bị ảnh hưởng). Xác nhận?`;
+            if (!confirm(confirmMsg)) return;
+
+            const btn = document.getElementById('suspendSubmitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Đang xử lý...';
+
             try {
-                await TB.apiFetch(`/api/v1/admin/tour-schedules/${scheduleId}/suspend`, {
+                await TB.apiFetch(`/api/v1/admin/tours/${tourId}/suspend`, {
                     method: 'POST',
                     body: JSON.stringify({
                         suspensionReasonType: reasonType,
                         suspensionReason: reason,
-                        suspendedUntil: until || null
+                        suspendedFrom: from,
+                        suspendedUntil: until,
+                        includedScheduleIds: checked
                     })
                 });
-                showToast('Tạm ngưng lịch trình thành công!', 'success');
+                showToast(`Tạm ngưng thành công ${checked.length} lịch trình!`, 'success');
                 closeSuspendModal();
                 loadTours(currentPage);
             } catch (err) {
-                console.error("Suspend error", err);
+                console.error('Suspend error', err);
                 showToast(err.message || 'Lỗi khi tạm ngưng', 'error');
+                btn.disabled = false;
+                btn.textContent = 'Xác nhận Tạm ngưng';
             }
         }
 
         async function showResumeModal(tourId) {
-            // Because the frontend only knows that SOME schedule is suspended via the tour badge,
-            // we will fetch the tour details, find the suspended schedule(s), and resume them.
-            if (!confirm("Bạn xác nhận điều kiện đã ổn định trở lại và muốn mở lại tour này?")) return;
+            if (!confirm('Bạn xác nhận điều kiện đã ổn định trở lại và muốn mở lại TẤT CẢ lịch trình đang tạm ngưng của tour này?')) return;
             try {
-                const response = await TB.apiFetch(`${PUBLIC_API}/${tourId}`);
-                const schedules = response.data.schedules || [];
-                const suspendedSchedules = schedules.filter(s => s.status === 'SUSPENDED');
-                
-                if (suspendedSchedules.length === 0) {
-                    showToast('Không tìm thấy lịch trình bị tạm ngưng.', 'error');
-                    loadTours(currentPage);
-                    return;
-                }
-
-                // If there are multiple, loop and resume all
-                for (const s of suspendedSchedules) {
-                    await TB.apiFetch(`/api/v1/admin/tour-schedules/${s.scheduleId}/resume`, {
-                        method: 'POST'
-                    });
-                }
-                showToast('Mở lại lịch trình thành công!', 'success');
+                await TB.apiFetch(`/api/v1/admin/tours/${tourId}/resume`, { method: 'POST' });
+                showToast('Mở lại tour thành công!', 'success');
                 loadTours(currentPage);
             } catch (err) {
-                console.error("Resume error", err);
+                console.error('Resume error', err);
                 showToast(err.message || 'Lỗi khi mở lại', 'error');
             }
         }
+
 
         function formatPrice(price) {
             if (!price && price !== 0) return '-';

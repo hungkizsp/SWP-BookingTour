@@ -96,22 +96,35 @@ public class AdminController {
                 .build();
     }
 
-    @PostMapping("/tour-schedules/{scheduleId}/suspend")
-    public ApiResponse<Void> suspendSchedule(@PathVariable Long scheduleId, @RequestBody com.tourbooking.booking.backend.model.dto.request.SuspendScheduleRequest request) {
-        request.setScheduleId(scheduleId);
-        tourScheduleService.suspendSchedule(request);
-        return ApiResponse.<Void>builder()
+    @PostMapping("/tours/{tourId}/suspend/preview")
+    public ApiResponse<List<com.tourbooking.booking.backend.model.dto.response.SuspendPreviewResponse>> previewSuspension(
+            @PathVariable Long tourId,
+            @RequestParam java.time.LocalDate from,
+            @RequestParam java.time.LocalDate until) {
+        return ApiResponse.<List<com.tourbooking.booking.backend.model.dto.response.SuspendPreviewResponse>>builder()
                 .code(HttpStatus.OK.value())
-                .message("Schedule suspended successfully")
+                .message("Preview suspension")
+                .data(tourScheduleService.previewSuspension(tourId, from, until))
                 .build();
     }
 
-    @PostMapping("/tour-schedules/{scheduleId}/resume")
-    public ApiResponse<Void> resumeSchedule(@PathVariable Long scheduleId) {
-        tourScheduleService.resumeSchedule(scheduleId);
+    @PostMapping("/tours/{tourId}/suspend")
+    public ApiResponse<Void> suspendTour(
+            @PathVariable Long tourId,
+            @RequestBody com.tourbooking.booking.backend.model.dto.request.SuspendTourRequest request) {
+        tourScheduleService.suspendTourByDateRange(tourId, request);
         return ApiResponse.<Void>builder()
                 .code(HttpStatus.OK.value())
-                .message("Schedule resumed successfully")
+                .message("Tour suspended successfully")
+                .build();
+    }
+
+    @PostMapping("/tours/{tourId}/resume")
+    public ApiResponse<Void> resumeTour(@PathVariable Long tourId) {
+        tourScheduleService.resumeTour(tourId);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Tour resumed successfully")
                 .build();
     }
 

@@ -9,4 +9,6 @@ public class RefundRequest {
     private String accountNumber;
     private String accountHolderName;
     private String reason;
+    private String refundInfo; // sometimes passed in history.html
+    private boolean isOperatorInitiated; // true if customer is refunding due to tour suspension
 }
