@@ -615,6 +615,7 @@
       if (s === 'COMPLETED' || s === 'SUCCESS') return { cls: 'success', label: 'Đã hoàn thành' };
       if (s === 'CONFIRMED') return { cls: 'pending', label: 'Đã xác nhận' };
       if (s === 'IN_PROGRESS') return { cls: 'pending', label: 'Đang diễn ra' };
+      if (s === 'NO_SHOW') return { cls: 'cancelled', label: '⚠️ Vắng mặt (không hoàn tiền)' };
       return { cls: 'pending', label: 'Đang chờ' };
     }
 
@@ -786,7 +787,7 @@
       } else if (currentFilter === 'done') {
           statusQuery = '&status=COMPLETED&status=SUCCESS';
       } else if (currentFilter === 'cancelled') {
-          statusQuery = '&status=CANCELLED&status=EXPIRED&status=CANCELLED_BY_OPERATOR&status=COMPANY_CANCELED&status=REFUNDED';
+          statusQuery = '&status=CANCELLED&status=EXPIRED&status=CANCELLED_BY_OPERATOR&status=COMPANY_CANCELED&status=REFUNDED&status=NO_SHOW';
       }
 
       try {

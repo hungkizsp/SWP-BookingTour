@@ -68,7 +68,10 @@ function renderBookingsPage() {
     allBookings.forEach(b => {
         const isPendingCash = b.status === 'PENDING_CASH';
         const isPending = b.status === 'PENDING' || isPendingCash;
-        const statusClass = isPending ? 'status-pending' : (b.status === 'CONFIRMED' ? 'status-confirmed' : 'status-cancelled');
+        let statusClass = 'status-cancelled';
+        if (isPending) statusClass = 'status-pending';
+        else if (b.status === 'CONFIRMED' || b.status === 'SUCCESS' || b.status === 'PAID') statusClass = 'status-confirmed';
+        else if (b.status === 'NO_SHOW') statusClass = 'status-cancelled';
         
         let guideColumnHtml = '<td>-</td>';
         if (b.guideFullName) {

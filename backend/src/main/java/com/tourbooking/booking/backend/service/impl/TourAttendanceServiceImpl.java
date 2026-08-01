@@ -120,7 +120,16 @@ public class TourAttendanceServiceImpl implements TourAttendanceService {
             String guideName = schedule.getGuide() != null ? schedule.getGuide().getFullName() : "N/A";
             String customerName = attendance.getBooking() != null && attendance.getBooking().getUser() != null
                     ? attendance.getBooking().getUser().getFullName() : "Khách hàng";
-            String msg = String.format("⚠️ Khách hàng vắng mặt: %s | Tour: %s (Lịch #%d) | Khởi hành: %s | Hướng dẫn viên: %s",
+            
+            // Set booking status to NO_SHOW
+            if (attendance.getBooking() != null) {
+                Booking b = attendance.getBooking();
+                b.setStatus(BookingStatus.NO_SHOW);
+                bookingRepository.save(b);
+                log.info("[ATTENDANCE] Booking #{} changed to NO_SHOW because customer was marked ABSENT.", b.getId());
+            }
+
+            String msg = String.format("🚨 Khách hàng vắng mặt: %s | Tour: %s (Lịch #%d) | Khởi hành: %s | Hướng dẫn viên: %s",
                     customerName, tourName, schedule.getId(),
                     schedule.getStartDate() != null ? schedule.getStartDate().toString() : "N/A",
                     guideName);

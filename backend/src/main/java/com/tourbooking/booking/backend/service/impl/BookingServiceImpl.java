@@ -965,6 +965,11 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
 
+        if (booking.getStatus() == BookingStatus.NO_SHOW) {
+            throw new AppException(ErrorCode.INVALID_REQUEST,
+                    "Không thể yêu cầu hoàn tiền: Khách hàng vắng mặt (NO_SHOW).");
+        }
+
         if (booking.getStatus() != BookingStatus.CONFIRMED && booking.getStatus() != BookingStatus.SUCCESS) {
             throw new AppException(ErrorCode.INVALID_REQUEST,
                     "Chỉ có thể yêu cầu hoàn tiền với đơn ở trạng thái CONFIRMED hoặc SUCCESS.");
