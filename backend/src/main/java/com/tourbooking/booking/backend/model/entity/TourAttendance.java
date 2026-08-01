@@ -33,12 +33,6 @@ public class TourAttendance {
     @Column(name = "MarkedAt")
     private LocalDateTime markedAt;
 
-    @Column(name = "LateNote", length = 500)
-    private String lateNote;
-
-    @Column(name = "LateMinutes")
-    private Integer lateMinutes;
-
     @Column(name = "CreatedAt", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

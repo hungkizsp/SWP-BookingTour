@@ -6,6 +6,4 @@ import lombok.Data;
 @Data
 public class UpdateAttendanceRequest {
     private AttendanceStatus status;
-    private String lateNote;
-    private Integer lateMinutes;
 }

@@ -315,10 +315,6 @@ window.openAdminAttendanceModal = async function(scheduleId, tourName) {
                 PENDING: '<span style="background:#fef9c3;color:#92400e;border-radius:6px;padding:2px 10px;font-size:.78rem;font-weight:600;">⏳ Chưa điểm</span>',
             }[a.status] || a.status;
 
-            const lateTag = (a.status === 'PRESENT' && a.lateMinutes) 
-                ? `<br><span title="${a.lateNote || ''}" style="background:#fff7ed;color:#c2410c;border-radius:6px;padding:2px 8px;font-size:.75rem;font-weight:600;display:inline-block;margin-top:4px;cursor:help;">⏰ Trễ ${a.lateMinutes}p</span>` 
-                : '';
-
             return `<tr style="border-bottom:1px solid #f1f5f9;">
                 <td style="padding:10px;">
                     <div style="font-weight:600;color:#1e293b;">${a.customerName}</div>
@@ -328,7 +324,7 @@ window.openAdminAttendanceModal = async function(scheduleId, tourName) {
                     <div style="font-size:.82rem;color:#475569;">📱 ${a.customerPhone}</div>
                     <div style="font-size:.82rem;color:#475569;">✉ ${a.customerEmail}</div>
                 </td>
-                <td style="padding:10px;text-align:center;">${statusBadge}${lateTag}</td>
+                <td style="padding:10px;text-align:center;">${statusBadge}</td>
                 <td style="padding:10px;text-align:center;font-size:0.8rem;color:#64748b;">
                     ${a.markedAt ? new Date(a.markedAt).toLocaleString('vi-VN') : '—'}
                 </td>

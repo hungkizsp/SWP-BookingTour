@@ -1302,8 +1302,6 @@ CREATE TABLE [dbo].[TourAttendances](
     [BookingID] [bigint] NOT NULL,
     [Status] [varchar](20) NOT NULL DEFAULT 'PENDING',
     [MarkedAt] [datetime2](7) NULL,
-    [LateNote] [nvarchar](500) NULL,
-    [LateMinutes] [int] NULL,
     [CreatedAt] [datetime2](7) NOT NULL DEFAULT sysdatetime(),
     PRIMARY KEY CLUSTERED ([id] ASC),
     CONSTRAINT [FK_TourAttendances_Schedules] FOREIGN KEY([ScheduleID]) REFERENCES [dbo].[TourSchedules] ([ScheduleID]) ON DELETE CASCADE,

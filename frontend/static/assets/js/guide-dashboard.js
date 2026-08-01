@@ -20,7 +20,7 @@ async function loadAssignedTours() {
         container.innerHTML = '';
         
         if (tours.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px;">No upcoming tours assigned.</p>';
+            container.innerHTML = '<p style="text-align:center; color:#64748b; padding:20px;">Không có lịch tour nào được phân công.</p>';
             return;
         }
 
@@ -35,7 +35,8 @@ async function loadAssignedTours() {
             if (statusLabel === 'COMPLETED') badgeClass = 'badge-success';
 
             const canAttend = (statusLabel === 'OPEN' || statusLabel === 'CONFIRMED'
-                || statusLabel === 'IN_PROGRESS' || statusLabel === 'BOOKING_CLOSED' || statusLabel === 'SOLD_OUT');
+                || statusLabel === 'IN_PROGRESS' || statusLabel === 'BOOKING_CLOSED'
+                || statusLabel === 'SOLD_OUT' || statusLabel === 'PENDING_GUIDE');
 
             el.innerHTML = `
                 <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-main); margin-bottom: 8px; cursor:pointer;"
@@ -81,12 +82,12 @@ async function loadAssignedTours() {
 let _attScheduleId = null;
 let _attTourName = '';
 let _countdownInterval = null;
+let _absentThreshold = null; // departure + 15 mins
 
 function openAttendanceModal(scheduleId, tourName) {
     _attScheduleId = scheduleId;
     _attTourName = tourName;
 
-    // Create modal overlay if not exists
     let overlay = document.getElementById('attModalOverlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -121,22 +122,6 @@ function openAttendanceModal(scheduleId, tourName) {
                     <button onclick="closeAttendanceModal()" style="padding:.5rem 1.25rem;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-size:.875rem;">Đóng</button>
                 </div>
             </div>
-            <!-- Late note sub-modal -->
-            <div id="lateNoteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:10000;align-items:center;justify-content:center;">
-                <div style="background:#fff;border-radius:12px;padding:1.5rem;width:min(400px,92vw);box-shadow:0 8px 30px rgba(0,0,0,.3);">
-                    <h4 style="margin:0 0 1rem;font-size:1rem;font-weight:700;">📝 Ghi chú đến trễ</h4>
-                    <label style="display:block;font-size:.85rem;color:#475569;margin-bottom:.4rem;">Số phút trễ (ước tính)</label>
-                    <input id="lateMinutesInput" type="number" min="1" placeholder="Nhập số phút..."
-                        style="width:100%;padding:.5rem .75rem;border:1px solid #cbd5e1;border-radius:8px;font-size:.875rem;margin-bottom:.75rem;box-sizing:border-box;">
-                    <label style="display:block;font-size:.85rem;color:#475569;margin-bottom:.4rem;">Ghi chú</label>
-                    <textarea id="lateNoteInput" rows="3" placeholder="Ghi chú ngắn về trường hợp đến trễ..."
-                        style="width:100%;padding:.5rem .75rem;border:1px solid #cbd5e1;border-radius:8px;font-size:.875rem;box-sizing:border-box;resize:vertical;"></textarea>
-                    <div style="display:flex;gap:.5rem;justify-content:flex-end;margin-top:1rem;">
-                        <button onclick="closeLateNoteModal()" style="padding:.4rem 1rem;border:1px solid #cbd5e1;background:#fff;border-radius:8px;cursor:pointer;font-size:.85rem;">Bỏ qua</button>
-                        <button id="saveLateNoteBtn" style="padding:.4rem 1rem;background:#0891b2;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.85rem;">Lưu</button>
-                    </div>
-                </div>
-            </div>
         `;
         document.body.appendChild(overlay);
     }
@@ -152,13 +137,6 @@ function closeAttendanceModal() {
     if (overlay) overlay.style.display = 'none';
     if (_countdownInterval) clearInterval(_countdownInterval);
 }
-
-function closeLateNoteModal() {
-    const m = document.getElementById('lateNoteModal');
-    if (m) m.style.display = 'none';
-}
-
-let _absentThreshold = null; // departure + 15 mins
 
 async function startCountdown(scheduleId) {
     try {
@@ -185,7 +163,6 @@ async function startCountdown(scheduleId) {
                 bar.textContent = '✅ Đã qua mốc 15 phút — Có thể đánh vắng';
                 bar.style.color = '#16a34a';
                 clearInterval(_countdownInterval);
-                // Re-render to enable absent buttons
                 loadAttendances();
             } else {
                 const mins = Math.floor(diff / 60);
@@ -213,7 +190,6 @@ async function loadAttendances() {
         const pending = list.filter(a => a.status === 'PENDING').length;
         const allDone = pending === 0 && list.length > 0;
 
-        // Stats row
         stats.innerHTML = `
             <span style="background:#dcfce7;color:#15803d;border-radius:8px;padding:4px 12px;font-size:.8rem;font-weight:600;">✅ Có mặt: ${present}</span>
             <span style="background:#fee2e2;color:#dc2626;border-radius:8px;padding:4px 12px;font-size:.8rem;font-weight:600;">❌ Vắng: ${absent}</span>
@@ -232,13 +208,9 @@ async function loadAttendances() {
         body.innerHTML = list.map(a => {
             const statusBadge = {
                 PRESENT: '<span style="background:#dcfce7;color:#15803d;border-radius:6px;padding:2px 10px;font-size:.78rem;font-weight:600;">✅ Có mặt</span>',
-                ABSENT: '<span style="background:#fee2e2;color:#dc2626;border-radius:6px;padding:2px 10px;font-size:.78rem;font-weight:600;">❌ Vắng</span>',
+                ABSENT:  '<span style="background:#fee2e2;color:#dc2626;border-radius:6px;padding:2px 10px;font-size:.78rem;font-weight:600;">❌ Vắng</span>',
                 PENDING: '<span style="background:#fef9c3;color:#92400e;border-radius:6px;padding:2px 10px;font-size:.78rem;font-weight:600;">⏳ Chưa điểm</span>',
             }[a.status] || a.status;
-
-            const lateTag = (a.status === 'PRESENT' && a.lateMinutes) 
-                ? `<span title="${a.lateNote || ''}" style="background:#fff7ed;color:#c2410c;border-radius:6px;padding:2px 8px;font-size:.75rem;font-weight:600;cursor:pointer;margin-left:4px;">⏰ Trễ ${a.lateMinutes}p</span>` 
-                : '';
 
             const absentBtn = a.status !== 'ABSENT' ? `
                 <button onclick="markAttendance(${a.id}, 'ABSENT')" 
@@ -255,12 +227,6 @@ async function loadAttendances() {
                     ✅ Có mặt
                 </button>` : '';
 
-            const lateNoteBtn = a.status === 'PRESENT' ? `
-                <button onclick="openLateNoteModal(${a.id})"
-                    style="padding:4px 10px;border:1px solid #0891b2;color:#0891b2;background:#fff;border-radius:6px;cursor:pointer;font-size:.78rem;">
-                    📝 Ghi chú trễ
-                </button>` : '';
-
             return `<tr style="border-bottom:1px solid #f1f5f9;">
                 <td style="padding:10px;">
                     <div style="font-weight:600;color:#1e293b;">${a.customerName}</div>
@@ -270,10 +236,10 @@ async function loadAttendances() {
                     <div style="font-size:.82rem;color:#475569;">📱 ${a.customerPhone}</div>
                     <div style="font-size:.82rem;color:#475569;">✉ ${a.customerEmail}</div>
                 </td>
-                <td style="padding:10px;text-align:center;">${statusBadge}${lateTag}</td>
+                <td style="padding:10px;text-align:center;">${statusBadge}</td>
                 <td style="padding:10px;text-align:center;">
                     <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
-                        ${presentBtn}${absentBtn}${lateNoteBtn}
+                        ${presentBtn}${absentBtn}
                     </div>
                 </td>
             </tr>`;
@@ -294,29 +260,4 @@ async function markAttendance(attendanceId, status) {
     } catch (err) {
         alert('Lỗi: ' + (err.message || 'Không thể cập nhật điểm danh'));
     }
-}
-
-let _lateNoteTargetId = null;
-
-function openLateNoteModal(attendanceId) {
-    _lateNoteTargetId = attendanceId;
-    const m = document.getElementById('lateNoteModal');
-    if (!m) return;
-    document.getElementById('lateMinutesInput').value = '';
-    document.getElementById('lateNoteInput').value = '';
-    m.style.display = 'flex';
-    document.getElementById('saveLateNoteBtn').onclick = async () => {
-        const lateMinutes = parseInt(document.getElementById('lateMinutesInput').value) || null;
-        const lateNote = document.getElementById('lateNoteInput').value.trim() || null;
-        try {
-            await TB.apiFetch(`/api/v1/guides/assigned-tours/${_attScheduleId}/attendances/${_lateNoteTargetId}`, {
-                method: 'PUT',
-                body: JSON.stringify({ status: 'PRESENT', lateMinutes, lateNote })
-            });
-            closeLateNoteModal();
-            await loadAttendances();
-        } catch (err) {
-            alert('Lỗi: ' + (err.message || 'Không thể lưu ghi chú'));
-        }
-    };
 }

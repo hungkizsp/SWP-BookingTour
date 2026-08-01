@@ -54,7 +54,9 @@
             transform: translate(20px, -20px);
         }
 
-        .stat-card.blue::after { background: #0284c7; }
+        .stat-card.blue::after {
+            background: #0284c7;
+        }
 
         .stat-card.green::after {
             background: #10b981;
@@ -79,9 +81,13 @@
             flex-shrink: 0;
         }
 
-        .stat-icon.blue { background: #e0f2fe; }
+        .stat-icon.blue {
+            background: #e0f2fe;
+        }
 
-        .stat-icon.green { background: #ecfdf5; }
+        .stat-icon.green {
+            background: #ecfdf5;
+        }
 
         .stat-icon.purple {
             background: #f5f3ff;
@@ -216,7 +222,8 @@
 
         .panel-badge {
             font-size: 0.75rem;
-            background: #e0f2fe; color: #0369a1;
+            background: #e0f2fe;
+            color: #0369a1;
             padding: 0.25rem 0.65rem;
             border-radius: 9999px;
             font-weight: 600;
@@ -245,7 +252,9 @@
         }
 
         .quick-link:hover {
-            background: #e0f2fe; border-color: #7dd3fc; color: #0369a1;
+            background: #e0f2fe;
+            border-color: #7dd3fc;
+            color: #0369a1;
         }
 
         .quick-link .link-icon {
@@ -546,18 +555,23 @@
                         <span class="icon">&#x1F504;</span> Làm mới
                     </button>
                     <div style="width:1px; height:24px; background:var(--border);"></div>
-                    <div style="position:relative; cursor:pointer; padding:0.5rem 0.6rem; border-radius:0.5rem; border:1px solid var(--border);">
+                    <div
+                        style="position:relative; cursor:pointer; padding:0.5rem 0.6rem; border-radius:0.5rem; border:1px solid var(--border);">
                         <span style="font-size:1.1rem;">&#x1F514;</span>
-                        <span style="position:absolute; top:2px; right:2px; background:#f59e0b; width:8px; height:8px; border-radius:50%; border:2px solid var(--bg-main);"></span>
+                        <span
+                            style="position:absolute; top:2px; right:2px; background:#f59e0b; width:8px; height:8px; border-radius:50%; border:2px solid var(--bg-main);"></span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:0.75rem; padding:0.25rem 0.75rem; border-radius:0.75rem; border:1px solid var(--border); cursor:pointer;">
-                        <div style="width:32px; height:32px; border-radius:50%; background:#e0f2fe; color:#0369a1; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem;" id="userAvatar">A</div>
+                    <div
+                        style="display:flex; align-items:center; gap:0.75rem; padding:0.25rem 0.75rem; border-radius:0.75rem; border:1px solid var(--border); cursor:pointer;">
+                        <div style="width:32px; height:32px; border-radius:50%; background:#e0f2fe; color:#0369a1; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem;"
+                            id="userAvatar">A</div>
                         <div style="display:flex; flex-direction:column; line-height:1.2;">
                             <span id="userInfo" style="font-weight:700; font-size:0.85rem;">Admin</span>
                             <span style="font-size:0.7rem; color:var(--text-muted);">Administrator</span>
                         </div>
                     </div>
-                    <button id="logoutBtn" class="btn btn-secondary" style="font-size:0.8rem; padding:0.4rem 0.85rem;">Đăng xuất</button>
+                    <button id="logoutBtn" class="btn btn-secondary"
+                        style="font-size:0.8rem; padding:0.4rem 0.85rem;">Đăng xuất</button>
                 </div>
             </header>
 
@@ -976,16 +990,16 @@
                     return `
                         <div class="alert-card urgent">
                             <div style="background:#fee2e2;border-radius:6px;padding:6px 10px;margin-bottom:8px;font-size:0.78rem;font-weight:700;color:#991b1b;">
-                                ?? Kh�ch h�ng v?ng m?t (No-Show)
+                                Khách hàng vắng mặt (No-Show)
                             </div>
                             <div class="alert-header" style="margin-bottom:6px;">
                                 <span class="alert-tour-name" style="color:#b91c1c; font-size:1.1rem;">${alert.customerName}</span>
                             </div>
                             <div class="alert-meta">
-                                <div>Tour: <b>${alert.tourName}</b> (L?ch #${alert.scheduleId})</div>
-                                <div>Guide: ${alert.guideName}</div>
-                                <div>Gi? KH: ${alert.departureDateTime ? new Date(alert.departureDateTime).toLocaleString('vi-VN') : '�'}</div>
-                                <div style="color:#b91c1c; margin-top:4px; font-weight:bold;">��nh v?ng l�c: ${alert.markedAt ? new Date(alert.markedAt).toLocaleString('vi-VN') : '�'}</div>
+                                <div>Tour: <b>${alert.tourName}</b> (Lịch #${alert.scheduleId})</div>
+                                <div>Hướng dẫn viên: ${alert.guideName}</div>
+                                <div>Giờ KH: ${alert.departureDateTime ? new Date(alert.departureDateTime).toLocaleString('vi-VN') : ''}</div>
+                                <div style="color:#b91c1c; margin-top:4px; font-weight:bold;">Đánh dấu lúc: ${alert.markedAt ? new Date(alert.markedAt).toLocaleString('vi-VN') : ''}</div>
                             </div>
                         </div>
                     `;
@@ -1010,7 +1024,7 @@
                 let actionArea = `
                     <div style="margin-top:10px;">
                         <button onclick="openAssignModal(${scheduleId})" class="btn-assign-guide" style="padding:6px 12px; margin:0;">
-                            👤 Assign Guide
+                            👤 Chỉ định Hướng dẫn viên
                         </button>
                     </div>`;
 
@@ -1021,8 +1035,8 @@
                             Action Required: Tour Guide missing for ${alert.tourName} - Departure in ${mins} minutes.
                         </div>
                         <div style="display:flex; gap:8px; align-items:center;">
-                            <select id="quick-assign-${scheduleId} class="guide-select-dropdown" style="flex:1; padding:6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.8rem; max-width: 250px;">
-                                <option value="">-- Select a Guide --</option>
+                            <select id="quick-assign-${scheduleId}" class="guide-select-dropdown" style="flex:1; padding:6px; border:1px solid #cbd5e1; border-radius:4px; font-size:0.8rem; max-width: 250px;">
+                                <option value="">-- Chọn Hướng dẫn viên --</option>
                             </select>
                             <button onclick="quickAssign(${scheduleId})" class="btn-assign-guide" style="padding:6px 12px; margin:0;">Assign</button>
                         </div>
@@ -1165,10 +1179,7 @@
             }
         };
     </script>
-<script src="../../assets/js/admin/sidebar.js"></script>
+    <script src="../../assets/js/admin/sidebar.js"></script>
 </body>
 
 </html>
-
-
-

@@ -21,6 +21,4 @@ public class AttendanceResponse {
     private String customerEmail;
     private AttendanceStatus status;
     private LocalDateTime markedAt;
-    private String lateNote;
-    private Integer lateMinutes;
 }

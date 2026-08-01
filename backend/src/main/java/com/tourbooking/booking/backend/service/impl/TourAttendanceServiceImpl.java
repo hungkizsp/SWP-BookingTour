@@ -111,14 +111,6 @@ public class TourAttendanceServiceImpl implements TourAttendanceService {
 
         attendance.setStatus(request.getStatus());
         attendance.setMarkedAt(LocalDateTime.now());
-        
-        if (request.getStatus() == AttendanceStatus.PRESENT) {
-            attendance.setLateNote(request.getLateNote());
-            attendance.setLateMinutes(request.getLateMinutes());
-        } else {
-            attendance.setLateNote(null);
-            attendance.setLateMinutes(null);
-        }
 
         tourAttendanceRepository.save(attendance);
 
@@ -174,8 +166,6 @@ public class TourAttendanceServiceImpl implements TourAttendanceService {
                 .customerEmail(email)
                 .status(a.getStatus())
                 .markedAt(a.getMarkedAt())
-                .lateNote(a.getLateNote())
-                .lateMinutes(a.getLateMinutes())
                 .build();
     }
 

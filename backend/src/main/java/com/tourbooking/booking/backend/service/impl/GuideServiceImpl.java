@@ -46,9 +46,17 @@ public class GuideServiceImpl implements GuideService {
         log.info("Fetching assigned tours for guide ID: {}", guideId);
         List<TourSchedule> schedules = tourScheduleRepository.findByGuide_Id(guideId);
         log.info("Found {} schedules for guide ID: {}", schedules.size(), guideId);
+        
+        List<TourStatus> hiddenStatuses = List.of(
+                TourStatus.COMPLETED,
+                TourStatus.CANCELLED,
+                TourStatus.CANCELLED_BY_OPERATOR,
+                TourStatus.SUSPENDED,
+                TourStatus.EXPIRED_NO_BOOKING
+        );
+
         return schedules.stream()
-                .filter(s -> s.getStatus() != TourStatus.SUSPENDED)
-                .filter(s -> bookingRepository.countByScheduleIdAndStatusIn(s.getId(), ActiveBookingStatuses.STATUSES) > 0)
+                .filter(s -> !hiddenStatuses.contains(s.getStatus()))
                 .map(s -> mapToResponse(s, false))
                 .collect(Collectors.toList());
     }
