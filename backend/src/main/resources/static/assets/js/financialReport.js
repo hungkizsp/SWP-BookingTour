@@ -3,7 +3,7 @@ let currentReportData = [];
 let revenueChart;
 
 const EMPTY_REPORT_MESSAGE =
-    'Chưa có dữ liệu doanh thu thực tế trong khoảng thời gian này';
+    'Chưa có doanh thu trong khoảng thời gian này';
 
 function formatLocalDate(date) {
     const y = date.getFullYear();

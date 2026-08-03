@@ -125,6 +125,54 @@ public class FixDatabaseComponent implements CommandLineRunner {
             } catch (Exception e) {
                 log.warn("Failed to check/add EmailVerified to Users: {}", e.getMessage());
             }
+
+            // 4. Ensure AILogs table exists
+            try {
+                jdbcTemplate.execute(
+                        "IF OBJECT_ID('dbo.AILogs', 'U') IS NULL " +
+                                "BEGIN " +
+                                "    CREATE TABLE dbo.AILogs ( " +
+                                "        LogID BIGINT IDENTITY(1,1) PRIMARY KEY, " +
+                                "        AgentName NVARCHAR(50) NULL, " +
+                                "        WorkflowId NVARCHAR(100) NULL, " +
+                                "        InputTokens INT NULL DEFAULT 0, " +
+                                "        OutputTokens INT NULL DEFAULT 0, " +
+                                "        LatencyMs BIGINT NULL DEFAULT 0, " +
+                                "        Status NVARCHAR(20) NULL, " +
+                                "        ErrorMessage NVARCHAR(500) NULL, " +
+                                "        CreatedAt DATETIME NULL DEFAULT GETDATE(), " +
+                                "        UpdatedAt DATETIME NULL DEFAULT GETDATE() " +
+                                "    ); " +
+                                "END");
+                log.info("Schema migration: AILogs table checked/created.");
+            } catch (Exception e) {
+                log.warn("Failed to check/create AILogs table: {}", e.getMessage());
+            }
+
+            // 5. Ensure UserAIProfiles table exists
+            try {
+                jdbcTemplate.execute(
+                        "IF OBJECT_ID('dbo.UserAIProfiles', 'U') IS NULL " +
+                                "BEGIN " +
+                                "    CREATE TABLE dbo.UserAIProfiles ( " +
+                                "        ProfileID BIGINT IDENTITY(1,1) PRIMARY KEY, " +
+                                "        UserID BIGINT NULL UNIQUE, " +
+                                "        TravelStyle NVARCHAR(200) NULL, " +
+                                "        FavoriteCategories NVARCHAR(500) NULL, " +
+                                "        BudgetRange NVARCHAR(100) NULL, " +
+                                "        PreferredDestinations NVARCHAR(500) NULL, " +
+                                "        TravelFrequency NVARCHAR(50) NULL, " +
+                                "        FamilySize INT NULL DEFAULT 1, " +
+                                "        LastAnalyzedAt DATETIME NULL, " +
+                                "        CreatedAt DATETIME NULL DEFAULT GETDATE(), " +
+                                "        UpdatedAt DATETIME NULL DEFAULT GETDATE(), " +
+                                "        CONSTRAINT FK_UserAIProfiles_Users FOREIGN KEY (UserID) REFERENCES dbo.Users(UserID) " +
+                                "    ); " +
+                                "END");
+                log.info("Schema migration: UserAIProfiles table checked/created.");
+            } catch (Exception e) {
+                log.warn("Failed to check/create UserAIProfiles table: {}", e.getMessage());
+            }
         } catch (Exception e) {
             log.error("Schema migration error: {}", e.getMessage());
         }

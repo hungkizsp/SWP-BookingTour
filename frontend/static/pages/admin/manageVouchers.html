@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -237,10 +237,21 @@
             tbody.innerHTML = html;
         }
 
+        function getNowLocalISO() {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            return now.toISOString().slice(0, 16);
+        }
+
         function openModal() {
             document.getElementById('voucherForm').reset();
             document.getElementById('voucherId').value = '';
             document.getElementById('modalTitle').textContent = 'Tạo Voucher Mới';
+            
+            const nowISO = getNowLocalISO();
+            document.getElementById('vStartDate').min = nowISO;
+            document.getElementById('vEndDate').min = nowISO;
+
             document.getElementById('voucherModal').style.display = 'flex';
         }
 
@@ -251,6 +262,10 @@
         function editVoucher(id) {
             const v = allVouchers.find(x => x.id === id);
             if (!v) return;
+
+            const nowISO = getNowLocalISO();
+            document.getElementById('vStartDate').removeAttribute('min');
+            document.getElementById('vEndDate').min = nowISO;
 
             document.getElementById('voucherId').value = v.id;
             document.getElementById('vCode').value = v.code;
@@ -272,6 +287,39 @@
         async function submitForm(e) {
             e.preventDefault();
             
+            const id = document.getElementById('voucherId').value;
+            const startDateVal = document.getElementById('vStartDate').value;
+            const endDateVal = document.getElementById('vEndDate').value;
+            const now = new Date();
+
+            if (startDateVal) {
+                const startDate = new Date(startDateVal);
+                if (!id && startDate < new Date(now.getTime() - 5 * 60000)) {
+                    if (typeof showToast === 'function') showToast('Ngày bắt đầu không được ở trong quá khứ', 'error');
+                    else alert('Ngày bắt đầu không được ở trong quá khứ');
+                    return;
+                }
+            }
+
+            if (endDateVal) {
+                const endDate = new Date(endDateVal);
+                if (endDate < new Date(now.getTime() - 5 * 60000)) {
+                    if (typeof showToast === 'function') showToast('Ngày kết thúc không được ở trong quá khứ', 'error');
+                    else alert('Ngày kết thúc không được ở trong quá khứ');
+                    return;
+                }
+            }
+
+            if (startDateVal && endDateVal) {
+                const startDate = new Date(startDateVal);
+                const endDate = new Date(endDateVal);
+                if (endDate <= startDate) {
+                    if (typeof showToast === 'function') showToast('Ngày kết thúc phải sau ngày bắt đầu', 'error');
+                    else alert('Ngày kết thúc phải sau ngày bắt đầu');
+                    return;
+                }
+            }
+
             const payload = {
                 code: document.getElementById('vCode').value.trim(),
                 discountType: document.getElementById('vDiscountType').value,
@@ -281,11 +329,9 @@
                 usageLimit: document.getElementById('vUsageLimit').value ? parseInt(document.getElementById('vUsageLimit').value) : null,
                 applicableTourId: document.getElementById('vApplicableTourId').value ? parseInt(document.getElementById('vApplicableTourId').value) : null,
                 isActive: document.getElementById('vIsActive').value === 'true',
-                startDate: document.getElementById('vStartDate').value ? document.getElementById('vStartDate').value + ':00' : null,
-                endDate: document.getElementById('vEndDate').value ? document.getElementById('vEndDate').value + ':00' : null,
+                startDate: startDateVal ? startDateVal + ':00' : null,
+                endDate: endDateVal ? endDateVal + ':00' : null,
             };
-
-            const id = document.getElementById('voucherId').value;
             
             try {
                 if (id) {
@@ -304,7 +350,8 @@
                 closeModal();
                 loadVouchers();
             } catch (err) {
-                alert(err.message || 'Có lỗi xảy ra');
+                if (typeof showToast === 'function') showToast(err.message || 'Có lỗi xảy ra', 'error');
+                else alert(err.message || 'Có lỗi xảy ra');
             }
         }
 

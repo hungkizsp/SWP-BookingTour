@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const currentPath = window.location.pathname.split('/').pop();
-    
+
     const navGroups = [
         {
             title: "TỔNG QUAN",
@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         {
             title: "MARKETING & TÀI CHÍNH",
             items: [
-                { href: './manageDiscounts.html', text: 'Giảm giá', icon: '🔥', activeMatch: ['manageDiscounts.html'] },
+                // { href: './manageDiscounts.html', text: 'Giảm giá', icon: '🔥', activeMatch: ['manageDiscounts.html'] },
                 { href: './manageVouchers.html', text: 'Vouchers', icon: '🎟️', activeMatch: ['manageVouchers.html'] },
                 { href: './manageNewsletter.html', text: 'Bản tin', icon: '📧', activeMatch: ['manageNewsletter.html'] },
                 { href: './financialReport.html', text: 'Báo cáo tài chính', icon: '💰', activeMatch: ['financialReport.html'] }
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Try to find an existing sidebar element
     let sidebarEl = document.querySelector('.sidebar');
-    
+
     // If found, replace its innerHTML. Otherwise, prepend it to admin-layout.
     if (sidebarEl) {
         sidebarEl.innerHTML = sidebarHtml;

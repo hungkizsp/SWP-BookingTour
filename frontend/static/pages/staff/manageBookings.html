@@ -34,39 +34,47 @@
         }
 
         /* Chat button -> Blue (Primary) */
-        #bookingsTable .action-btn[onclick^="window.open"] {
+        #bookingsTable .action-btn[onclick^="window.open"],
+        .booking-card-actions .chat-btn {
             background: var(--primary) !important;
         }
-        #bookingsTable .action-btn[onclick^="window.open"]:hover {
+        #bookingsTable .action-btn[onclick^="window.open"]:hover,
+        .booking-card-actions .chat-btn:hover {
             background: var(--primary-dark) !important;
             box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3) !important;
         }
 
         /* Hủy đặt tour (Cancel) -> Red (Danger) */
-        #bookingsTable .action-btn[onclick^="openCancelModal"] {
+        #bookingsTable .action-btn[onclick^="openCancelModal"],
+        .booking-card-actions .cancel-btn {
             background: var(--danger) !important; /* red */
         }
-        #bookingsTable .action-btn[onclick^="openCancelModal"]:hover {
+        #bookingsTable .action-btn[onclick^="openCancelModal"]:hover,
+        .booking-card-actions .cancel-btn:hover {
             background: #b91c1c !important; /* darker red */
             box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3) !important;
         }
 
         /* Xác nhận (Confirm) -> Green (Success) */
-        #bookingsTable .action-btn[onclick^="confirmBooking"] {
+        #bookingsTable .action-btn[onclick^="confirmBooking"],
+        .booking-card-actions .confirm-btn {
             background: var(--success) !important; /* green */
         }
-        #bookingsTable .action-btn[onclick^="confirmBooking"]:hover {
+        #bookingsTable .action-btn[onclick^="confirmBooking"]:hover,
+        .booking-card-actions .confirm-btn:hover {
             background: #059669 !important; /* darker green */
             box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3) !important;
         }
 
         /* Phân công (Assign) -> Teal (Secondary) */
         #bookingsTable .action-btn[onclick^="openAssignModal"],
-        .modal .action-btn[onclick^="submitAssignment"] {
+        .modal .action-btn[onclick^="submitAssignment"],
+        .booking-card-actions .assign-btn {
             background: var(--secondary) !important; /* teal */
         }
         #bookingsTable .action-btn[onclick^="openAssignModal"]:hover,
-        .modal .action-btn[onclick^="submitAssignment"]:hover {
+        .modal .action-btn[onclick^="submitAssignment"]:hover,
+        .booking-card-actions .assign-btn:hover {
             background: var(--secondary-dark) !important;
             box-shadow: 0 4px 10px rgba(13, 148, 136, 0.3) !important;
         }
@@ -77,6 +85,143 @@
         }
         .modal .action-btn[onclick^="closeAssignModal"]:hover {
             background: #64748b !important;
+        }
+
+        /* ── Grid/Card View Styles ── */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .booking-card {
+            background: var(--bg-white, #ffffff);
+            border: 1px solid var(--border, #e2e8f0);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .booking-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+            border-color: var(--primary, #0284c7);
+        }
+
+        .booking-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed var(--border, #e2e8f0);
+            padding-bottom: 0.65rem;
+        }
+
+        .booking-card-id {
+            font-weight: 800;
+            color: var(--primary-dark, #0369a1);
+            font-size: 1.05rem;
+        }
+
+        .booking-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            font-size: 0.88rem;
+            color: var(--text-main, #0f172a);
+        }
+
+        .booking-card-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .booking-card-row .icon {
+            font-size: 1rem;
+            width: 20px;
+            text-align: center;
+            opacity: 0.85;
+            margin-top: 1px;
+        }
+
+        .booking-card-row .val {
+            flex: 1;
+        }
+
+        .booking-card-row .label {
+            font-weight: 600;
+            color: var(--text-muted, #64748b);
+            margin-right: 4px;
+        }
+
+        .booking-card-price {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #ef4444; /* danger red */
+            border-top: 1px dashed var(--border, #e2e8f0);
+            padding-top: 0.65rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .booking-card-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            border-top: 1px solid var(--border, #e2e8f0);
+            padding-top: 0.85rem;
+            margin-top: auto;
+        }
+
+        /* ── Status Tab Styles ── */
+        .status-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: pointer;
+            border: 1px solid var(--border, #e2e8f0);
+            background: white;
+            color: var(--text-muted, #64748b);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .status-tab:hover {
+            border-color: var(--primary, #0284c7);
+            color: var(--primary, #0284c7);
+            background: var(--bg-main, #f8fafc);
+        }
+
+        .status-tab.active {
+            background: var(--primary, #0284c7);
+            color: white;
+            border-color: var(--primary, #0284c7);
+        }
+
+        .status-tab .count {
+            font-size: 0.72rem;
+            background: rgba(0, 0, 0, 0.06);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 800;
+        }
+
+        .status-tab.active .count {
+            background: rgba(255, 255, 255, 0.22);
+            color: white;
         }
     </style>
 </head>
@@ -106,27 +251,53 @@
                 </div>
             </header>
 
-            <table style="width: 100%; border-collapse: collapse;" class="table-container" id="bookingsTable">
-                <thead>
-                    <tr>
-                        <th>Booking ID</th>
-                        <th>Người dùng</th>
-                        <th>Lịch trình tour</th>
-                        <th>Số tiền</th>
-                        <th>Trạng thái</th>
-                        <th>Hướng dẫn</th>
-                        <th>Trò chuyện</th>
-                        <th>Hành động</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td colspan="8">Loading...</td>
-                    </tr>
-                </tbody>
-            </table>
-            <div id="pagination" class="pagination-container"
-                style="margin-top:20px; display:flex; gap:5px; justify-content:center;"></div>
+            <div class="card" style="padding: 1.5rem; background: var(--bg-white); border-radius: 1rem; border: 1px solid var(--border); box-shadow: var(--shadow-sm);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 15px;">
+                    <h2 style="font-size: 1.25rem; font-weight: 800;">Tất cả Bookings</h2>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="searchFilter" placeholder="Tìm tên khách, tour, ID..." class="form-control" style="width: 250px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);" oninput="window.onSearchInput()">
+                        <div class="view-toggle" style="display: flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: white;">
+                            <button id="viewTableBtn" class="btn active" style="border: none; border-radius: 0; padding: 8px 16px; cursor: pointer; transition: all 0.2s;" onclick="window.setView('table')">📋 Bảng</button>
+                            <button id="viewGridBtn" class="btn" style="border: none; border-radius: 0; padding: 8px 16px; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-muted);" onclick="window.setView('grid')">🎴 Thẻ</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Tabs -->
+                <div id="statusTabs" class="status-tabs-container" style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                    <!-- Dynamic status tabs with counters -->
+                </div>
+
+                <!-- Table View Container -->
+                <div id="tableView" class="table-container" style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse;" id="bookingsTable">
+                        <thead>
+                            <tr>
+                                <th>Booking ID</th>
+                                <th>Người dùng</th>
+                                <th>Lịch trình tour</th>
+                                <th>Số tiền</th>
+                                <th>Trạng thái</th>
+                                <th>Hướng dẫn</th>
+                                <th>Trò chuyện</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="8">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Grid/Card View Container -->
+                <div id="gridView" class="grid-container" style="display: none;">
+                    <!-- Dynamic booking cards -->
+                </div>
+
+                <div id="pagination" class="pagination-container" style="margin-top:20px; display:flex; gap:5px; justify-content:center;"></div>
+            </div>
         </main>
     </div>
 

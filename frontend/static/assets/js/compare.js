@@ -54,26 +54,26 @@
 
       empty.style.display = 'none';
       gridWrapper.style.display = 'block';
-      
+
       const aiCompareBtn = document.getElementById('aiCompareBtn');
       if (aiCompareBtn && currentTours.length >= 2) {
         aiCompareBtn.onclick = async () => {
           const btn = aiCompareBtn;
           const resultBlock = document.getElementById('aiCompareResultBlock');
           const contentBlock = document.getElementById('aiCompareContent');
-          
+
           btn.disabled = true;
-          btn.innerHTML = `<span style="margin-right: 8px;">🤖</span> Đang phân tích (có thể mất 30-60 giây)...`;
-          
+          btn.innerHTML = `<span style="margin-right: 8px;"></span> Đang phân tích...`;
+
           try {
             const res = await TB.apiFetch('/api/v1/tours/compare-ai', {
               method: 'POST',
               body: JSON.stringify({ tourIds: currentTours.map(t => t.id) })
             });
-            
+
             resultBlock.style.display = 'block';
             contentBlock.innerHTML = formatAiText(res.data.analysis);
-            
+
             // Scroll to result smoothly
             resultBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
           } catch (err) {
@@ -121,7 +121,7 @@
 
       // 3. Render Body Rows
       let bodyHtml = '';
-      
+
       // Find extremes for highlighting
       let minPricePerDay = null;
       let maxRating = null;
@@ -269,12 +269,12 @@
   window.showFullItinerary = async (tourId) => {
     const tour = currentTours.find(t => t.id == tourId);
     if (!tour) return;
-    
+
     const modal = document.getElementById('itineraryModal');
     const modalBody = document.getElementById('modalBody');
     const modalTitle = document.getElementById('modalTitle');
     modalTitle.textContent = `Lịch trình chi tiết: ${tour.tourName}`;
-    
+
     if (tour.itinerary === 'NEW_API' || tour.itineraryDaysCount > 0) {
       try {
         const res = await TB.apiFetch(`/api/v1/tours/${tourId}/itinerary`);

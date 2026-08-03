@@ -508,6 +508,17 @@
             Bằng cách nhấp vào nút "Xác nhận", bạn đồng ý với các Điều khoản & Chính sách của Dana.
           </p>
         </div>
+
+        <!-- AI Booking Advisor Widget -->
+        <div style="margin-top: 20px; background: linear-gradient(135deg, #1e1b4b, #312e81); border-radius: 16px; padding: 20px; color: white; box-shadow: 0 10px 25px -5px rgba(49,46,129,0.3);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div style="font-weight: 800; font-size: 1rem; color: #a5b4fc;">🤖 AI BOOKING ADVISOR</div>
+            <button onclick="fetchAiAdvice()" style="background: rgba(255,255,255,0.2); color: white; border: none; padding: 5px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">Tư vấn AI</button>
+          </div>
+          <div id="aiAdvisorContent" style="font-size: 0.85rem; line-height: 1.6; color: #e0e7ff;">
+            Bấm "Tư vấn AI" để AI PricingAgent & RiskAgent phân tích ưu đãi giá và thời tiết cho bạn.
+          </div>
+        </div>
       </aside>
     </div>
   </main>
@@ -521,6 +532,24 @@
   <script src="../assets/js/api.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="../assets/js/checkout.js"></script>
+  <script>
+    async function fetchAiAdvice() {
+      const container = document.getElementById('aiAdvisorContent');
+      if (!container) return;
+      container.innerHTML = '⏳ AI Agents đang phân tích ưu đãi & thời tiết...';
+      try {
+        const res = await TB.apiFetch('/api/v1/ai/checkout/analyze', {
+          method: 'POST',
+          body: JSON.stringify({
+            scheduleId: new URLSearchParams(window.location.search).get('scheduleId')
+          })
+        });
+        container.innerHTML = '<div style="white-space:pre-line;">' + (res.data ? res.data.advice : 'Giá hiện tại đang rất tốt!') + '</div>';
+      } catch (err) {
+        container.innerHTML = '❌ Chưa thể tư vấn lúc này: ' + (err.message || 'Lỗi hệ thống');
+      }
+    }
+  </script>
 </body>
 
 </html>

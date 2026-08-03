@@ -57,9 +57,20 @@ async function loadReport(options = {}) {
     const reportType = document.getElementById('reportType').value;
     const status = document.getElementById('bookingStatus').value;
     const includeTest = status === 'INCLUDE_TEST';
+    const todayStr = formatLocalDate(new Date());
 
     if (!startDate || !endDate) {
         showToast('Vui lòng chọn khoảng thời gian', 'warning');
+        return;
+    }
+
+    if (startDate > todayStr) {
+        showToast('Ngày bắt đầu không được vượt quá ngày hiện tại', 'warning');
+        return;
+    }
+
+    if (endDate > todayStr) {
+        showToast('Ngày kết thúc không được vượt quá ngày hiện tại', 'warning');
         return;
     }
 
@@ -325,13 +336,32 @@ function initFinancialReportPage() {
 
     window.addEventListener('load', () => {
         const today = new Date();
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const startDate = formatLocalDate(startOfMonth);
-        const endDate = formatLocalDate(today);
+        const todayStr = formatLocalDate(today);
 
-        document.getElementById('startDate').value = startDate;
-        document.getElementById('endDate').value = endDate;
-        document.getElementById('bookingStatus').value = 'INCLUDE_TEST';
+        const startDateEl = document.getElementById('startDate');
+        const endDateEl = document.getElementById('endDate');
+
+        if (startDateEl) startDateEl.max = todayStr;
+        if (endDateEl) endDateEl.max = todayStr;
+
+        const startOfRange = new Date(today);
+        startOfRange.setDate(startOfRange.getDate() - 30);
+        const startDate = formatLocalDate(startOfRange);
+        const endDate = todayStr;
+
+        if (startDateEl) startDateEl.value = startDate;
+        if (endDateEl) endDateEl.value = endDate;
+        
+        const statusEl = document.getElementById('bookingStatus');
+        if (statusEl) statusEl.value = 'INCLUDE_TEST';
+
+        if (startDateEl) {
+            startDateEl.addEventListener('change', () => {
+                if (startDateEl.value) {
+                    endDateEl.min = startDateEl.value;
+                }
+            });
+        }
 
         loadReport({ autoLoad: true });
     });

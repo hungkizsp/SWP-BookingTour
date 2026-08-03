@@ -65,7 +65,15 @@ public class PassengerClassificationService {
                 throw new BadRequestException("Ngày sinh hành khách không được để trống.");
             }
 
-            PassengerType resolvedType = resolvePassengerType(passengerRequest.getDateOfBirth(), tourStartDate);
+            LocalDate dob = passengerRequest.getDateOfBirth();
+            if (dob.isAfter(LocalDate.now())) {
+                throw new BadRequestException("Ngày sinh của hành khách không thể ở tương lai.");
+            }
+            if (!dob.isBefore(tourStartDate)) {
+                throw new BadRequestException("Ngày sinh của hành khách phải trước ngày khởi hành tour.");
+            }
+
+            PassengerType resolvedType = resolvePassengerType(dob, tourStartDate);
             classifiedPassengers.add(new ClassifiedPassenger(passengerRequest, resolvedType));
 
             switch (resolvedType) {
@@ -84,6 +92,11 @@ public class PassengerClassificationService {
         if (realAdultCount < 1 && (realChildCount > 0 || realInfantCount > 0)) {
             throw new BadRequestException(
                     "Trẻ em hoặc em bé không được đi một mình, bắt buộc phải có ít nhất 1 người lớn đi kèm.");
+        }
+
+        if (realChildCount + realInfantCount > realAdultCount) {
+            throw new BadRequestException(
+                    "Mỗi người lớn chỉ có thể đi kèm tối đa 1 trẻ em hoặc em bé.");
         }
 
         return new ClassificationResult(

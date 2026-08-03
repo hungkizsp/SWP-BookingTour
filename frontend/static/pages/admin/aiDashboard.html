@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin AI Dashboard - Multi-Agent System</title>
+  <link rel="stylesheet" href="../../assets/css/main.css">
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; color: #1e293b; margin: 0; padding: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px 30px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 25px; }
+    .tabs { display: flex; gap: 10px; margin-bottom: 25px; }
+    .tab-btn { padding: 12px 24px; border: none; border-radius: 10px; background: white; color: #64748b; font-weight: 700; cursor: pointer; border: 1px solid #e2e8f0; transition: 0.2s; }
+    .tab-btn.active { background: #059669; color: white; border-color: #059669; }
+    .card { background: white; border-radius: 16px; padding: 30px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .result-box { background: #f1f5f9; border-radius: 12px; padding: 20px; margin-top: 20px; white-space: pre-line; line-height: 1.8; font-size: 1.05rem; }
+    .btn-action { background: #0284c7; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>🤖 ADMIN AI MULTI-AGENT DASHBOARD</h2>
+    <a href="./dashboard.html" style="color:#0284c7; font-weight:700; text-decoration:none;">← Quay lại Dashboard</a>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('forecast')">📈 Forecast Agent (Dự báo)</button>
+    <button class="tab-btn" onclick="switchTab('marketing')">📣 Marketing Agent (Quảng bá)</button>
+    <button class="tab-btn" onclick="switchTab('resource')">🚌 Resource Agent (Tài nguyên)</button>
+  </div>
+
+  <div class="card" id="agentSection">
+    <h3 id="sectionTitle">📈 Phân tích Dự báo Booking & Doanh Thu</h3>
+    <p id="sectionDesc" style="color:#64748b;">ForecastAgent hỗ trợ đưa ra dự báo lượng đặt tour và doanh thu cho giai đoạn sắp tới.</p>
+    <button class="btn-action" id="btnRun" onclick="runCurrentAgent()">⚡ Chạy AI Agent Phân Tích</button>
+    <div class="result-box" id="resultContent">Bấm nút trên để bắt đầu phân tích.</div>
+  </div>
+
+  <script src="../../assets/js/api.js"></script>
+  <script>
+    let activeAgent = 'forecast';
+
+    const config = {
+      forecast: {
+        title: '📈 Phân tích Dự báo Booking & Doanh Thu',
+        desc: 'ForecastAgent hỗ trợ đưa ra dự báo lượng đặt tour và doanh thu cho giai đoạn sắp tới.',
+        url: '/api/v1/ai/admin/forecast',
+        key: 'forecast'
+      },
+      marketing: {
+        title: '📣 Đề xuất Chiến dịch Marketing & Phân khúc Khách hàng',
+        desc: 'MarketingAgent gợi ý phân khúc tiềm năng và mẫu nội dung truyền thông thu hút.',
+        url: '/api/v1/ai/admin/marketing',
+        key: 'campaign'
+      },
+      resource: {
+        title: '🚌 Phân bổ Hướng dẫn viên & Phương tiện',
+        desc: 'ResourceAgent gợi ý sắp xếp HDV, xe đưa đón và tối ưu chỗ khả dụng cho các đoàn.',
+        url: '/api/v1/ai/admin/resource',
+        key: 'resource'
+      }
+    };
+
+    function switchTab(tab) {
+      activeAgent = tab;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const c = config[tab];
+      document.getElementById('sectionTitle').innerText = c.title;
+      document.getElementById('sectionDesc').innerText = c.desc;
+      document.getElementById('resultContent').innerText = 'Bấm nút trên để bắt đầu phân tích.';
+    }
+
+    async function runCurrentAgent() {
+      const c = config[activeAgent];
+      const btn = document.getElementById('btnRun');
+      const resBox = document.getElementById('resultContent');
+
+      btn.disabled = true;
+      btn.innerText = '⏳ AI Agent đang làm việc...';
+      resBox.innerText = '🤖 AI Agent đang tính toán và lập báo cáo...';
+
+      try {
+        const res = await TB.apiFetch(c.url, { method: 'POST', body: JSON.stringify({}) });
+        resBox.innerText = (res.data && res.data[c.key]) ? res.data[c.key] : 'Hoàn thành phân tích!';
+      } catch (e) {
+        resBox.innerText = '❌ Lỗi thực thi AI Agent: ' + (e.message || 'Hệ thống bận');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = '⚡ Chạy AI Agent Phân Tích';
+      }
+    }
+  </script>
+</body>
+</html>
