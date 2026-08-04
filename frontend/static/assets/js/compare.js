@@ -149,6 +149,10 @@
         <div style="font-weight: 600;">${t.duration ? t.duration + ' ngày' : '—'}</div>
       `);
 
+      bodyHtml += renderRow('🔢 Mã Tour (ID)', t => `
+        <div style="font-weight: 800; color: var(--primary);">Tour ${t.id}</div>
+      `);
+
       bodyHtml += renderRow('💵 Giá/ngày', t => {
         const val = t.pricePerDay;
         const isMin = val !== null && val === minPricePerDay;
