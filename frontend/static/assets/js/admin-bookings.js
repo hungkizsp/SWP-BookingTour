@@ -40,6 +40,20 @@ async function loadBookings() {
     }
 }
 
+function formatTourDate(value) {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+}
+
+function formatBookingDate(value) {
+    if (!value) return 'N/A';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
 function filterAndRender() {
     allBookings = allBookingsRaw.filter(b => {
         // Status filter
@@ -130,7 +144,7 @@ function renderTableRows(pageItems) {
 
     tbody.innerHTML = '';
     if (pageItems.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem;">Không tìm thấy booking.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding: 2rem;">Không tìm thấy booking.</td></tr>';
         return;
     }
 
@@ -138,9 +152,16 @@ function renderTableRows(pageItems) {
         const isPendingCash = b.status === 'PENDING_CASH';
         const isPending = b.status === 'PENDING' || isPendingCash;
         let statusClass = 'status-cancelled';
-        if (isPending) statusClass = 'status-pending';
-        else if (b.status === 'CONFIRMED' || b.status === 'PAID' || b.status === 'SUCCESS' || b.status === 'SUCCESS' || b.status === 'PAID') statusClass = 'status-confirmed';
-        else if (b.status === 'NO_SHOW') statusClass = 'status-cancelled';
+
+        if (isPending || b.status === 'REFUND_REQUESTED') {
+            statusClass = 'status-pending';
+        } else if (b.status === 'CONFIRMED' || b.status === 'PAID') {
+            statusClass = 'status-confirmed';
+        } else if (b.status === 'SUCCESS' || b.status === 'COMPLETED') {
+            statusClass = 'status-completed';
+        } else {
+            statusClass = 'status-cancelled';
+        }
 
         let guideColumnHtml = '<td>-</td>';
         if (b.guideFullName) {
@@ -152,18 +173,17 @@ function renderTableRows(pageItems) {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>#${b.id}</td>
-            <td><strong>${b.userFullName || 'Guest'}</strong></td>
-            <td>SD-${b.scheduleId}</td>
+            <td>
+                <div style="font-weight:700;">${b.userFullName || 'Guest'}</div>
+                <div style="font-size:0.75rem; color:#666;">${b.userEmail || ''}</div>
+            </td>
+            <td>${b.tourName || ('SD-' + b.scheduleId)}</td>
+            <td style="font-size:0.85rem; white-space:nowrap; color:#0369a1; font-weight:600;">${formatTourDate(b.departureDate)}</td>
+            <td style="font-size:0.8rem; white-space:nowrap;">${formatBookingDate(b.bookingDate)}</td>
+            <td style="text-align:center;">${b.numberOfPeople || '-'}</td>
             <td style="font-weight:700; color:#ef4444;">${Number(b.totalPrice).toLocaleString('vi-VN')} VNĐ</td>
             <td><span class="status-badge ${statusClass}">${b.status}</span></td>
             ${guideColumnHtml}
-            <td>
-                <button class="action-btn chat-btn" onclick="window.open('/pages/client/group-chat.html?scheduleId=${b.scheduleId}', '_blank')">💬 Chat</button>
-            </td>
-            <td>
-                ${isPendingCash ? `<button class="action-btn confirm-btn" onclick="window.confirmBooking(${b.id})">Confirm</button>` : ''}
-                ${(b.status === 'CONFIRMED' || b.status === 'PAID') ? `<button class="action-btn cancel-btn" onclick="window.openCancelModal(${b.id})">Hủy đặt tour</button>` : ''}
-            </td>
         `;
         tbody.appendChild(row);
     });
@@ -182,8 +202,17 @@ function renderCardGrid(pageItems) {
     grid.innerHTML = pageItems.map(b => {
         const isPendingCash = b.status === 'PENDING_CASH';
         const isPending = b.status === 'PENDING' || isPendingCash;
-        const statusClass = isPending ? 'badge-info' : (b.status === 'CONFIRMED' || b.status === 'PAID' || b.status === 'SUCCESS' ? 'badge-success' : 'badge-danger');
+        let statusClass = 'badge-danger';
 
+        if (isPending || b.status === 'REFUND_REQUESTED') {
+            statusClass = 'badge-warning';
+        } else if (b.status === 'CONFIRMED' || b.status === 'PAID') {
+            statusClass = 'badge-confirmed';
+        } else if (b.status === 'SUCCESS' || b.status === 'COMPLETED') {
+            statusClass = 'badge-success';
+        } else {
+            statusClass = 'badge-danger';
+        }
         let guideHtml = '';
         if (b.guideFullName) {
             guideHtml = `<span style="font-weight:700; color:var(--success);">${b.guideFullName}</span>`;
@@ -204,12 +233,31 @@ function renderCardGrid(pageItems) {
                     <span class="icon">🧑</span>
                     <div class="val">
                         <strong style="font-size: 0.95rem;">${b.userFullName || 'Guest'}</strong>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">${b.userEmail || ''}</div>
+                    </div>
+                </div>
+                <div class="booking-card-row">
+                    <span class="icon">✈️</span>
+                    <div class="val">
+                        <span class="label">Tour:</span><strong>${b.tourName || ('SD-' + b.scheduleId)}</strong>
                     </div>
                 </div>
                 <div class="booking-card-row">
                     <span class="icon">📅</span>
                     <div class="val">
-                        <span class="label">Lịch trình:</span><strong>SD-${b.scheduleId}</strong>
+                        <span class="label">Ngày tour:</span><strong style="color:#0369a1;">${formatTourDate(b.departureDate)}</strong>
+                    </div>
+                </div>
+                <div class="booking-card-row">
+                    <span class="icon">📅</span>
+                    <div class="val">
+                        <span class="label">Ngày đặt:</span>${formatBookingDate(b.bookingDate)}
+                    </div>
+                </div>
+                <div class="booking-card-row">
+                    <span class="icon">👥</span>
+                    <div class="val">
+                        <span class="label">Số khách:</span>${b.numberOfPeople || '-'}
                     </div>
                 </div>
                 <div class="booking-card-row">
@@ -222,11 +270,6 @@ function renderCardGrid(pageItems) {
             <div class="booking-card-price">
                 <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">Tổng cộng:</span>
                 <strong>${Number(b.totalPrice).toLocaleString('vi-VN')} VNĐ</strong>
-            </div>
-            <div class="booking-card-actions">
-                <button class="action-btn chat-btn" style="flex:1;" onclick="window.open('/pages/client/group-chat.html?scheduleId=${b.scheduleId}', '_blank')">💬 Chat</button>
-                ${isPendingCash ? `<button class="action-btn confirm-btn" style="flex:1;" onclick="window.confirmBooking(${b.id})">Confirm</button>` : ''}
-                ${(b.status === 'CONFIRMED' || b.status === 'PAID') ? `<button class="action-btn cancel-btn" style="flex:1;" onclick="window.openCancelModal(${b.id})">Hủy đặt</button>` : ''}
             </div>
         </div>
         `;
