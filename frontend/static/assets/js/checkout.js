@@ -275,6 +275,41 @@
   }
 
   function onCountChange() {
+    const available = (scheduleData && scheduleData.availableSlots != null) ? scheduleData.availableSlots : 9999;
+    let adults = getAdultCount();
+    let children = getChildCount();
+    let infants = getInfantCount();
+    
+    // Check total slots vs available
+    if (adults + children > available) {
+      alert(`Tổng số chỗ đăng ký (người lớn + trẻ em: ${adults + children}) không được vượt quá số chỗ còn lại của tour (còn ${available} chỗ).`);
+      if (adults > available) {
+        adultInput.value = available;
+        childInput.value = 0;
+      } else {
+        childInput.value = available - adults;
+      }
+      adults = getAdultCount();
+      children = getChildCount();
+    }
+
+    // Check chaperone ratio
+    if (children + infants > adults) {
+      alert('Mỗi người lớn chỉ có thể đi kèm tối đa 1 trẻ em hoặc em bé. Số lượng đã được điều chỉnh tự động.');
+      let diff = (children + infants) - adults;
+      let newChildren = children;
+      let newInfants = infants;
+      if (newChildren >= diff) {
+        newChildren -= diff;
+      } else {
+        diff -= newChildren;
+        newChildren = 0;
+        newInfants = Math.max(0, newInfants - diff);
+      }
+      childInput.value = newChildren;
+      infantInput.value = newInfants;
+    }
+
     renderPassengerForms();
     updateTotals();
     appliedDiscount = 0;
@@ -287,11 +322,20 @@
 
   // ─── Counters ─────────────────────────────────────────────────────────────────
   document.getElementById('plusAdultBtn').onclick = () => {
+    const available = (scheduleData && scheduleData.availableSlots != null) ? scheduleData.availableSlots : 9999;
+    if (getAdultCount() + getChildCount() + 1 > available) {
+      alert(`Không thể tăng thêm. Tổng số chỗ đăng ký không được vượt quá số chỗ còn lại của tour (còn ${available} chỗ).`);
+      return;
+    }
     adultInput.value = getAdultCount() + 1;
     onCountChange();
   };
   document.getElementById('minusAdultBtn').onclick = () => {
     if (getAdultCount() > 1) {
+      if (getChildCount() + getInfantCount() > getAdultCount() - 1) {
+        alert('Không thể giảm số người lớn vì tỉ lệ đi kèm (tối đa 1 trẻ em/em bé mỗi người lớn) sẽ không hợp lệ.');
+        return;
+      }
       adultInput.value = getAdultCount() - 1;
       onCountChange();
     }
@@ -299,6 +343,15 @@
   adultInput.oninput = onCountChange;
 
   document.getElementById('plusChildBtn').onclick = () => {
+    const available = (scheduleData && scheduleData.availableSlots != null) ? scheduleData.availableSlots : 9999;
+    if (getAdultCount() + getChildCount() + 1 > available) {
+      alert(`Không thể tăng thêm. Tổng số chỗ đăng ký không được vượt quá số chỗ còn lại của tour (còn ${available} chỗ).`);
+      return;
+    }
+    if (getChildCount() + getInfantCount() + 1 > getAdultCount()) {
+      alert('Mỗi người lớn chỉ có thể đi kèm tối đa 1 trẻ em hoặc em bé. Vui lòng tăng số người lớn.');
+      return;
+    }
     childInput.value = getChildCount() + 1;
     onCountChange();
   };
@@ -311,6 +364,10 @@
   childInput.oninput = onCountChange;
 
   document.getElementById('plusInfantBtn').onclick = () => {
+    if (getChildCount() + getInfantCount() + 1 > getAdultCount()) {
+      alert('Mỗi người lớn chỉ có thể đi kèm tối đa 1 trẻ em hoặc em bé. Vui lòng tăng số người lớn.');
+      return;
+    }
     infantInput.value = getInfantCount() + 1;
     onCountChange();
   };
@@ -441,6 +498,27 @@
       }
 
       const dob = new Date(data[i].dateOfBirth);
+      const nowToday = new Date();
+      nowToday.setHours(0,0,0,0);
+      const dobCheck = new Date(dob);
+      dobCheck.setHours(0,0,0,0);
+
+      if (dobCheck > nowToday) {
+        alert(`Ngày sinh của ${meta.label} ${slot.num} không thể ở tương lai.`);
+        document.getElementById(`p_dob_${i}`)?.focus();
+        return null;
+      }
+
+      if (tourStartDate) {
+        const startCheck = new Date(tourStartDate);
+        startCheck.setHours(0,0,0,0);
+        if (dobCheck >= startCheck) {
+          alert(`Ngày sinh của ${meta.label} ${slot.num} phải trước ngày khởi hành tour.`);
+          document.getElementById(`p_dob_${i}`)?.focus();
+          return null;
+        }
+      }
+
       const today = tourStartDate || new Date();
       let age = today.getFullYear() - dob.getFullYear();
       const m = today.getMonth() - dob.getMonth();
@@ -466,14 +544,23 @@
 
       if (slot.type === 'ADULT') {
         if (!data[i].idNumber) {
-          alert(`Vui lòng nhập Số CCCD cho ${meta.label} ${slot.num}.`);
+          alert(`Vui lòng nhập Số CCCD / Passport cho ${meta.label} ${slot.num}.`);
           document.getElementById(`p_id_${i}`)?.focus();
           return null;
         }
-        if (!/^\d{12}$/.test(data[i].idNumber)) {
-          alert(`Số CCCD cho ${meta.label} ${slot.num} phải gồm đúng 12 chữ số hợp lệ.`);
+        if (!/^\d{12}$/.test(data[i].idNumber) && !/^[A-Z0-9]{8,12}$/i.test(data[i].idNumber)) {
+          alert(`Số định danh cho ${meta.label} ${slot.num} không hợp lệ. Định dạng CCCD (12 chữ số) hoặc Passport (8-12 ký tự chữ và số).`);
           document.getElementById(`p_id_${i}`)?.focus();
           return null;
+        }
+
+        // Check duplicate CCCD/Passport
+        for (let j = 0; j < i; j++) {
+          if (slots[j].type === 'ADULT' && data[j].idNumber === data[i].idNumber) {
+            alert(`Số định danh của ${meta.label} ${slot.num} bị trùng với ${PASSENGER_META[slots[j].type].label} ${slots[j].num}.`);
+            document.getElementById(`p_id_${i}`)?.focus();
+            return null;
+          }
         }
       }
     }
@@ -817,8 +904,35 @@
 
   // ─── Confirm booking ──────────────────────────────────────────────────────────
   confirmBtn.onclick = async () => {
-    // Before validating, sync counts from forms
-    recalculateCountsFromForms();
+    // 1. Validate contact info
+    const phoneEl = document.getElementById('custPhone');
+    const phone = phoneEl ? phoneEl.value.trim() : '';
+    if (!phone) {
+      alert('Vui lòng nhập Số điện thoại liên lạc.');
+      phoneEl?.focus();
+      return;
+    }
+    if (!/^0\d{9}$/.test(phone)) {
+      alert('Số điện thoại liên lạc không hợp lệ. Phải gồm đúng 10 chữ số và bắt đầu bằng số 0.');
+      phoneEl?.focus();
+      return;
+    }
+
+    // 2. Validate accompaniment ratio
+    if (getChildCount() + getInfantCount() > getAdultCount()) {
+      alert('Mỗi người lớn chỉ có thể đi kèm tối đa 1 trẻ em hoặc em bé.');
+      return;
+    }
+
+    // 3. Validate slots limit against available slots
+    const requestedSlots = getAdultCount() + getChildCount();
+    const available = scheduleData.availableSlots != null ? scheduleData.availableSlots : 9999;
+    if (requestedSlots > available) {
+      alert(`Số lượng khách đăng ký (người lớn + trẻ em: ${requestedSlots}) vượt quá số chỗ còn lại của tour (còn ${available} chỗ).`);
+      return;
+    }
+
+    // 4. Validate passenger cards
     const passengers = validatePassengers();
     if (!passengers) return;
 
@@ -832,6 +946,26 @@
 
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'ĐANG XỬ LÝ...';
+
+    // Auto-update user phone number if changed
+    if (phone !== (user.phoneNumber || user.phone || '')) {
+      try {
+        await TB.apiFetch(`/api/v1/users/${user.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            fullName: user.fullName,
+            email: user.email,
+            phoneNumber: phone,
+            role: user.role,
+            isActive: user.isActive
+          })
+        });
+        user.phoneNumber = phone;
+        sessionStorage.setItem('user', JSON.stringify(user));
+      } catch (e) {
+        console.warn("Could not auto-update user phone number in profile", e);
+      }
+    }
 
     try {
       const bookingReq = {

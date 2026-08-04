@@ -35,6 +35,7 @@ public class DiscountServiceImpl implements DiscountService {
 
     @Override
     public DiscountResponse createDiscount(DiscountRequest request) {
+        validateDates(request, true);
         Discount discount = new Discount();
         updateEntity(discount, request);
         return mapToResponse(discountRepository.save(discount));
@@ -42,10 +43,33 @@ public class DiscountServiceImpl implements DiscountService {
 
     @Override
     public DiscountResponse updateDiscount(Long id, DiscountRequest request) {
+        validateDates(request, false);
         Discount discount = discountRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Discount not found"));
         updateEntity(discount, request);
         return mapToResponse(discountRepository.save(discount));
+    }
+
+    private void validateDates(DiscountRequest request, boolean isNew) {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (request.getEndDate() != null) {
+            if (request.getEndDate().isBefore(now.minusMinutes(5))) {
+                throw new RuntimeException("Ngày kết thúc không được ở trong quá khứ");
+            }
+        }
+
+        if (request.getStartDate() != null && request.getEndDate() != null) {
+            if (!request.getEndDate().isAfter(request.getStartDate())) {
+                throw new RuntimeException("Ngày kết thúc phải sau ngày bắt đầu");
+            }
+        }
+
+        if (isNew && request.getStartDate() != null) {
+            if (request.getStartDate().isBefore(now.minusMinutes(5))) {
+                throw new RuntimeException("Ngày bắt đầu không được ở trong quá khứ");
+            }
+        }
     }
 
     @Override

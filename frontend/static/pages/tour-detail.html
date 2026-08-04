@@ -113,6 +113,41 @@
       box-shadow: var(--shadow-premium);
     }
 
+    /* AI travel report */
+    .ai-report-shell { position: relative; isolation: isolate; overflow: hidden; margin-bottom: 60px; border: 1px solid #c7d2fe; border-radius: 28px; background: #f8fbff; box-shadow: 0 24px 70px rgba(30,64,175,.12); }
+    .ai-report-shell::before, .ai-report-shell::after { content: ''; position: absolute; z-index: -1; width: 280px; height: 280px; border-radius: 50%; opacity: .65; }
+    .ai-report-shell::before { top: -150px; right: -70px; background: #dbeafe; }
+    .ai-report-shell::after { bottom: -170px; left: -90px; background: #ccfbf1; }
+    .ai-report-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 30px 32px 26px; background: linear-gradient(125deg,#102a43 0%,#164e63 54%,#0f766e 100%); color: white; }
+    .ai-report-kicker { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #a7f3d0; font-size: .72rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    .ai-report-title { margin: 0; font-size: clamp(1.35rem,2.4vw,1.9rem); letter-spacing: -.035em; }
+    .ai-report-subtitle { max-width: 650px; margin: 9px 0 0; color: #c9e6ef; font-size: .91rem; line-height: 1.65; }
+    .ai-analyze-btn { display: inline-flex; align-items: center; gap: 9px; flex: 0 0 auto; min-height: 46px; padding: 0 19px; border: 1px solid rgba(255,255,255,.35); border-radius: 14px; background: #fbbf24; color: #172554; font-weight: 800; cursor: pointer; box-shadow: 0 10px 24px rgba(0,0,0,.18); transition: transform .2s,box-shadow .2s; }
+    .ai-analyze-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(0,0,0,.23); }
+    .ai-analyze-btn:disabled { cursor: wait; opacity: .75; }
+    .ai-report-body { padding: 24px 32px 30px; }
+    .ai-report-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+    .ai-meta-pill { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid #dbeafe; border-radius: 999px; background: rgba(255,255,255,.8); color: #475569; font-size: .76rem; font-weight: 700; }
+    .ai-meta-pill strong { color: #0f766e; }
+    .ai-report-content { display: grid; gap: 14px; }
+    .ai-report-card { padding: 21px 23px; border: 1px solid #e2e8f0; border-radius: 18px; background: rgba(255,255,255,.92); box-shadow: 0 7px 18px rgba(15,23,42,.045); }
+    .ai-report-card.is-lead { border-color: #99f6e4; background: linear-gradient(135deg,#ecfdf5,#f0fdfa); }
+    .ai-report-card.is-advice { border-left: 4px solid #f59e0b; }
+    .ai-report-card.is-alert { border-left: 4px solid #ef4444; background: #fff9f9; }
+    .ai-report-card.is-weather { border-left: 4px solid #38bdf8; background: #f0f9ff; }
+    .ai-report-banner { padding: 14px 20px; border-radius: 12px; background: linear-gradient(90deg, #0f766e22, #1d4ed822); border: 1px solid #c7d2fe; color: #0f3d4c; font-size: 1rem; font-weight: 800; text-align: center; letter-spacing: .04em; text-transform: uppercase; }
+    @media (max-width: 650px) { .ai-report-head { flex-direction: column; padding: 24px 20px; } .ai-analyze-btn { width: 100%; justify-content: center; } .ai-report-body { padding: 20px; } }
+    .ai-card-heading { display: flex; align-items: flex-start; gap: 11px; margin-bottom: 9px; color: #0f3d4c; font-size: 1.02rem; font-weight: 800; line-height: 1.45; }
+    .ai-card-icon { display: grid; place-items: center; width: 30px; height: 30px; flex: 0 0 30px; border-radius: 10px; background: #ccfbf1; font-size: .95rem; }
+    .ai-card-body { color: #475569; font-size: .94rem; line-height: 1.8; }
+    .ai-card-body p { margin: 0 0 8px; }
+    .ai-card-body p:last-child { margin-bottom: 0; }
+    .ai-card-body ul { margin: 6px 0 0; padding-left: 20px; }
+    .ai-card-body li { margin: 5px 0; }
+    .ai-report-loading { padding: 26px; border: 1px dashed #93c5fd; border-radius: 16px; background: #eff6ff; color: #0369a1; text-align: center; font-weight: 700; }
+    .ai-report-error { padding: 16px; border-radius: 14px; background: #fef2f2; color: #b91c1c; font-weight: 700; }
+    @media (max-width: 650px) { .ai-report-head { flex-direction: column; padding: 24px 20px; } .ai-analyze-btn { width: 100%; justify-content: center; } .ai-report-body { padding: 20px; } }
+
     @media (max-width: 960px) {
       .detail-layout {
         grid-template-columns: 1fr;
@@ -225,6 +260,38 @@
             </div>
           </div>
         </div>
+
+        <!-- Multi-Agent AI Travel Report Section -->
+        <section class="ai-report-shell" aria-labelledby="aiReportTitle">
+          <div class="ai-report-head">
+            <div>
+              <div class="ai-report-kicker"><span>✦</span> Multi-agent intelligence</div>
+              <h3 class="ai-report-title" id="aiReportTitle">Báo cáo du lịch thông minh</h3>
+              <p class="ai-report-subtitle">Lịch trình được nhìn từ nhiều góc độ: trải nghiệm, thời tiết, đánh giá và các rủi ro cần lưu ý.</p>
+            </div>
+            <button id="btnAnalyzeAi" class="ai-analyze-btn" onclick="runAiAnalysis()"><span>✦</span> Phân tích tour</button>
+          </div>
+          <div id="aiReportContainer" class="ai-report-body" style="display: none;">
+            <div class="ai-report-meta"><span class="ai-meta-pill">◉ <strong>AI Travel Report</strong></span><span class="ai-meta-pill">⚙ Nhiều agent phối hợp</span><span class="ai-meta-pill">⌁ Cập nhật theo tour</span></div>
+            <div id="aiReportContent" class="ai-report-content"></div>
+          </div>
+        </section>
+        <!-- Legacy report markup intentionally replaced by the styled report shell above. -->
+        <!--
+        <div style="margin-bottom: 60px; background: linear-gradient(135deg, #f0fdf4, #e0f2fe); border: 2px solid #059669; border-radius: 16px; padding: 30px; box-shadow: 0 10px 25px -5px rgba(5,150,105,0.1);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+            <div>
+              <h3 style="margin: 0; color: #065f46; font-size: 1.4rem; font-weight: 800;">✨ BÁO CÁO PHÂN TÍCH AI (MULTI-AGENT)</h3>
+              <p style="margin: 5px 0 0; color: #047857; font-size: 0.9rem;">Hệ thống AI Agents tự động phân tích lịch trình, đánh giá, thời tiết và rủi ro chuyến đi.</p>
+            </div>
+            <button id="btnAnalyzeAi" onclick="runAiAnalysis()" style="background: linear-gradient(135deg, #059669, #0284c7); color: white; border: none; padding: 12px 24px; border-radius: 30px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(5,150,105,0.3); transition: transform 0.2s;">
+              ⚡ Phân Tích Tour Ngay
+            </button>
+          </div>
+          <div id="aiReportContainer" style="display: none; background: white; border-radius: 12px; padding: 25px; border: 1px solid #cbd5e1; line-height: 1.8; color: #1e293b;">
+            <div id="aiReportContent"></div>
+          </div>
+        </div> -->
 
         <div style="margin-bottom: 60px;">
           <h3 class="section-title"
@@ -412,6 +479,194 @@
           sessionStorage.clear();
           location.reload();
         };
+      }
+    }
+
+    function cleanMarkdown(str) {
+      if (!str) return '';
+      return str
+        .replace(/^#{1,6}\s*/gm, '')
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/```[a-z]*\n?/gi, '')
+        .replace(/---+/g, '')
+        .trim();
+    }
+
+    function escapeAiHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    }
+
+    // Split a long plain-text paragraph into sentence groups (max ~3 sentences per group)
+    function splitBySentences(text, maxPerGroup) {
+      // Split by ". " or ".\n" where next char exists
+      const sentenceBreak = /(?<=[.!?])\s+/;
+      let parts;
+      try {
+        parts = text.split(sentenceBreak).map(s => s.trim()).filter(Boolean);
+      } catch (e) {
+        // Fallback for browsers without lookbehind
+        parts = text.replace(/([.!?])\s+/g, '$1|||').split('|||').map(s => s.trim()).filter(Boolean);
+      }
+      if (parts.length <= 1) return [text];
+      const groups = [];
+      for (let i = 0; i < parts.length; i += maxPerGroup) {
+        groups.push(parts.slice(i, i + maxPerGroup).join(' '));
+      }
+      return groups;
+    }
+
+    // Auto-detect a section title from content keywords, avoiding duplicates
+    function detectSectionTitle(text, index, usedTitles) {
+      const lower = text.toLowerCase();
+      const candidates = [];
+      if (index === 0) candidates.push('Tổng quan hành trình');
+      if (/thời tiết|nhiệt độ|mưa|nắng|khí hậu/.test(lower)) candidates.push('Thời tiết & Khí hậu');
+      if (/rủi ro|lưu ý|cảnh báo|nguy hiểm|phòng tránh/.test(lower)) candidates.push('Lưu ý & Rủi ro');
+      if (/đánh giá|review|phản hồi|khách hàng|hài lòng/.test(lower)) candidates.push('Đánh giá khách hàng');
+      if (/trải nghiệm|điểm đến|tham quan|khám phá|địa danh/.test(lower)) candidates.push('Trải nghiệm nổi bật');
+      if (/lời khuyên|gợi ý|cần chuẩn bị|mang theo/.test(lower)) candidates.push('Lời khuyên');
+      if (/giá|chi phí|ngân sách|tiết kiệm/.test(lower)) candidates.push('Thông tin giá cả');
+      if (/ẩm thực|món ăn|đặc sản|nhà hàng|quán/.test(lower)) candidates.push('Ẩm thực địa phương');
+      if (/lưu trú|khách sạn|nghỉ ngơi|phòng/.test(lower)) candidates.push('Lưu trú & Nghỉ ngơi');
+      if (/dự báo|xu hướng|dự đoán|tương lai/.test(lower)) candidates.push('Dự báo & Xu hướng');
+      if (/marketing|tiếp thị|quảng bá|thương hiệu/.test(lower)) candidates.push('Góc nhìn thị trường');
+      if (/tài nguyên|nhân lực|hướng dẫn viên|phương tiện/.test(lower)) candidates.push('Tài nguyên & Vận hành');
+      if (/kế hoạch|lịch trình|chương trình|ngày \d/.test(lower)) candidates.push('Kế hoạch hành trình');
+      if (/đề xuất|gợi ý tour|phù hợp|lựa chọn/.test(lower)) candidates.push('Đề xuất cho bạn');
+      // Pick first candidate not yet used
+      for (const c of candidates) {
+        if (!usedTitles.has(c)) { usedTitles.add(c); return c; }
+      }
+      const fallback = index === 0 ? 'Báo cáo tổng hợp' : `Thông tin bổ sung ${index}`;
+      usedTitles.add(fallback);
+      return fallback;
+    }
+
+    function renderAiReportAsCardsV2(rawText) {
+      if (!rawText || !rawText.trim()) return '<div class="ai-report-error">Chưa có dữ liệu báo cáo.</div>';
+
+      const cleaned = cleanMarkdown(rawText);
+      const icons = ['✦', '◌', '◈', '⌁', '✧', '✓'];
+      const usedTitles = new Set();
+
+      /* ── Step 1: Split by double newline ── */
+      let rawBlocks = cleaned.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+
+      /* ── Step 2: Expand long single-line blocks by sentence ── */
+      const blocks = [];
+      rawBlocks.forEach(block => {
+        const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
+        if (lines.length === 1) {
+          const line = lines[0];
+          if (line.length <= 80 && !line.endsWith('.')) {
+            // Looks like a standalone title — skip as a card, it will become a banner
+            blocks.push({ type: 'title', text: line });
+          } else if (line.length > 250) {
+            // Long paragraph without newlines — split by sentences
+            splitBySentences(line, 3).forEach(g => blocks.push({ type: 'body', text: g }));
+          } else {
+            blocks.push({ type: 'body', text: line });
+          }
+        } else {
+          // Multi-line block: first line = heading, rest = body
+          const heading = lines[0];
+          const body = lines.slice(1).join(' ');
+          if (heading.length < 80 && !heading.endsWith('.') && body.length > 0) {
+            blocks.push({ type: 'section', heading, body });
+          } else {
+            // First line is not a title
+            const fullText = lines.join(' ');
+            if (fullText.length > 250) {
+              splitBySentences(fullText, 3).forEach(g => blocks.push({ type: 'body', text: g }));
+            } else {
+              blocks.push({ type: 'body', text: fullText });
+            }
+          }
+        }
+      });
+
+      /* ── Step 3: Fallback — if no structured blocks, sentence-split entire text ── */
+      const contentBlocks = blocks.filter(b => b.type !== 'title');
+      if (contentBlocks.length <= 1 && cleaned.length > 300) {
+        blocks.length = 0;
+        const allSentences = splitBySentences(cleaned.replace(/\n/g, ' '), 3);
+        allSentences.forEach(s => blocks.push({ type: 'body', text: s }));
+      }
+
+      /* ── Step 4: Render ── */
+      let cardIndex = 0;
+      const html = blocks.map(block => {
+        if (block.type === 'title') {
+          // Render as a prominent banner, not a card
+          return `<div class="ai-report-banner">${escapeAiHtml(block.text)}</div>`;
+        }
+
+        let heading, bodyText;
+        if (block.type === 'section') {
+          heading = escapeAiHtml(block.heading.replace(/:$/, ''));
+          usedTitles.add(block.heading.replace(/:$/, ''));
+          bodyText = block.body;
+        } else {
+          heading = detectSectionTitle(block.text, cardIndex, usedTitles);
+          bodyText = block.text;
+        }
+
+        // Split body into readable paragraphs
+        let bodyHtml;
+        const bodyLines = bodyText.split('\n').map(l => l.trim()).filter(Boolean);
+        const hasListItems = bodyLines.some(l => /^[-•*]\s/.test(l));
+        if (hasListItems) {
+          bodyHtml = '<ul>' + bodyLines
+            .map(l => `<li>${escapeAiHtml(l.replace(/^[-•*]\s*/, ''))}</li>`)
+            .join('') + '</ul>';
+        } else {
+          const sentences = splitBySentences(bodyText, 3);
+          bodyHtml = sentences.map(s => `<p>${escapeAiHtml(s)}</p>`).join('');
+        }
+
+        if (!bodyHtml || bodyHtml === '<p></p>') return ''; // skip empty cards
+
+        const lower = heading.toLowerCase();
+        const tone = cardIndex === 0 ? 'is-lead'
+          : /lưu ý|rủi ro|cảnh báo/.test(lower) ? 'is-alert'
+          : /lời khuyên|gợi ý/.test(lower) ? 'is-advice'
+          : /thời tiết|dự báo/.test(lower) ? 'is-weather' : '';
+
+        const icon = icons[cardIndex % icons.length];
+        cardIndex++;
+        return `<article class="ai-report-card ${tone}"><div class="ai-card-heading"><span class="ai-card-icon">${icon}</span><span>${heading}</span></div><div class="ai-card-body">${bodyHtml}</div></article>`;
+      }).join('');
+
+      return html || '<div class="ai-report-error">Không thể hiển thị báo cáo.</div>';
+    }
+
+    async function runAiAnalysis() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tourId = urlParams.get('id');
+      if (!tourId) return;
+
+      const btn = document.getElementById('btnAnalyzeAi');
+      const container = document.getElementById('aiReportContainer');
+      const content = document.getElementById('aiReportContent');
+
+      btn.disabled = true;
+      btn.innerHTML = '<span>◌</span> Đang tổng hợp...';
+      container.style.display = 'block';
+      content.innerHTML = '<div class="ai-report-loading">◌ 9 AI agents đang trao đổi và phân tích lịch trình...<br><small>Vui lòng chờ trong giây lát (khoảng 30-60 giây)</small></div>';
+
+      try {
+        const res = await TB.apiFetch('/api/v1/ai/tour/' + tourId + '/analyze', { method: 'POST' });
+        const data = res.data || {};
+        console.log("[runAiAnalysis] API Response data:", data);
+        console.log("[runAiAnalysis] data.report content:\n", data.report);
+        content.innerHTML = renderAiReportAsCardsV2(data.report || 'Đã tạo báo cáo AI.');
+      } catch (err) {
+        console.error("[runAiAnalysis] Error calling analyze endpoint:", err);
+        content.innerHTML = '<div class="ai-report-error">Không thể kết nối hệ thống Multi-Agent AI: ' + escapeAiHtml(err.message || 'Lỗi hệ thống') + '</div>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<span>↻</span> Phân tích lại';
       }
     }
   </script>

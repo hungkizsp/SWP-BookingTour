@@ -135,9 +135,9 @@
     let blockReason = null;
     if (NON_BOOKABLE.includes(schedStatus)) {
       const labels = {
-        CANCELLED:      'Lịch trình này đã bị hủy.',
-        COMPLETED:      'Tour này đã hoàn thành.',
-        IN_PROGRESS:    'Tour đang diễn ra, không thể đặt thêm chỗ.',
+        CANCELLED: 'Lịch trình này đã bị hủy.',
+        COMPLETED: 'Tour này đã hoàn thành.',
+        IN_PROGRESS: 'Tour đang diễn ra, không thể đặt thêm chỗ.',
         BOOKING_CLOSED: 'Hạn đặt tour cho lịch trình này đã kết thúc.',
       };
       blockReason = labels[schedStatus] || 'Lịch trình này hiện không thể đặt.';
@@ -728,7 +728,7 @@
           method: 'POST',
           body: JSON.stringify({ bookingId })
         });
-        alert('Đặt tour thành công! Vui lòng đến văn phòng Danangbest để hoàn tất thanh toán.');
+        alert('Đặt tour thành công! Vui lòng đến văn phòng Dana để hoàn tất thanh toán.');
         window.location.href = './index.html';
       }
     } catch (err) {

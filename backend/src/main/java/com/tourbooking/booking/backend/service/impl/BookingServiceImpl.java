@@ -51,7 +51,6 @@ import java.util.Locale;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import com.tourbooking.booking.backend.model.dto.response.FinancialReportResponse;
-import com.tourbooking.booking.backend.model.entity.enums.BookingStatus;
 
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
@@ -79,7 +78,7 @@ public class BookingServiceImpl implements BookingService {
     private final PaymentService paymentService;
     private final Environment environment;
     private final com.tourbooking.booking.backend.service.MailService mailService;
-    
+
     @Value("${booking.suspension.reschedule-window-days:30}")
     private int rescheduleWindowDays;
 
@@ -348,14 +347,14 @@ public class BookingServiceImpl implements BookingService {
 
         // ── Duplicate booking protection (30-second window) ────────────────────
         LocalDateTime thirtySecondsAgo = LocalDateTime.now().minusSeconds(30);
-        long recentBookings = bookingRepository.countByUser_IdAndBookingDateAfter(request.getUserId(), thirtySecondsAgo);
+        long recentBookings = bookingRepository.countByUser_IdAndBookingDateAfter(request.getUserId(),
+                thirtySecondsAgo);
         if (recentBookings > 0) {
             throw new AppException(ErrorCode.DUPLICATE_BOOKING);
         }
 
         TourSchedule schedule = tourScheduleRepository.findByIdWithLock(request.getScheduleId())
                 .orElseThrow(() -> new AppException(ErrorCode.SCHEDULE_NOT_FOUND));
-
 
         LocalDateTime now = LocalDateTime.now();
         com.tourbooking.booking.backend.model.entity.enums.TourStatus currentStatus = schedule.getStatus();
@@ -692,7 +691,19 @@ public class BookingServiceImpl implements BookingService {
     public List<FinancialReportResponse> getFinancialReport(
             String start, String end, String type, String status, boolean includeTest) {
         LocalDate startDate = LocalDate.parse(start);
-        LocalDate endDate = LocalDate.parse(end);
+        LocalDate parsedEndDate = LocalDate.parse(end);
+        LocalDate today = LocalDate.now();
+
+        if (startDate.isAfter(today)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Ngày bắt đầu không được vượt quá ngày hiện tại");
+        }
+
+        LocalDate endDate = parsedEndDate.isAfter(today) ? today : parsedEndDate;
+
+        if (startDate.isAfter(endDate)) {
+            throw new AppException(ErrorCode.INVALID_REQUEST, "Ngày bắt đầu không được sau ngày kết thúc");
+        }
+
         boolean devProfile = isDevProfile();
         boolean includeTestData = includeTest || "INCLUDE_TEST".equalsIgnoreCase(status);
 
@@ -707,7 +718,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         LocalDateTime rangeStart = startDate.atStartOfDay();
-        LocalDateTime rangeEnd = endDate.atTime(23, 59, 59, 999_999_999);
+        LocalDateTime rangeEnd = endDate.atTime(23, 59, 59);
 
         List<Payment> paymentsInRange = paymentRepository.findInDateRange(rangeStart, rangeEnd);
         log.info("Payments in date range {} - {}: {}", startDate, endDate, paymentsInRange.size());
@@ -769,9 +780,14 @@ public class BookingServiceImpl implements BookingService {
                             .map(p -> {
                                 if (p.getAmount() == null)
                                     return BigDecimal.ZERO;
-                                boolean isRefund = p.getStatus() == PaymentStatus.REFUNDED ||
-                                        (p.getBooking() != null
-                                                && p.getBooking().getStatus() == BookingStatus.REFUNDED);
+                                boolean isRefund = false;
+                                try {
+                                    isRefund = p.getStatus() == PaymentStatus.REFUNDED ||
+                                            (p.getBooking() != null
+                                                    && p.getBooking().getStatus() == BookingStatus.REFUNDED);
+                                } catch (Exception e) {
+                                    isRefund = p.getStatus() == PaymentStatus.REFUNDED;
+                                }
                                 return isRefund ? p.getAmount().negate() : p.getAmount();
                             })
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -849,7 +865,7 @@ public class BookingServiceImpl implements BookingService {
     public BigDecimal getMonthlyRevenue() {
         YearMonth current = YearMonth.now();
         LocalDateTime rangeStart = current.atDay(1).atStartOfDay();
-        LocalDateTime rangeEnd = current.atEndOfMonth().atTime(23, 59, 59, 999_999_999);
+        LocalDateTime rangeEnd = current.atEndOfMonth().atTime(23, 59, 59);
         boolean devProfile = isDevProfile();
 
         return paymentRepository.findInDateRange(rangeStart, rangeEnd).stream()
@@ -995,8 +1011,10 @@ public class BookingServiceImpl implements BookingService {
         }
 
         // Send email only if the booking was previously confirmed or paid
-        if (originalStatus == BookingStatus.CONFIRMED || originalStatus == BookingStatus.PAID || originalStatus == BookingStatus.SUCCESS) {
-            String tourName = (schedule != null && schedule.getTour() != null) ? schedule.getTour().getTourName() : "N/A";
+        if (originalStatus == BookingStatus.CONFIRMED || originalStatus == BookingStatus.PAID
+                || originalStatus == BookingStatus.SUCCESS) {
+            String tourName = (schedule != null && schedule.getTour() != null) ? schedule.getTour().getTourName()
+                    : "N/A";
             if (booking.getUser() != null && booking.getUser().getEmail() != null) {
                 mailService.sendTourCancellationEmail(booking.getUser().getEmail(), booking.getUser().getFullName(),
                         booking.getId(), tourName, booking.getCancellationReason());
@@ -1032,9 +1050,10 @@ public class BookingServiceImpl implements BookingService {
 
         // ── Tính số tiền hoàn theo chính sách ngày khởi hành hoặc lỗi hệ thống ──
         BigDecimal refundAmount;
-        boolean isOperatorInitiated = request.isOperatorInitiated() 
-                || booking.getSuspensionActionStatus() == com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.PENDING_CUSTOMER_ACTION;
-        
+        boolean isOperatorInitiated = request.isOperatorInitiated()
+                || booking
+                        .getSuspensionActionStatus() == com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.PENDING_CUSTOMER_ACTION;
+
         if (isOperatorInitiated) {
             refundAmount = booking.getTotalPrice(); // 100% refund for operator/suspension
         } else {
@@ -1046,14 +1065,16 @@ public class BookingServiceImpl implements BookingService {
 
         // ── Cập nhật trạng thái Booking ───────────────────────────────────────
         booking.setStatus(BookingStatus.REFUND_REQUESTED);
-        booking.setSuspensionActionStatus(com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.RESOLVED);
+        booking.setSuspensionActionStatus(
+                com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.RESOLVED);
         bookingRepository.save(booking);
 
         // ── Tạo chuỗi Reason chứa thông tin ngân hàng + lý do khách ─────────
-        String bankInfo = request.getRefundInfo() != null ? request.getRefundInfo() : String.format("Ngân hàng: %s | STK: %s | Chủ TK: %s",
-                request.getBankName() != null ? request.getBankName() : "N/A",
-                request.getAccountNumber() != null ? request.getAccountNumber() : "N/A",
-                request.getAccountHolderName() != null ? request.getAccountHolderName() : "N/A");
+        String bankInfo = request.getRefundInfo() != null ? request.getRefundInfo()
+                : String.format("Ngân hàng: %s | STK: %s | Chủ TK: %s",
+                        request.getBankName() != null ? request.getBankName() : "N/A",
+                        request.getAccountNumber() != null ? request.getAccountNumber() : "N/A",
+                        request.getAccountHolderName() != null ? request.getAccountHolderName() : "N/A");
         String fullReason = bankInfo + " | Lý do: " + (request.getReason() != null ? request.getReason() : "Không có");
         if (isOperatorInitiated) {
             fullReason = "[SUSPENSION/OPERATOR] " + fullReason;
@@ -1066,10 +1087,11 @@ public class BookingServiceImpl implements BookingService {
         refundEntity.setReason(fullReason);
         refundEntity.setStatus(com.tourbooking.booking.backend.model.entity.enums.RefundStatus.PENDING);
         refundEntity.setOriginalBookingStatus(originalStatus); // Lưu trạng thái gốc
-        
-        // If it was operator initiated, we mark a staff note flag implicitly by prefixing reason or we could add a field.
+
+        // If it was operator initiated, we mark a staff note flag implicitly by
+        // prefixing reason or we could add a field.
         // The admin processRefund can just approve this 100%.
-        
+
         refundRequestRepository.save(refundEntity);
 
         log.info("[Refund] BookingID={} | RefundAmount={} | OriginalStatus={} | Reason={}",
@@ -1125,7 +1147,8 @@ public class BookingServiceImpl implements BookingService {
         tourScheduleRepository.save(newSchedule);
 
         booking.setSchedule(newSchedule);
-        booking.setSuspensionActionStatus(com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.RESOLVED);
+        booking.setSuspensionActionStatus(
+                com.tourbooking.booking.backend.model.entity.enums.SuspensionActionStatus.RESOLVED);
         bookingRepository.save(booking);
 
         return BookingMapper.toResponse(booking);
@@ -1223,33 +1246,37 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional(readOnly = true)
-    public java.util.List<com.tourbooking.booking.backend.model.dto.response.PendingSuspensionActionResponse> getPendingSuspensionActions(Long userId) {
+    public java.util.List<com.tourbooking.booking.backend.model.dto.response.PendingSuspensionActionResponse> getPendingSuspensionActions(
+            Long userId) {
         java.util.List<Booking> pendingBookings = bookingRepository.findPendingSuspensionActionsByUserId(userId);
-        
+
         final int finalWindowDays = rescheduleWindowDays;
-        
+
         return pendingBookings.stream().map(booking -> {
             boolean canReschedule = false;
-            java.util.List<com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse> candidates = getRescheduleCandidates(booking.getId());
-            
+            java.util.List<com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse> candidates = getRescheduleCandidates(
+                    booking.getId());
+
             if (candidates != null && !candidates.isEmpty()) {
-                java.time.LocalDate limitDate = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh")).plusDays(finalWindowDays);
-                canReschedule = candidates.stream().anyMatch(c -> c.getStartDate() != null && !c.getStartDate().isAfter(limitDate));
+                java.time.LocalDate limitDate = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"))
+                        .plusDays(finalWindowDays);
+                canReschedule = candidates.stream()
+                        .anyMatch(c -> c.getStartDate() != null && !c.getStartDate().isAfter(limitDate));
             }
-            
+
             TourSchedule schedule = booking.getSchedule();
             return com.tourbooking.booking.backend.model.dto.response.PendingSuspensionActionResponse.builder()
-                .bookingId(booking.getId())
-                .scheduleId(schedule.getId())
-                .tourName(schedule.getTour() != null ? schedule.getTour().getTourName() : "")
-                .departureDate(schedule.getStartDate())
-                .totalPrice(booking.getTotalPrice())
-                .suspensionReasonType(schedule.getSuspensionReasonType())
-                .suspensionReason(schedule.getSuspensionReason())
-                .suspendedFrom(schedule.getSuspendedFrom())
-                .suspendedUntil(schedule.getSuspendedUntil())
-                .canReschedule(canReschedule)
-                .build();
+                    .bookingId(booking.getId())
+                    .scheduleId(schedule.getId())
+                    .tourName(schedule.getTour() != null ? schedule.getTour().getTourName() : "")
+                    .departureDate(schedule.getStartDate())
+                    .totalPrice(booking.getTotalPrice())
+                    .suspensionReasonType(schedule.getSuspensionReasonType())
+                    .suspensionReason(schedule.getSuspensionReason())
+                    .suspendedFrom(schedule.getSuspendedFrom())
+                    .suspendedUntil(schedule.getSuspendedUntil())
+                    .canReschedule(canReschedule)
+                    .build();
         }).toList();
     }
 
@@ -1599,9 +1626,11 @@ public class BookingServiceImpl implements BookingService {
                 }
             }
 
-            if ((newStatus == BookingStatus.CONFIRMED || newStatus == BookingStatus.SUCCESS || newStatus == BookingStatus.PAID)
-                    && (booking.getStatus() == BookingStatus.PENDING || booking.getStatus() == BookingStatus.PENDING_CASH)) {
-                
+            if ((newStatus == BookingStatus.CONFIRMED || newStatus == BookingStatus.SUCCESS
+                    || newStatus == BookingStatus.PAID)
+                    && (booking.getStatus() == BookingStatus.PENDING
+                            || booking.getStatus() == BookingStatus.PENDING_CASH)) {
+
                 com.tourbooking.booking.backend.model.dto.request.PaymentRequest paymentRequest = new com.tourbooking.booking.backend.model.dto.request.PaymentRequest();
                 paymentRequest.setBookingId(id);
                 paymentRequest.setPaymentMethod("CASH");

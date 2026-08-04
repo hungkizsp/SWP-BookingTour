@@ -23,24 +23,36 @@
                 </div>
             </header>
 
-            <div class="card">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                    <h2>All Bookings</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <select id="statusFilter" class="form-control" onchange="loadBookings(0)" style="width: 200px;">
-                            <option value="ALL">All Status</option>
-                            <option value="PENDING">Pending</option>
-                            <option value="PENDING_CASH">Pending Cash</option>
-                            <option value="CONFIRMED">Confirmed</option>
-                            <option value="REFUND_REQUESTED">Refund Requested ⚠️</option>
-                            <option value="CANCELLED">Cancelled</option>
-                            <option value="SUCCESS">Success / Paid</option>
-                            <option value="NO_SHOW">No Show</option>
-                        </select>
+            <div class="card"
+                style="padding: 1.5rem; background: var(--bg-white, #ffffff); border-radius: 1rem; border: 1px solid var(--border, #e2e8f0); box-shadow: var(--shadow-sm);">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 15px;">
+                    <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0;">All Bookings</h2>
+                    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                        <input type="text" id="searchFilter" placeholder="Tìm tên khách, email, tour, ID..."
+                            class="form-control"
+                            style="width: 250px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border, #e2e8f0);"
+                            oninput="onSearchInput()">
+                        <div class="view-toggle"
+                            style="display: flex; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; overflow: hidden; background: white;">
+                            <button id="viewTableBtn" class="btn active"
+                                style="border: none; border-radius: 0; padding: 8px 16px; cursor: pointer; transition: all 0.2s;"
+                                onclick="setView('table')">📋 Bảng</button>
+                            <button id="viewGridBtn" class="btn"
+                                style="border: none; border-radius: 0; padding: 8px 16px; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--text-muted);"
+                                onclick="setView('grid')">🎴 Thẻ</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="table-container">
+                <!-- Status Tabs -->
+                <div id="statusTabs" class="status-tabs-container"
+                    style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
+                    <!-- Dynamic status tabs with counters -->
+                </div>
+
+                <!-- Table View Container -->
+                <div id="tableView" class="table-container">
                     <table>
                         <thead>
                             <tr>
@@ -62,7 +74,14 @@
                         </tbody>
                     </table>
                 </div>
-                <div id="pagination" class="pagination-container"></div>
+
+                <!-- Grid/Card View Container -->
+                <div id="gridView" class="grid-container" style="display: none;">
+                    <!-- Dynamic booking cards -->
+                </div>
+
+                <div id="pagination" class="pagination-container"
+                    style="margin-top:20px; display:flex; gap:5px; justify-content:center;"></div>
             </div>
         </main>
     </div>
@@ -133,15 +152,19 @@
 
     <script>
         const PAGE_SIZE = 10;
+        let allBookingsRaw = [];
         let allBookings = [];
         let currentPage = 0;
+        let currentView = localStorage.getItem('bookingView_admin') || 'table';
+        let currentStatus = 'ALL';
+        let searchQuery = '';
+
+
         function escapeHtml(text) {
             if (!text) return '';
-            return String(text)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;');
+            var div = document.createElement('div');
+            div.appendChild(document.createTextNode(String(text)));
+            return div.innerHTML;
         }
 
         function getCustomerName(item) {
@@ -156,10 +179,10 @@
                 || 'N/A';
         }
 
-        const ACTIVE_BOOKING_STATUSES = ['CONFIRMED', 'PAID', 'PENDING', 'PENDING_CASH'];
+        const ACTIVE_BOOKING_STATUSES = ['CONFIRMED', 'PAID', 'PENDING', 'PENDING_CASH', 'SUCCESS'];
 
         function countActiveBookingsForSchedule(scheduleId) {
-            return allBookings.filter(b => b.scheduleId == scheduleId && ACTIVE_BOOKING_STATUSES.includes(b.status)).length;
+            return allBookingsRaw.filter(b => b.scheduleId == scheduleId && ACTIVE_BOOKING_STATUSES.includes(b.status)).length;
         }
 
         function formatBookingDate(value) {
@@ -188,14 +211,262 @@
                 parts.push(`<strong>${Number(item.refundAmount).toLocaleString('vi-VN')}VNĐ</strong>`);
             }
             if (item.refundReason) {
-                parts.push(`<span style="color:#666;">${escapeHtml(item.refundReason)}</span>`);
+                parts.push(`<span style="color:#666; font-size:0.75rem;">${escapeHtml(item.refundReason)}</span>`);
             }
             return parts.join('<br>');
         }
 
+        async function loadBookings(page = 0) {
+            currentPage = page;
+            try {
+                const res = await TB.apiFetch('/api/v1/bookings');
+                allBookingsRaw = res.data || [];
+                allBookingsRaw.sort((a, b) => b.id - a.id);
+                filterAndRender();
+            } catch (err) {
+                console.error(err);
+                allBookingsRaw = [];
+                allBookings = [];
+                const table = document.getElementById('bookingTable');
+                if (table) {
+                    table.innerHTML = '<tr><td colspan="9" style="text-align: center; color: red;">Lỗi tải dữ liệu.</td></tr>';
+                }
+                renderPagination(0, 0);
+            }
+        }
+
+        function filterAndRender() {
+            allBookings = allBookingsRaw.filter(b => {
+                // Status Filter
+                if (currentStatus !== 'ALL') {
+                    if (currentStatus === 'CONFIRMED_PAID') {
+                        if (b.status !== 'CONFIRMED' && b.status !== 'PAID' && b.status !== 'SUCCESS') return false;
+                    } else if (b.status !== currentStatus) {
+                        return false;
+                    }
+                }
+
+                // Search Filter
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    const idStr = '#' + b.id;
+                    const name = getCustomerName(b).toLowerCase();
+                    const email = getCustomerEmail(b).toLowerCase();
+                    const tour = (b.tourName || '').toLowerCase();
+                    if (!idStr.includes(q) && !name.includes(q) && !email.includes(q) && !tour.includes(q) && !String(b.id).includes(q)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+
+            updateStatusTabs();
+            renderBookingsPage();
+        }
+
+        function updateStatusTabs() {
+            const baseList = allBookingsRaw.filter(b => {
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    const idStr = '#' + b.id;
+                    const name = getCustomerName(b).toLowerCase();
+                    const email = getCustomerEmail(b).toLowerCase();
+                    const tour = (b.tourName || '').toLowerCase();
+                    return idStr.includes(q) || name.includes(q) || email.includes(q) || tour.includes(q) || String(b.id).includes(q);
+                }
+                return true;
+            });
+
+            const counts = {
+                ALL: baseList.length,
+                PENDING_CASH: baseList.filter(b => b.status === 'PENDING_CASH').length,
+                CONFIRMED_PAID: baseList.filter(b => b.status === 'CONFIRMED' || b.status === 'PAID' || b.status === 'SUCCESS').length,
+                REFUND_REQUESTED: baseList.filter(b => b.status === 'REFUND_REQUESTED').length,
+                CANCELLED: baseList.filter(b => b.status === 'CANCELLED').length
+            };
+
+            const statuses = [
+                { key: 'ALL', label: 'Tất cả' },
+                { key: 'PENDING_CASH', label: 'Chờ duyệt tiền mặt' },
+                { key: 'CONFIRMED_PAID', label: 'Đã xác nhận' },
+                { key: 'REFUND_REQUESTED', label: 'Yêu cầu hoàn tiền' },
+                { key: 'CANCELLED', label: 'Đã hủy' }
+            ];
+
+            const tabsContainer = document.getElementById('statusTabs');
+            if (tabsContainer) {
+                tabsContainer.innerHTML = statuses.map(s => `
+                    <div class="status-tab ${currentStatus === s.key ? 'active' : ''}" onclick="setStatusFilter('${s.key}')">
+                        <span>${s.label}</span>
+                        <span class="count">${counts[s.key] || 0}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderBookingsPage() {
+            const totalPages = Math.ceil(allBookings.length / PAGE_SIZE) || 1;
+
+            if (currentPage >= totalPages) {
+                currentPage = Math.max(0, totalPages - 1);
+            }
+
+            const start = currentPage * PAGE_SIZE;
+            const pageItems = allBookings.slice(start, start + PAGE_SIZE);
+
+            if (currentView === 'grid') {
+                renderCardGrid(pageItems);
+            } else {
+                renderTableRows(pageItems);
+            }
+
+            renderPagination(totalPages, currentPage);
+        }
+
+        function renderTableRows(pageItems) {
+            const table = document.getElementById('bookingTable');
+            if (!table) return;
+
+            table.innerHTML = '';
+            if (pageItems.length === 0) {
+                table.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem;">Không tìm thấy booking.</td></tr>';
+                return;
+            }
+
+            pageItems.forEach(item => {
+                let guideColumnHtml = '<td>-</td>';
+                if (item.guideFullName) {
+                    guideColumnHtml = `<td>${escapeHtml(item.guideFullName)}</td>`;
+                } else if (item.status === 'CONFIRMED' || item.status === 'PAID') {
+                    guideColumnHtml = `<td><button class="btn btn-sm" style="background: #3b82f6; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;" onclick="openAssignModal(${item.scheduleId})">👤 Phân công</button></td>`;
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>#${item.id}</td>
+                    <td>
+                        <div style="font-weight:700;">${escapeHtml(getCustomerName(item))}</div>
+                        <div style="font-size:0.75rem; color:#666;">${escapeHtml(getCustomerEmail(item))}</div>
+                    </td>
+                    <td>${escapeHtml(item.tourName || 'N/A')}</td>
+                    <td style="font-size:0.85rem; white-space:nowrap;">${formatBookingDate(item.bookingDate)}</td>
+                    <td style="font-weight:800; color:var(--price);">${Number(item.totalPrice).toLocaleString('vi-VN')}VNĐ</td>
+                    <td><span class="badge ${getStatusClass(item.status)}">${item.status}</span></td>
+                    ${guideColumnHtml}
+                    <td style="font-size:0.8rem; max-width:220px; line-height:1.4;">${formatRefundInfo(item)}</td>
+                    <td>
+                        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                            ${item.status === 'REFUND_REQUESTED' ? `
+                                <button onclick="updateStatus(${item.id}, 'CANCELLED')" class="btn btn-danger btn-sm">Chấp nhận yêu cầu</button>
+                                <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-secondary btn-sm">Từ chối yêu cầu</button>
+                            ` : ''}
+                            ${item.status === 'PENDING_CASH' ? `
+                                <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-success btn-sm">Xác nhận</button>
+                            ` : ''}
+                            ${(item.status === 'CONFIRMED' || item.status === 'PAID') ? `
+                                <button onclick="openCancelModal(${item.id})" class="btn btn-danger btn-sm">Hủy Đặt Tour</button>
+                                <button data-schedule-id="${item.scheduleId}" data-tour-name="${escapeHtml(item.tourName || 'N/A')}" onclick="openCancelScheduleModal(this.dataset.scheduleId, this.dataset.tourName)" class="btn btn-sm" style="background:#7f1d1d; color:white; border:none;">Hủy Chuyến</button>
+                            ` : ''}
+                            ${item.status !== 'CANCELLED' ? `
+                                <button onclick="deleteBooking(${item.id})" class="btn btn-sm" style="background:#94a3b8; color:white; border:none;">Xóa</button>
+                            ` : ''}
+                        </div>
+                    </td>
+                `;
+                table.appendChild(tr);
+            });
+        }
+
+        function renderCardGrid(pageItems) {
+            const grid = document.getElementById('gridView');
+            if (!grid) return;
+
+            grid.innerHTML = '';
+            if (pageItems.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">Không tìm thấy booking nào.</div>';
+                return;
+            }
+
+            grid.innerHTML = pageItems.map(item => {
+                let guideHtml = '';
+                if (item.guideFullName) {
+                    guideHtml = `<span style="font-weight:700; color:var(--success);">${escapeHtml(item.guideFullName)}</span>`;
+                } else if (item.status === 'CONFIRMED' || item.status === 'PAID') {
+                    guideHtml = `<button class="btn btn-sm" style="background: #3b82f6; color: white; border: none; border-radius: 4px; padding: 3px 8px; cursor: pointer; font-size: 0.75rem;" onclick="openAssignModal(${item.scheduleId})">👤 Phân công</button>`;
+                } else {
+                    guideHtml = `<span style="color:#94a3b8;">Chưa gán</span>`;
+                }
+
+                return `
+                <div class="booking-card">
+                    <div class="booking-card-header">
+                        <span class="booking-card-id">#${item.id}</span>
+                        <span class="badge ${getStatusClass(item.status)}">${item.status}</span>
+                    </div>
+                    <div class="booking-card-body">
+                        <div class="booking-card-row">
+                            <span class="icon">🧑</span>
+                            <div class="val">
+                                <strong style="font-size: 0.95rem;">${escapeHtml(getCustomerName(item))}</strong>
+                                <div style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(getCustomerEmail(item))}</div>
+                            </div>
+                        </div>
+                        <div class="booking-card-row">
+                            <span class="icon">✈️</span>
+                            <div class="val">
+                                <span class="label">Tour:</span><strong>${escapeHtml(item.tourName || 'N/A')}</strong>
+                            </div>
+                        </div>
+                        <div class="booking-card-row">
+                            <span class="icon">📅</span>
+                            <div class="val">
+                                <span class="label">Ngày đặt:</span>${formatBookingDate(item.bookingDate)}
+                            </div>
+                        </div>
+                        <div class="booking-card-row">
+                            <span class="icon">👤</span>
+                            <div class="val">
+                                <span class="label">HDV:</span>${guideHtml}
+                            </div>
+                        </div>
+                        ${(item.refundReason || item.refundStatus || item.refundAmount) ? `
+                        <div class="booking-card-row" style="background: #fffbeb; padding: 8px; border-radius: 6px; border: 1px solid #fef3c7; margin-top: 4px; flex-direction: column; gap: 2px;">
+                            <div><span class="badge badge-warning" style="padding: 2px 6px;">${escapeHtml(item.refundStatus || 'REFUND')}</span></div>
+                            ${item.refundAmount != null ? `<div style="font-size:0.8rem; font-weight:700;">Số tiền: ${Number(item.refundAmount).toLocaleString('vi-VN')} VNĐ</div>` : ''}
+                            <div style="font-size:0.75rem; color:#854d0e;">Lý do: ${escapeHtml(item.refundReason || 'Không có')}</div>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="booking-card-price">
+                        <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">Tổng cộng:</span>
+                        <strong>${Number(item.totalPrice).toLocaleString('vi-VN')} VNĐ</strong>
+                    </div>
+                    <div class="booking-card-actions">
+                        ${item.status === 'REFUND_REQUESTED' ? `
+                            <button onclick="updateStatus(${item.id}, 'CANCELLED')" class="btn btn-danger btn-sm" style="flex:1;">Chấp nhận hoàn</button>
+                            <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-secondary btn-sm" style="flex:1;">Từ chối hoàn</button>
+                        ` : ''}
+                        ${item.status === 'PENDING_CASH' ? `
+                            <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-success btn-sm" style="flex:1;">Xác nhận</button>
+                        ` : ''}
+                        ${(item.status === 'CONFIRMED' || item.status === 'PAID') ? `
+                            <button onclick="openCancelModal(${item.id})" class="btn btn-danger btn-sm" style="flex:1;">Hủy đặt</button>
+                            <button data-schedule-id="${item.scheduleId}" data-tour-name="${escapeHtml(item.tourName || 'N/A')}" onclick="openCancelScheduleModal(this.dataset.scheduleId, this.dataset.tourName)" class="btn btn-sm" style="background:#7f1d1d; color:white; border:none; flex:1.2;">Hủy Chuyến</button>
+                        ` : ''}
+                        ${item.status !== 'CANCELLED' ? `
+                            <button onclick="deleteBooking(${item.id})" class="btn btn-sm" style="background:#94a3b8; color:white; border:none; width: 40px; flex:none;">Xóa</button>
+                        ` : ''}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
         function renderPagination(totalPages, page) {
             const container = document.getElementById('pagination');
-            if (!allBookings.length) {
+            if (!container) return;
+
+            if (totalPages <= 1) {
                 container.style.display = 'none';
                 container.innerHTML = '';
                 return;
@@ -217,123 +488,93 @@
 
             html += `
                 <button class="page-btn" ${page >= totalPagesSafe - 1 ? 'disabled' : ''} onclick="goToPage(${page + 1})">&raquo;</button>
-                <span class="page-info">Trang ${page + 1} / ${totalPagesSafe}</span>
+                <span class="page-info" style="margin-left:10px;">Trang ${page + 1} / ${totalPagesSafe}</span>
             `;
             container.innerHTML = html;
         }
 
-        function goToPage(page) {
+        window.goToPage = function (page) {
             const totalPages = Math.ceil(allBookings.length / PAGE_SIZE);
             if (page < 0 || page >= totalPages) return;
             currentPage = page;
             renderBookingsPage();
-        }
+        };
 
-        function renderBookingsPage() {
-            const table = document.getElementById('bookingTable');
-            const totalPages = Math.ceil(allBookings.length / PAGE_SIZE) || 1;
+        window.setView = function (viewType) {
+            currentView = viewType;
+            localStorage.setItem('bookingView_admin', viewType);
 
-            if (currentPage >= totalPages) {
-                currentPage = Math.max(0, totalPages - 1);
+            const viewTableBtn = document.getElementById('viewTableBtn');
+            const viewGridBtn = document.getElementById('viewGridBtn');
+            const tableView = document.getElementById('tableView');
+            const gridView = document.getElementById('gridView');
+
+            if (!viewTableBtn || !viewGridBtn || !tableView || !gridView) return;
+
+            if (currentView === 'grid') {
+                viewTableBtn.classList.remove('active');
+                viewTableBtn.style.background = 'transparent';
+                viewTableBtn.style.color = 'var(--text-muted)';
+                viewGridBtn.classList.add('active');
+                viewGridBtn.style.background = 'var(--primary-light)';
+                viewGridBtn.style.color = 'var(--primary-dark)';
+                tableView.style.display = 'none';
+                gridView.style.display = 'grid';
+            } else {
+                viewGridBtn.classList.remove('active');
+                viewGridBtn.style.background = 'transparent';
+                viewGridBtn.style.color = 'var(--text-muted)';
+                viewTableBtn.classList.add('active');
+                viewTableBtn.style.background = 'var(--primary-light)';
+                viewTableBtn.style.color = 'var(--primary-dark)';
+                gridView.style.display = 'none';
+                tableView.style.display = 'block';
             }
+            renderBookingsPage();
+        };
 
-            const start = currentPage * PAGE_SIZE;
-            const pageItems = allBookings.slice(start, start + PAGE_SIZE);
+        window.setStatusFilter = function (status) {
+            currentStatus = status;
+            currentPage = 0;
+            filterAndRender();
+        };
 
-            if (!pageItems.length) {
-                table.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem;">No bookings found.</td></tr>';
-                renderPagination(0, 0);
-                return;
-            }
+        window.onSearchInput = function () {
+            const input = document.getElementById('searchFilter');
+            searchQuery = input ? input.value.trim() : '';
+            currentPage = 0;
+            filterAndRender();
+        };
 
-            table.innerHTML = pageItems.map(item => `
-                    <tr>
-                        <td>#${item.id}</td>
-                        <td>
-                            <div style="font-weight:700;">${escapeHtml(getCustomerName(item))}</div>
-                            <div style="font-size:0.75rem; color:#666;">${escapeHtml(getCustomerEmail(item))}</div>
-                        </td>
-                        <td>${escapeHtml(item.tourName || 'N/A')}</td>
-                        <td style="font-size:0.85rem; white-space:nowrap;">${formatBookingDate(item.bookingDate)}</td>
-                        <td style="font-weight:800; color:var(--price);">${Number(item.totalPrice).toLocaleString('vi-VN')}VNĐ</td>
-                        <td><span class="badge ${getStatusClass(item.status)}">${item.status}</span></td>
-                        ${(() => {
-                    if (item.guideFullName) return `<td>${escapeHtml(item.guideFullName)}</td>`;
-                    if (item.status === 'CONFIRMED' || item.status === 'PAID') return `<td><button class="btn btn-sm" style="background: #3b82f6; color: white; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer;" onclick="openAssignModal(${item.scheduleId})">👤 Phân công</button></td>`;
-                    return '<td>-</td>';
-                })()}
-                        <td style="font-size:0.8rem; max-width:220px; line-height:1.4;">${formatRefundInfo(item)}</td>
-                        <td>
-                            <div style="display:flex; gap:5px; flex-wrap:wrap;">
-                                ${item.status === 'REFUND_REQUESTED' ? `
-                                    <button onclick="updateStatus(${item.id}, 'CANCELLED')" class="btn btn-danger btn-sm">Chấp nhận yêu cầu</button>
-                                    <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-secondary btn-sm">Từ chối yêu cầu</button>
-                                ` : ''}
-                                ${item.status === 'PENDING_CASH' ? `
-                                    <button onclick="updateStatus(${item.id}, 'CONFIRMED')" class="btn btn-success btn-sm">Xác nhận</button>
-                                ` : ''}
-                                ${(item.status === 'CONFIRMED' || item.status === 'PAID') ? `
-                                    <button onclick="openCancelModal(${item.id})" class="btn btn-danger btn-sm">Hủy Đặt Tour</button>
-                                    <button onclick="openCancelScheduleModal(${item.scheduleId}, '${escapeHtml(item.tourName || 'N/A')}')" class="btn btn-sm" style="background:#7f1d1d; color:white; border:none;">Hủy Toàn Bộ Chuyến</button>
-                                ` : ''}
-
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
-
-            renderPagination(totalPages, currentPage);
-        }
-
-        async function loadBookings(page = 0) {
-            currentPage = page;
-            try {
-                const status = document.getElementById('statusFilter').value;
-                const res = await TB.apiFetch('/api/v1/bookings');
-                let list = res.data || [];
-
-                if (status !== 'ALL') {
-                    list = list.filter(b => b.status === status);
-                }
-
-                allBookings = list.sort((a, b) => b.id - a.id);
-                renderBookingsPage();
-            } catch (err) {
-                console.error(err);
-                allBookings = [];
-                document.getElementById('bookingTable').innerHTML = '<tr><td colspan="8" style="text-align: center; color: red;">Error loading data.</td></tr>';
-                renderPagination(0, 0);
-            }
-        }
-
-        function getStatusClass(status) {
+        window.getStatusClass = function (status) {
             switch (status) {
                 case 'CONFIRMED': return 'badge-success';
                 case 'SUCCESS': return 'badge-success';
+                case 'PAID': return 'badge-success';
                 case 'CANCELLED': return 'badge-danger';
                 case 'REFUND_REQUESTED': return 'badge-warning';
+                case 'PENDING_CASH': return 'badge-info';
                 case 'PENDING': return 'badge-info';
                 case 'NO_SHOW': return 'badge-danger';
                 default: return '';
             }
-        }
+        };
 
-        async function updateStatus(id, newStatus) {
-            if (!confirm(`Update booking #${id} to ${newStatus}?`)) return;
+        window.updateStatus = async function (id, newStatus) {
+            if (!confirm(`Bạn chắc chắn muốn chuyển trạng thái booking #${id} thành ${newStatus}?`)) return;
             try {
                 await TB.apiFetch(`/api/v1/bookings/${id}/status?status=${newStatus}`, { method: 'PUT' });
-                showToast('Cập nhật trạng thái thành công');
+                showToast('Cập nhật trạng thái thành công', 'success');
                 loadBookings(currentPage);
             } catch (err) {
                 showToast('Update failed: ' + err.message, 'error');
             }
-        }
-
+        };
 
         // ==========================================
         // ASSIGN GUIDE LOGIC
         // ==========================================
-        async function openAssignModal(scheduleId) {
+        window.openAssignModal = async function (scheduleId) {
             document.getElementById('targetScheduleId').innerText = 'Schedule ID: SD-' + scheduleId;
             document.getElementById('targetScheduleId').dataset.sid = scheduleId;
             document.getElementById('assignModal').style.display = 'flex';
@@ -355,18 +596,18 @@
                 console.error('Error loading guides:', e);
                 document.getElementById('guideSelect').innerHTML = '<option value="">Lỗi khi tải danh sách Guide</option>';
             }
-        }
+        };
 
-        function closeAssignModal() {
+        window.closeAssignModal = function () {
             document.getElementById('assignModal').style.display = 'none';
-        }
+        };
 
-        async function submitAssignment() {
+        window.submitAssignment = async function () {
             const sid = document.getElementById('targetScheduleId').dataset.sid;
             const gid = document.getElementById('guideSelect').value;
 
             if (!gid) {
-                if (typeof showToast === 'function') showToast('Vui lòng chọn 1 Guide!', 'error');
+                showToast('Vui lòng chọn 1 Guide!', 'error');
                 return;
             }
 
@@ -376,47 +617,46 @@
                 });
 
                 if (res.code === 200) {
-                    if (typeof showToast === 'function') showToast('Gán Guide thành công!', 'success');
+                    showToast('Gán Guide thành công!', 'success');
                     closeAssignModal();
                     const selectEl = document.getElementById('guideSelect');
                     const selectedText = selectEl.options[selectEl.selectedIndex].text.split('(')[0].trim();
-                    allBookings.forEach(b => {
+                    allBookingsRaw.forEach(b => {
                         if (b.scheduleId == sid) {
                             b.guideFullName = selectedText;
                         }
                     });
-                    renderBookingsPage();
+                    filterAndRender();
                 } else {
-                    if (typeof showToast === 'function') showToast('Lỗi gán Guide: ' + res.message, 'error');
+                    showToast('Lỗi gán Guide: ' + res.message, 'error');
                 }
             } catch (e) {
                 const serverMsg = e.message || 'Lỗi hệ thống khi gán Guide.';
-                if (typeof showToast === 'function') showToast('❌ ' + serverMsg, 'error');
-                else alert('❌ ' + serverMsg);
+                showToast('❌ ' + serverMsg, 'error');
                 console.error('[AssignGuide]', e);
             }
-        }
+        };
 
         let currentCancelId = null;
 
-        function openCancelModal(id) {
+        window.openCancelModal = function (id) {
             currentCancelId = id;
             document.getElementById('cancelReason').value = '';
             document.getElementById('confirmCancelBtn').disabled = true;
             document.getElementById('cancelModal').style.display = 'flex';
-        }
+        };
 
-        function closeCancelModal() {
+        window.closeCancelModal = function () {
             document.getElementById('cancelModal').style.display = 'none';
             currentCancelId = null;
-        }
+        };
 
-        function onReasonChange() {
+        window.onReasonChange = function () {
             const reason = document.getElementById('cancelReason').value.trim();
             document.getElementById('confirmCancelBtn').disabled = reason.length === 0;
-        }
+        };
 
-        async function submitCancelBooking() {
+        window.submitCancelBooking = async function () {
             if (!currentCancelId) return;
             const reason = document.getElementById('cancelReason').value.trim();
             if (!reason) return;
@@ -432,11 +672,11 @@
             } catch (err) {
                 showToast('Lỗi khi hủy: ' + err.message, 'error');
             }
-        }
+        };
 
         let currentCancelScheduleId = null;
 
-        async function openCancelScheduleModal(scheduleId, tourName) {
+        window.openCancelScheduleModal = async function (scheduleId, tourName) {
             currentCancelScheduleId = scheduleId;
             document.getElementById('cancelScheduleTarget').textContent = `Schedule #${scheduleId} — ${tourName}`;
             document.getElementById('cancelScheduleWarning').textContent = 'Đang tải số lượng khách...';
@@ -453,14 +693,14 @@
                 document.getElementById('cancelScheduleWarning').textContent =
                     'Hành động này sẽ hủy TOÀN BỘ khách trong chuyến đi này và hoàn tiền cho tất cả, không thể hoàn tác.';
             }
-        }
+        };
 
-        function closeCancelScheduleModal() {
+        window.closeCancelScheduleModal = function () {
             document.getElementById('cancelScheduleModal').style.display = 'none';
             currentCancelScheduleId = null;
-        }
+        };
 
-        async function submitCancelSchedule() {
+        window.submitCancelSchedule = async function () {
             if (!currentCancelScheduleId) return;
             if (!confirm('Bạn chắc chắn muốn hủy TOÀN BỘ chuyến đi này? Hành động không thể hoàn tác.')) return;
 
@@ -474,13 +714,13 @@
             } catch (err) {
                 showToast('Lỗi khi hủy chuyến: ' + err.message, 'error');
             }
-        }
+        };
 
         async function deleteBooking(id) {
             if (!confirm('Bạn có chắc muốn xóa vĩnh viễn booking này không?')) return;
             try {
                 await TB.apiFetch(`/api/v1/bookings/${id}`, { method: 'DELETE' });
-                showToast('Đã xóa booking');
+                showToast('Đã xóa booking', 'success');
                 loadBookings(currentPage);
             } catch (err) {
                 showToast('Xóa thất bại', 'error');
@@ -493,6 +733,7 @@
         } else {
             document.getElementById('userInfo').textContent = user.fullName;
             loadBookings();
+            setView(currentView);
         }
 
         document.getElementById('logoutBtn').onclick = () => {
@@ -542,6 +783,144 @@
 
         .btn-outline:hover {
             background: #f5f5f5;
+        }
+
+        /* ── Grid/Card View Styles ── */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .booking-card {
+            background: var(--bg-white, #ffffff);
+            border: 1px solid var(--border, #e2e8f0);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .booking-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+            border-color: var(--primary, #0284c7);
+        }
+
+        .booking-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px dashed var(--border, #e2e8f0);
+            padding-bottom: 0.65rem;
+        }
+
+        .booking-card-id {
+            font-weight: 800;
+            color: var(--primary-dark, #0369a1);
+            font-size: 1.05rem;
+        }
+
+        .booking-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+            font-size: 0.88rem;
+            color: var(--text-main, #0f172a);
+        }
+
+        .booking-card-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .booking-card-row .icon {
+            font-size: 1rem;
+            width: 20px;
+            text-align: center;
+            opacity: 0.85;
+            margin-top: 1px;
+        }
+
+        .booking-card-row .val {
+            flex: 1;
+        }
+
+        .booking-card-row .label {
+            font-weight: 600;
+            color: var(--text-muted, #64748b);
+            margin-right: 4px;
+        }
+
+        .booking-card-price {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: #ef4444;
+            /* danger red */
+            border-top: 1px dashed var(--border, #e2e8f0);
+            padding-top: 0.65rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .booking-card-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            border-top: 1px solid var(--border, #e2e8f0);
+            padding-top: 0.85rem;
+            margin-top: auto;
+        }
+
+        /* ── Status Tab Styles ── */
+        .status-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.82rem;
+            cursor: pointer;
+            border: 1px solid var(--border, #e2e8f0);
+            background: white;
+            color: var(--text-muted, #64748b);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .status-tab:hover {
+            border-color: var(--primary, #0284c7);
+            color: var(--primary, #0284c7);
+            background: var(--bg-main, #f8fafc);
+        }
+
+        .status-tab.active {
+            background: var(--primary, #0284c7);
+            color: white;
+            border-color: var(--primary, #0284c7);
+        }
+
+        .status-tab .count {
+            font-size: 0.72rem;
+            background: rgba(0, 0, 0, 0.06);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 800;
+        }
+
+        .status-tab.active .count {
+            background: rgba(255, 255, 255, 0.22);
+            color: white;
         }
     </style>
     <script src="../../assets/js/admin/sidebar.js"></script>

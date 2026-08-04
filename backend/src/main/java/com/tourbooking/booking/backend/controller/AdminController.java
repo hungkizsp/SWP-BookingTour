@@ -243,11 +243,21 @@ public class AdminController {
             @RequestParam(defaultValue = "daily") String type,
             @RequestParam(defaultValue = "all") String status,
             @RequestParam(defaultValue = "false") boolean includeTest) {
-        return ApiResponse.<List<FinancialReportResponse>>builder()
-                .code(HttpStatus.OK.value())
-                .message("Financial report generated successfully")
-                .data(bookingService.getFinancialReport(start, end, type, status, includeTest))
-                .build();
+        try {
+            return ApiResponse.<List<FinancialReportResponse>>builder()
+                    .code(HttpStatus.OK.value())
+                    .message("Financial report generated successfully")
+                    .data(bookingService.getFinancialReport(start, end, type, status, includeTest))
+                    .build();
+        } catch (Exception e) {
+            System.err.println("CRITICAL ERROR IN FINANCIAL REPORT: " + e.getMessage());
+            e.printStackTrace();
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error: " + e.getClass().getName() + " - " + e.getMessage(),
+                    e
+            );
+        }
     }
 
     // --- DASHBOARD STATS ---
