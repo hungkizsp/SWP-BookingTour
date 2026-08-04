@@ -128,7 +128,7 @@
     scheduleData = scheduleRes.data;
     const policies = discountRes.data || discountRes || [];
     const loyaltyData = loyaltyRes.data;
-    
+
     if (loyaltyData) {
       loyaltyPointsAvailable = loyaltyData.totalPoints || 0;
       document.getElementById('loyaltySection').style.display = 'block';
@@ -147,9 +147,9 @@
     let blockReason = null;
     if (NON_BOOKABLE.includes(schedStatus)) {
       const labels = {
-        CANCELLED:      'Lịch trình này đã bị hủy.',
-        COMPLETED:      'Tour này đã hoàn thành.',
-        IN_PROGRESS:    'Tour đang diễn ra, không thể đặt thêm chỗ.',
+        CANCELLED: 'Lịch trình này đã bị hủy.',
+        COMPLETED: 'Tour này đã hoàn thành.',
+        IN_PROGRESS: 'Tour đang diễn ra, không thể đặt thêm chỗ.',
         BOOKING_CLOSED: 'Hạn đặt tour cho lịch trình này đã kết thúc.',
         EXPIRED_NO_BOOKING: 'Đã hết hạn - Không có khách đặt.',
       };
@@ -279,7 +279,7 @@
     let adults = getAdultCount();
     let children = getChildCount();
     let infants = getInfantCount();
-    
+
     // Check total slots vs available
     if (adults + children > available) {
       alert(`Tổng số chỗ đăng ký (người lớn + trẻ em: ${adults + children}) không được vượt quá số chỗ còn lại của tour (còn ${available} chỗ).`);
@@ -294,20 +294,16 @@
     }
 
     // Check chaperone ratio
-    if (children + infants > adults) {
-      alert('Mỗi người lớn chỉ có thể đi kèm tối đa 1 trẻ em hoặc em bé. Số lượng đã được điều chỉnh tự động.');
-      let diff = (children + infants) - adults;
-      let newChildren = children;
-      let newInfants = infants;
-      if (newChildren >= diff) {
-        newChildren -= diff;
-      } else {
-        diff -= newChildren;
-        newChildren = 0;
-        newInfants = Math.max(0, newInfants - diff);
-      }
-      childInput.value = newChildren;
-      infantInput.value = newInfants;
+    if (children > adults * 2) {
+      alert('Số lượng trẻ em vượt quá giới hạn (tối đa 2 trẻ em / 1 người lớn). Đã tự động điều chỉnh.');
+      childInput.value = adults * 2;
+      children = adults * 2;
+    }
+
+    if (infants > adults * 1) {
+      alert('Số lượng em bé vượt quá giới hạn (tối đa 1 em bé / 1 người lớn). Đã tự động điều chỉnh.');
+      infantInput.value = adults * 1;
+      infants = adults * 1;
     }
 
     renderPassengerForms();
@@ -323,24 +319,21 @@
   // ─── Counters ─────────────────────────────────────────────────────────────────
   document.getElementById('plusAdultBtn').onclick = () => {
     const available = (scheduleData && scheduleData.availableSlots != null) ? scheduleData.availableSlots : 9999;
-    if (getAdultCount() + getChildCount() + 1 > available) {
+    if (getAdultCount() + getChildCount() + getInfantCount() + 1 > available) {
       alert(`Không thể tăng thêm. Tổng số chỗ đăng ký không được vượt quá số chỗ còn lại của tour (còn ${available} chỗ).`);
       return;
     }
     adultInput.value = getAdultCount() + 1;
     onCountChange();
   };
+
   document.getElementById('minusAdultBtn').onclick = () => {
     if (getAdultCount() > 1) {
-      if (getChildCount() + getInfantCount() > getAdultCount() - 1) {
-        alert('Không thể giảm số người lớn vì tỉ lệ đi kèm (tối đa 1 trẻ em/em bé mỗi người lớn) sẽ không hợp lệ.');
-        return;
-      }
       adultInput.value = getAdultCount() - 1;
       onCountChange();
     }
   };
-  adultInput.oninput = onCountChange;
+  adultInput.onchange = onCountChange;
 
   document.getElementById('plusChildBtn').onclick = () => {
     const available = (scheduleData && scheduleData.availableSlots != null) ? scheduleData.availableSlots : 9999;
@@ -348,8 +341,8 @@
       alert(`Không thể tăng thêm. Tổng số chỗ đăng ký không được vượt quá số chỗ còn lại của tour (còn ${available} chỗ).`);
       return;
     }
-    if (getChildCount() + getInfantCount() + 1 > getAdultCount()) {
-      alert('Mỗi người lớn chỉ có thể đi kèm tối đa 1 trẻ em hoặc em bé. Vui lòng tăng số người lớn.');
+    if (getChildCount() + 1 > getAdultCount() * 2) {
+      alert('Số trẻ em vượt quá giới hạn (tối đa 2 trẻ em / 1 người lớn đi cùng)');
       return;
     }
     childInput.value = getChildCount() + 1;
@@ -361,11 +354,11 @@
       onCountChange();
     }
   };
-  childInput.oninput = onCountChange;
+  childInput.onchange = onCountChange;
 
   document.getElementById('plusInfantBtn').onclick = () => {
-    if (getChildCount() + getInfantCount() + 1 > getAdultCount()) {
-      alert('Mỗi người lớn chỉ có thể đi kèm tối đa 1 trẻ em hoặc em bé. Vui lòng tăng số người lớn.');
+    if (getInfantCount() + 1 > getAdultCount() * 1) {
+      alert('Số em bé vượt quá giới hạn (tối đa 1 em bé / 1 người lớn đi cùng)');
       return;
     }
     infantInput.value = getInfantCount() + 1;
@@ -377,7 +370,7 @@
       onCountChange();
     }
   };
-  infantInput.oninput = onCountChange;
+  infantInput.onchange = onCountChange;
 
   // ─── Dynamic passenger form renderer ─────────────────────────────────────────
   function renderPassengerForms() {
@@ -499,9 +492,9 @@
 
       const dob = new Date(data[i].dateOfBirth);
       const nowToday = new Date();
-      nowToday.setHours(0,0,0,0);
+      nowToday.setHours(0, 0, 0, 0);
       const dobCheck = new Date(dob);
-      dobCheck.setHours(0,0,0,0);
+      dobCheck.setHours(0, 0, 0, 0);
 
       if (dobCheck > nowToday) {
         alert(`Ngày sinh của ${meta.label} ${slot.num} không thể ở tương lai.`);
@@ -511,7 +504,7 @@
 
       if (tourStartDate) {
         const startCheck = new Date(tourStartDate);
-        startCheck.setHours(0,0,0,0);
+        startCheck.setHours(0, 0, 0, 0);
         if (dobCheck >= startCheck) {
           alert(`Ngày sinh của ${meta.label} ${slot.num} phải trước ngày khởi hành tour.`);
           document.getElementById(`p_dob_${i}`)?.focus();
@@ -632,7 +625,7 @@
   applyLoyaltyBtn.onclick = async () => {
     const points = parseInt(loyaltyInput.value);
     if (isNaN(points) || points <= 0) return;
-    
+
     if (points > loyaltyPointsAvailable) {
       loyaltyMsg.style.color = '#f44336';
       loyaltyMsg.textContent = 'Số điểm muốn dùng vượt quá số điểm hiện có.';
@@ -649,7 +642,7 @@
       const baseTotal = adults * currentPrice
         + children * currentPrice * childRate
         + infants * currentPrice * infantRate;
-        
+
       // If there is already a voucher discount, we pass the total AFTER voucher
       const totalAfterVoucher = Math.max(0, baseTotal - appliedDiscount);
 
@@ -832,7 +825,7 @@
     }
   });
 
-  window.onDobChange = function(index) {
+  window.onDobChange = function (index) {
     const dobEl = document.getElementById(`p_dob_${index}`);
     if (!dobEl || !dobEl.value) return;
 
@@ -851,7 +844,7 @@
     const typeEl = document.getElementById(`p_type_${index}`);
     if (typeEl && typeEl.value !== newType) {
       typeEl.value = newType;
-      
+
       // Update styling
       const meta = PASSENGER_META[newType];
       const card = typeEl.closest('.passenger-card');
@@ -919,8 +912,13 @@
     }
 
     // 2. Validate accompaniment ratio
-    if (getChildCount() + getInfantCount() > getAdultCount()) {
-      alert('Mỗi người lớn chỉ có thể đi kèm tối đa 1 trẻ em hoặc em bé.');
+    // 2. Validate accompaniment ratio (2 children + 1 infant per adult, checked independently)
+    if (getChildCount() > getAdultCount() * 2) {
+      alert('Số trẻ em vượt quá giới hạn (tối đa 2 trẻ em / 1 người lớn đi cùng).');
+      return;
+    }
+    if (getInfantCount() > getAdultCount() * 1) {
+      alert('Số em bé vượt quá giới hạn (tối đa 1 em bé / 1 người lớn đi cùng).');
       return;
     }
 
@@ -995,9 +993,9 @@
       if (loyaltyPointsToRedeem > 0) {
         try {
           const rawTotal = (getAdultCount() * currentPrice) +
-                           (getChildCount() * currentPrice * childRate) +
-                           (getInfantCount() * currentPrice * infantRate);
-                           
+            (getChildCount() * currentPrice * childRate) +
+            (getInfantCount() * currentPrice * infantRate);
+
           await TB.apiFetch('/api/v1/loyalty/redeem', {
             method: 'POST',
             body: JSON.stringify({

@@ -16,6 +16,9 @@ public class AgeCategoryConfig {
     /** Maximum age for a child (exclusive). E.g., < 12 */
     private int childMaxAge = 12;
 
-    /** Maximum allowed children + infants per adult */
-    private int maxDependentsPerAdult = 2;
+    /** Maximum allowed children per adult */
+    private int maxChildrenPerAdult = 2;
+
+    /** Maximum allowed infants per adult */
+    private int maxInfantsPerAdult = 1;
 }

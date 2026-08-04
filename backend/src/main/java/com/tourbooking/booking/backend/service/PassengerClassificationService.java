@@ -44,10 +44,16 @@ public class PassengerClassificationService {
         }
 
         if (declaredAdultCount > 0) {
-            int maxDependents = declaredAdultCount * ageCategoryConfig.getMaxDependentsPerAdult();
-            if (declaredChildCount + declaredInfantCount > maxDependents) {
+            int maxAllowedChildren = declaredAdultCount * ageCategoryConfig.getMaxChildrenPerAdult();
+            if (declaredChildCount > maxAllowedChildren) {
                 throw new BadRequestException(
-                        "Số trẻ em và em bé tối đa đi cùng " + declaredAdultCount + " người lớn là " + maxDependents + ".");
+                        "Số trẻ em vượt quá giới hạn (tối đa " + ageCategoryConfig.getMaxChildrenPerAdult() + " trẻ em / 1 người lớn đi cùng)");
+            }
+
+            int maxAllowedInfants = declaredAdultCount * ageCategoryConfig.getMaxInfantsPerAdult();
+            if (declaredInfantCount > maxAllowedInfants) {
+                throw new BadRequestException(
+                        "Số em bé vượt quá giới hạn (tối đa " + ageCategoryConfig.getMaxInfantsPerAdult() + " em bé / 1 người lớn đi cùng)");
             }
         }
 
@@ -72,8 +78,9 @@ public class PassengerClassificationService {
                 throw new BadRequestException("Ngày sinh của hành khách phải trước ngày khởi hành tour.");
             }
 
+            int age = Period.between(dob, tourStartDate).getYears();
             PassengerType resolvedType = resolvePassengerType(dob, tourStartDate);
-            classifiedPassengers.add(new ClassifiedPassenger(passengerRequest, resolvedType));
+            classifiedPassengers.add(new ClassifiedPassenger(passengerRequest, resolvedType, age));
 
             switch (resolvedType) {
                 case ADULT -> realAdultCount++;
@@ -91,11 +98,6 @@ public class PassengerClassificationService {
         if (realAdultCount < 1 && (realChildCount > 0 || realInfantCount > 0)) {
             throw new BadRequestException(
                     "Trẻ em hoặc em bé không được đi một mình, bắt buộc phải có ít nhất 1 người lớn đi kèm.");
-        }
-
-        if (realChildCount + realInfantCount > realAdultCount) {
-            throw new BadRequestException(
-                    "Mỗi người lớn chỉ có thể đi kèm tối đa 1 trẻ em hoặc em bé.");
         }
 
         return new ClassificationResult(
