@@ -471,6 +471,7 @@ CREATE TABLE [dbo].[Passengers](
 	[DateOfBirth] [date] NULL,
 	[IdNumber] [varchar](50) NULL,
 	[PassengerType] [varchar](20) NOT NULL,
+	[ComputedAgeOnTravelDate] [int] NULL,
 	[CreatedAt] [datetime2](7) NOT NULL,
 	[UpdatedAt] [datetime2](7) NOT NULL,
 PRIMARY KEY CLUSTERED 

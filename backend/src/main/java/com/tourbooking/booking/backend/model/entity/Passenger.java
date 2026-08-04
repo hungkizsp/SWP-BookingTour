@@ -29,4 +29,7 @@ public class Passenger extends Base {
     /** ADULT | CHILD | INFANT */
     @Column(name = "PassengerType", length = 20, nullable = false)
     private String passengerType;
+
+    @Column(name = "ComputedAgeOnTravelDate")
+    private Integer computedAgeOnTravelDate;
 }

@@ -363,10 +363,11 @@
             <label>Ngày sinh <span style="color:#e53e3e">*</span></label>
             <input class="passenger-input" type="date" id="p_dob_${i}" required
               min="${bounds.min}" max="${bounds.max}"
-              value="${escHtml(old.dateOfBirth || '')}">
+              value="${escHtml(old.dateOfBirth || '')}"
+              onchange="onDobChange(${i})">
           </div>
-          <div class="form-group" style="${slot.type === 'INFANT' ? 'display:none;' : ''}">
-            <label>${idLabel}</label>
+          <div class="form-group" id="p_id_group_${i}" style="${slot.type === 'INFANT' ? 'display:none;' : ''}">
+            <label id="p_id_label_${i}">${idLabel}</label>
             <input class="passenger-input" type="text" id="p_id_${i}"
               placeholder="${escHtml(idPlaceholder)}"
               value="${escHtml(old.idNumber || '')}">
@@ -744,8 +745,80 @@
     }
   });
 
+  window.onDobChange = function(index) {
+    const dobEl = document.getElementById(`p_dob_${index}`);
+    if (!dobEl || !dobEl.value) return;
+
+    const dob = new Date(dobEl.value);
+    const today = tourStartDate || new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+      age--;
+    }
+
+    let newType = 'INFANT';
+    if (age >= 12) newType = 'ADULT';
+    else if (age >= 2) newType = 'CHILD';
+
+    const typeEl = document.getElementById(`p_type_${index}`);
+    if (typeEl && typeEl.value !== newType) {
+      typeEl.value = newType;
+      
+      // Update styling
+      const meta = PASSENGER_META[newType];
+      const card = typeEl.closest('.passenger-card');
+      if (card) {
+        card.className = `passenger-card ${meta.cardClass}`.trim();
+        const header = card.querySelector('.passenger-header');
+        if (header) {
+          const labelSpan = header.querySelector('.passenger-label');
+          if (labelSpan) labelSpan.innerHTML = `${meta.icon} ${meta.label} ${index + 1}`;
+          const badgeSpan = header.querySelector('.passenger-badge');
+          if (badgeSpan) badgeSpan.textContent = meta.badge;
+        }
+      }
+
+      // Toggle ID field visibility
+      const idGroup = document.getElementById(`p_id_group_${index}`);
+      if (idGroup) {
+        if (newType === 'INFANT') {
+          idGroup.style.display = 'none';
+        } else {
+          idGroup.style.display = 'block';
+          const label = document.getElementById(`p_id_label_${index}`);
+          if (label) {
+            label.innerHTML = newType === 'ADULT' ? 'Số CCCD / Passport <span style="color:#e53e3e">*</span>' : 'Số định danh (CCCD/Passport)';
+          }
+        }
+      }
+
+      // Adjust UI counters to match reality so totals match
+      recalculateCountsFromForms();
+    }
+  };
+
+  function recalculateCountsFromForms() {
+    let a = 0, c = 0, i = 0;
+    const slots = buildPassengerSlots();
+    for (let idx = 0; idx < slots.length; idx++) {
+      const typeEl = document.getElementById(`p_type_${idx}`);
+      const type = typeEl ? typeEl.value : slots[idx].type;
+      if (type === 'ADULT') a++;
+      if (type === 'CHILD') c++;
+      if (type === 'INFANT') i++;
+    }
+    // Update inputs without triggering onchange
+    adultInput.value = a;
+    childInput.value = c;
+    infantInput.value = i;
+    updateTotals();
+  }
+
   // ─── Confirm booking ──────────────────────────────────────────────────────────
   confirmBtn.onclick = async () => {
+    // Before validating, sync counts from forms
+    recalculateCountsFromForms();
     const passengers = validatePassengers();
     if (!passengers) return;
 

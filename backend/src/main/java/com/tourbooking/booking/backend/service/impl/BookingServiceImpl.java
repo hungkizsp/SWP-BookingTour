@@ -455,6 +455,7 @@ public class BookingServiceImpl implements BookingService {
             passenger.setDateOfBirth(pr.getDateOfBirth());
             passenger.setIdNumber(pr.getIdNumber());
             passenger.setPassengerType(classified.getPassengerType().name());
+            passenger.setComputedAgeOnTravelDate(classified.getComputedAgeOnTravelDate());
             passengerRepository.save(passenger);
         }
 
@@ -586,6 +587,60 @@ public class BookingServiceImpl implements BookingService {
             tourScheduleRepository.save(newSchedule);
 
             existingBooking.setSchedule(newSchedule);
+
+            // Re-compute passenger types and price based on new schedule
+            List<Passenger> passengers = passengerRepository.findByBookingId(existingBooking.getId());
+            if (!passengers.isEmpty()) {
+                int realAdultCount = 0;
+                int realChildCount = 0;
+                int realInfantCount = 0;
+
+                for (Passenger p : passengers) {
+                    if (p.getDateOfBirth() != null) {
+                        com.tourbooking.booking.backend.model.entity.enums.PassengerType newType = passengerClassificationService.resolvePassengerType(p.getDateOfBirth(), newSchedule.getStartDate());
+                        p.setPassengerType(newType.name());
+                        p.setComputedAgeOnTravelDate(java.time.Period.between(p.getDateOfBirth(), newSchedule.getStartDate()).getYears());
+                        passengerRepository.save(p);
+                        switch (newType) {
+                            case ADULT -> realAdultCount++;
+                            case CHILD -> realChildCount++;
+                            case INFANT -> realInfantCount++;
+                        }
+                    } else {
+                        switch (p.getPassengerType()) {
+                            case "ADULT" -> realAdultCount++;
+                            case "CHILD" -> realChildCount++;
+                            case "INFANT" -> realInfantCount++;
+                        }
+                    }
+                }
+
+                BigDecimal baseTourPrice = newSchedule.getTour().getPrice();
+                BigDecimal newTotalPrice = calculatePassengerTotalPrice(baseTourPrice, realAdultCount, realChildCount, realInfantCount);
+                existingBooking.setTotalPrice(newTotalPrice);
+                
+                int newOccupied = realAdultCount + realChildCount;
+                int slotDiff = newOccupied - occupied;
+                
+                if (slotDiff > 0) {
+                    if (newSchedule.getAvailableSlots() < slotDiff) {
+                        throw new AppException(ErrorCode.BOOKING_NOT_FOUND);
+                    }
+                    newSchedule.setAvailableSlots(newSchedule.getAvailableSlots() - slotDiff);
+                    tourScheduleRepository.save(newSchedule);
+                } else if (slotDiff < 0) {
+                    newSchedule.setAvailableSlots(newSchedule.getAvailableSlots() - slotDiff); // subtract negative = add
+                    tourScheduleRepository.save(newSchedule);
+                }
+                existingBooking.setOccupiedSlots(newOccupied);
+
+                // Re-apply discount if it exists, assuming the logic recalculates based on new total
+                if (existingBooking.getDiscountCode() != null && !existingBooking.getDiscountCode().isEmpty()) {
+                    // Temporarily set discount to 0 to re-calculate it correctly
+                    existingBooking.setDiscountAmount(BigDecimal.ZERO);
+                    applyDiscountIfPresent(existingBooking, existingBooking.getDiscountCode());
+                }
+            }
         }
         // handle change occupied slots (Adults + Children ONLY, exclude Infants)
         if (request.getAdultCount() != null || request.getChildCount() != null || request.getOccupiedSlots() > 0) {
@@ -1102,14 +1157,67 @@ public class BookingServiceImpl implements BookingService {
                 .stream()
                 // Slot check in Java — avoids CAST(time AS localTime) in SQL
                 .filter(s -> s.getAvailableSlots() != null && s.getAvailableSlots() >= requiredSlots)
-                .map(s -> com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse.builder()
+                .map(s -> {
+                    BigDecimal oldPrice = booking.getTotalPrice();
+                    BigDecimal newPrice = oldPrice;
+                    String message = null;
+                    BigDecimal priceDifference = BigDecimal.ZERO;
+                    
+                    try {
+                        List<Passenger> passengers = passengerRepository.findByBookingId(bookingId);
+                        int realAdultCount = 0;
+                        int realChildCount = 0;
+                        int realInfantCount = 0;
+                        boolean categoryChanged = false;
+
+                        for (Passenger p : passengers) {
+                            if (p.getDateOfBirth() != null) {
+                                com.tourbooking.booking.backend.model.entity.enums.PassengerType newType = passengerClassificationService.resolvePassengerType(p.getDateOfBirth(), s.getStartDate());
+                                if (!newType.name().equals(p.getPassengerType())) {
+                                    categoryChanged = true;
+                                }
+                                switch (newType) {
+                                    case ADULT -> realAdultCount++;
+                                    case CHILD -> realChildCount++;
+                                    case INFANT -> realInfantCount++;
+                                }
+                            } else {
+                                // Fallback if DOB is missing
+                                switch (p.getPassengerType()) {
+                                    case "ADULT" -> realAdultCount++;
+                                    case "CHILD" -> realChildCount++;
+                                    case "INFANT" -> realInfantCount++;
+                                }
+                            }
+                        }
+
+                        if (categoryChanged && s.getTour() != null) {
+                            BigDecimal baseTourPrice = s.getTour().getPrice();
+                            newPrice = calculatePassengerTotalPrice(baseTourPrice, realAdultCount, realChildCount, realInfantCount);
+                            // Need to account for discount? If discount was percentage, this gets complex.
+                            // Let's assume price difference is before discount or simple recalculation.
+                            priceDifference = newPrice.subtract(oldPrice);
+                            if (priceDifference.compareTo(BigDecimal.ZERO) > 0) {
+                                message = "Ngày khởi hành mới khiến hành khách thay đổi độ tuổi, chênh lệch: +" + priceDifference.stripTrailingZeros().toPlainString() + " VNĐ";
+                            } else if (priceDifference.compareTo(BigDecimal.ZERO) < 0) {
+                                message = "Ngày khởi hành mới khiến hành khách thay đổi độ tuổi, chênh lệch: " + priceDifference.stripTrailingZeros().toPlainString() + " VNĐ";
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("Error calculating price difference for schedule " + s.getId(), e);
+                    }
+
+                    return com.tourbooking.booking.backend.model.dto.response.ScheduleCandidateResponse.builder()
                         .id(s.getId())
                         .startDate(s.getStartDate())
                         .endDate(s.getEndDate())
                         .departureTime(s.getDepartureTime())
                         .availableSlots(s.getAvailableSlots())
                         .status(s.getStatus() != null ? s.getStatus().name() : null)
-                        .build())
+                        .priceDifference(priceDifference)
+                        .priceDifferenceMessage(message)
+                        .build();
+                })
                 .toList();
     }
 

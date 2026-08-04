@@ -425,20 +425,27 @@
             // excludes current schedule, already slot-checked.
             const res = await TB.apiFetch(`/api/v1/bookings/${bookingId}/reschedule-candidates`);
             const schedules = res?.data || [];
+            window.currentRescheduleCandidates = schedules; // Store for confirmation check
 
             const listEl = $('rescheduleSchedulesList');
             if (schedules.length === 0) {
                 listEl.innerHTML = '<div style="padding:10px; color:#ef4444; background:#fef2f2; border:1px solid #fca5a5; border-radius:6px;">Hiện không có lịch trình nào khác phù hợp cho tour này.</div>';
             } else {
-                listEl.innerHTML = schedules.map(s => `
-                    <label style="display:flex; align-items:center; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.1); border-radius:8px; cursor:pointer;" onclick="rescheduleSelectedScheduleId = ${s.id}">
-                        <input type="radio" name="newScheduleRadio" value="${s.id}" style="width:18px; height:18px;" />
-                        <div>
+                listEl.innerHTML = schedules.map(s => {
+                    let diffMsg = '';
+                    if (s.priceDifferenceMessage) {
+                        diffMsg = `<div style="font-size:0.85rem; color:#dc2626; margin-top: 4px; font-weight: 500;">⚠️ ${s.priceDifferenceMessage}</div>`;
+                    }
+                    return `
+                    <label style="display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid rgba(0,0,0,0.1); border-radius:8px; cursor:pointer;" onclick="rescheduleSelectedScheduleId = ${s.id}">
+                        <input type="radio" name="newScheduleRadio" value="${s.id}" style="width:18px; height:18px; margin-top:2px;" />
+                        <div style="flex: 1;">
                             <strong style="display:block; color:#0369a1;">Khởi hành: ${s.startDate} ${s.departureTime ? s.departureTime.substring(0,5) : ''}</strong>
                             <span style="font-size:0.85rem; color:#475569;">Còn trống: ${s.availableSlots} chỗ &nbsp;|&nbsp; Trở về: ${s.endDate || 'N/A'}</span>
+                            ${diffMsg}
                         </div>
                     </label>
-                `).join('');
+                `}).join('');
             }
         } catch (e) {
             $('rescheduleSchedulesList').innerHTML = `<div style="color:#ef4444;">Lỗi lấy lịch trình: ${e.message}</div>`;
@@ -450,7 +457,16 @@
             alert('Vui lòng chọn một lịch trình mới!');
             return;
         }
-        if (!confirm('Bạn có chắc chắn muốn đổi sang lịch trình này?')) return;
+        
+        let confirmMsg = 'Bạn có chắc chắn muốn đổi sang lịch trình này?';
+        if (window.currentRescheduleCandidates) {
+            const selected = window.currentRescheduleCandidates.find(s => s.id === rescheduleSelectedScheduleId);
+            if (selected && selected.priceDifferenceMessage) {
+                confirmMsg = selected.priceDifferenceMessage + "\n\nBạn có đồng ý với mức giá mới và đổi ngày không?";
+            }
+        }
+
+        if (!confirm(confirmMsg)) return;
 
         try {
             const btn = document.querySelector('#rescheduleModal .btn:not(.btn-secondary)');

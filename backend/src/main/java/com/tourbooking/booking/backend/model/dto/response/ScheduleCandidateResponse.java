@@ -14,4 +14,6 @@ public class ScheduleCandidateResponse {
     private LocalTime departureTime;
     private Integer availableSlots;
     private String status;
+    private java.math.BigDecimal priceDifference;
+    private String priceDifferenceMessage;
 }

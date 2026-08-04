@@ -11,18 +11,18 @@ import com.tourbooking.booking.backend.exception.BadRequestException;
 import com.tourbooking.booking.backend.model.dto.request.PassengerRequest;
 import com.tourbooking.booking.backend.model.entity.enums.PassengerType;
 
+import com.tourbooking.booking.backend.config.AgeCategoryConfig;
+import lombok.RequiredArgsConstructor;
 import lombok.Getter;
 
 @Service
+@RequiredArgsConstructor
 public class PassengerClassificationService {
+
+    private final AgeCategoryConfig ageCategoryConfig;
 
     private static final String AGE_MISMATCH_MESSAGE =
             "Độ tuổi hành khách không khớp với số lượng khai báo ban đầu, vui lòng kiểm tra lại!";
-
-    /**
-     * TASK 5 — Hard cap on infants per booking for tour safety.
-     */
-    private static final int MAX_INFANTS_PER_BOOKING = 2;
 
     public ClassificationResult classify(
             List<PassengerRequest> passengers,
@@ -43,16 +43,12 @@ public class PassengerClassificationService {
                             + ") không khớp với tổng số người đặt (" + expectedPassengers + ").");
         }
 
-        // TASK 5: Validate infant cap before classification
-        int dynamicMaxInfants = MAX_INFANTS_PER_BOOKING;
-        if (scheduleMaxSlots != null && scheduleMaxSlots > 0) {
-            dynamicMaxInfants = Math.min(MAX_INFANTS_PER_BOOKING, (int) (scheduleMaxSlots * 0.1));
-        }
-
-        if (declaredInfantCount > dynamicMaxInfants) {
-            throw new BadRequestException(
-                    "Mỗi booking chỉ được phép tối đa " + dynamicMaxInfants
-                            + " em bé (< 2 tuổi) để đảm bảo an toàn tour.");
+        if (declaredAdultCount > 0) {
+            int maxDependents = declaredAdultCount * ageCategoryConfig.getMaxDependentsPerAdult();
+            if (declaredChildCount + declaredInfantCount > maxDependents) {
+                throw new BadRequestException(
+                        "Số trẻ em và em bé tối đa đi cùng " + declaredAdultCount + " người lớn là " + maxDependents + ".");
+            }
         }
 
         int realAdultCount = 0;
@@ -64,9 +60,25 @@ public class PassengerClassificationService {
             if (passengerRequest.getDateOfBirth() == null) {
                 throw new BadRequestException("Ngày sinh hành khách không được để trống.");
             }
+            if (passengerRequest.getDateOfBirth().isAfter(tourStartDate)) {
+                throw new BadRequestException("Ngày sinh không thể sau ngày khởi hành.");
+            }
 
-            PassengerType resolvedType = resolvePassengerType(passengerRequest.getDateOfBirth(), tourStartDate);
-            classifiedPassengers.add(new ClassifiedPassenger(passengerRequest, resolvedType));
+            int age = Period.between(passengerRequest.getDateOfBirth(), tourStartDate).getYears();
+            if (age < 0) {
+                throw new BadRequestException("Tuổi không hợp lệ.");
+            }
+            
+            PassengerType resolvedType;
+            if (age >= ageCategoryConfig.getChildMaxAge()) {
+                resolvedType = PassengerType.ADULT;
+            } else if (age >= ageCategoryConfig.getInfantMaxAge()) {
+                resolvedType = PassengerType.CHILD;
+            } else {
+                resolvedType = PassengerType.INFANT;
+            }
+
+            classifiedPassengers.add(new ClassifiedPassenger(passengerRequest, resolvedType, age));
 
             switch (resolvedType) {
                 case ADULT -> realAdultCount++;
@@ -100,11 +112,18 @@ public class PassengerClassificationService {
      *   < 2 years  → INFANT
      */
     public PassengerType resolvePassengerType(LocalDate dateOfBirth, LocalDate tourStartDate) {
+        if (dateOfBirth.isAfter(tourStartDate)) {
+            throw new BadRequestException("Ngày sinh không thể sau ngày khởi hành.");
+        }
         int age = Period.between(dateOfBirth, tourStartDate).getYears();
-        if (age >= 12) {
+        if (age < 0) {
+            throw new BadRequestException("Tuổi không hợp lệ.");
+        }
+        
+        if (age >= ageCategoryConfig.getChildMaxAge()) {
             return PassengerType.ADULT;
         }
-        if (age >= 2) {
+        if (age >= ageCategoryConfig.getInfantMaxAge()) {
             return PassengerType.CHILD;
         }
         return PassengerType.INFANT;
@@ -145,10 +164,12 @@ public class PassengerClassificationService {
     public static class ClassifiedPassenger {
         private final PassengerRequest request;
         private final PassengerType passengerType;
+        private final int computedAgeOnTravelDate;
 
-        public ClassifiedPassenger(PassengerRequest request, PassengerType passengerType) {
+        public ClassifiedPassenger(PassengerRequest request, PassengerType passengerType, int computedAgeOnTravelDate) {
             this.request = request;
             this.passengerType = passengerType;
+            this.computedAgeOnTravelDate = computedAgeOnTravelDate;
         }
     }
 }
